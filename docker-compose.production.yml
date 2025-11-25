@@ -1,0 +1,16 @@
+# Docker Compose para producción
+# Se usa junto con docker-compose.yml base
+# Ejemplo: docker-compose -f docker-compose.yml -f docker-compose.production.yml up
+# O simplemente: NODE_ENV=production make docker-up (usa este archivo automáticamente)
+
+# En producción, podemos tener configuraciones adicionales como:
+# - Restart policies más estrictas
+# - Configuraciones de logging
+# - Recursos limitados
+# - Configuraciones de seguridad adicionales
+
+services:
+  postgres:
+    restart: always
+    # En producción, las variables de entorno vienen de .env.production + .env.local (combinados por Makefile)
+    # Considera usar secrets de Docker en lugar de variables de entorno para mayor seguridad

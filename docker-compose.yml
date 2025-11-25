@@ -1,0 +1,48 @@
+# ⚠️ IMPORTANTE: Este archivo NO contiene valores por defecto sensibles.
+# Todas las variables deben estar definidas en tus archivos de entorno.
+#
+# Este es el archivo base de configuración de Docker Compose.
+# Para diferentes entornos, usa:
+# - Desarrollo: docker-compose -f docker-compose.yml -f docker-compose.dev.yml
+# - Producción: docker-compose -f docker-compose.yml -f docker-compose.prod.yml
+#
+# El Makefile automáticamente:
+# 1. Combina .env.${NODE_ENV} con .env.local (igual que NestJS)
+# 2. Selecciona el archivo docker-compose apropiado según NODE_ENV
+# 3. Usa --env-file para cargar el archivo combinado
+#
+# Variables requeridas:
+# - DB_USER: Usuario de PostgreSQL
+# - DB_PASSWORD: Contraseña de PostgreSQL (NUNCA usar valores por defecto)
+# - DB_NAME: Nombre de la base de datos
+# - DB_PORT: Puerto de PostgreSQL (opcional, default: 5432)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: carecore-postgres
+    restart: unless-stopped
+    environment:
+      # Todas las variables deben venir del archivo .env
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - '${DB_PORT:-5432}:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - carecore-network
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  carecore-network:
+    driver: bridge
