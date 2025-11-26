@@ -1,105 +1,105 @@
 📘 CareCore API — README
 
-CareCore es una plataforma de historial médico digital donde el paciente es el dueño de su información, y solo profesionales médicos verificados pueden agregar o modificar registros clínicos.
+CareCore is a digital medical records platform where the patient owns their information, and only verified medical professionals can add or modify clinical records.
 
-Este repositorio contiene la API backend, construida con NestJS, FHIR, y una arquitectura preparada para integraciones clínicas e IA.
+This repository contains the backend API, built with NestJS, FHIR, and an architecture ready for clinical and AI integrations.
 
 ⸻
 
-## 🚀 Inicio Rápido
+## 🚀 Quick Start
 
-### Prerrequisitos
+### Prerequisites
 
 - Node.js >= 18.x
-- npm o yarn
-- Docker y Docker Compose
+- npm or yarn
+- Docker and Docker Compose
 - Git
 
-### Configuración Inicial
+### Initial Setup
 
-1. **Clonar el repositorio** (si aún no lo tienes)
+1. **Clone the repository** (if you don't have it yet)
    ```bash
    git clone <repository-url>
    cd carecore-api
    ```
 
-2. **Instalar dependencias**
+2. **Install dependencies**
    ```bash
    npm install
-   # o
+   # or
    make install
    ```
 
-3. **Configurar variables de entorno**
+3. **Configure environment variables**
    ```bash
-   # Copiar archivo de ejemplo de desarrollo
+   # Copy development example file
    cp .env.development.example .env.development
 
-   # Crear archivo local (sobrescribe valores de desarrollo para NestJS)
+   # Create local file (overrides development values for NestJS)
    cp .env.development.example .env.local
 
-   # Editar .env.development y .env.local con tus configuraciones personales
+   # Edit .env.development and .env.local with your personal configurations
    ```
 
-   ⚠️ **Nota:**
-   - Docker Compose y NestJS usan el mismo sistema de archivos de entorno:
-     - Ambos leen primero `.env.${NODE_ENV}` (o `.env.development` por defecto)
-     - Ambos leen luego `.env.local` si existe (que sobrescribe valores)
-   - El Makefile combina automáticamente ambos archivos para Docker Compose
-   - Esto mantiene total consistencia entre ambos sistemas
+   ⚠️ **Note:**
+   - Docker Compose and NestJS use the same environment file system:
+     - Both read first `.env.${NODE_ENV}` (or `.env.development` by default)
+     - Both read then `.env.local` if it exists (which overrides values)
+   - The Makefile automatically combines both files for Docker Compose
+   - This maintains total consistency between both systems
 
-   Para más detalles, consulta [ENV_VARIABLES.md](ENV_VARIABLES.md)
+   For more details, see [ENV_VARIABLES.md](ENV_VARIABLES.md)
 
-4. **Iniciar PostgreSQL con Docker**
+4. **Start PostgreSQL with Docker**
    ```bash
    docker-compose up -d
-   # o
+   # or
    make docker-up
    ```
 
-5. **Iniciar la aplicación en modo desarrollo**
+5. **Start the application in development mode**
    ```bash
    npm run start:dev
-   # o
+   # or
    make dev
    ```
 
-6. **Acceder a la documentación**
+6. **Access documentation**
    - API: http://localhost:3000/api
    - Swagger: http://localhost:3000/api/docs
    - PgAdmin: http://localhost:5050
 
-### Comandos Útiles
+### Useful Commands
 
-Ver todos los comandos disponibles:
+View all available commands:
 ```bash
 make help
 ```
 
-Comandos principales:
-- `make setup` - Configuración inicial completa
-- `make dev` - Iniciar en modo desarrollo
-- `make docker-up` - Iniciar contenedores Docker
-- `make docker-down` - Detener contenedores Docker
-- `make lint` - Ejecutar linter
-- `make format` - Formatear código
-- `make test` - Ejecutar tests
+Main commands:
+- `make setup` - Complete initial setup
+- `make dev` - Start in development mode
+- `make docker-up` - Start Docker containers
+- `make docker-down` - Stop Docker containers
+- `make lint` - Run linter
+- `make format` - Format code
+- `make test` - Run tests
 
 ⸻
 
-🚀 Objetivo del API
-	•	Servir como orquestador central de datos clínicos.
-	•	Exponer recursos compatibles con FHIR (Patient, Practitioner, Encounter, DocumentReference, Consent).
-	•	Implementar seguridad avanzada, roles, accesos basados en consentimiento (FHIR Consent), y auditoría inmutable.
-	•	Preparar endpoints y pipelines para módulos de IA (resumen clínico, extracción semántica, normalización de términos).
-	•	Ser la base para futuras integraciones con:
-	•	Laboratorios
-	•	Consultorios
-	•	Especialistas
-	•	Aseguradoras
-  •	Sistemas clínicos externos (SMART on FHIR)
+🚀 API Goals
+	•	Serve as central orchestrator of clinical data.
+	•	Expose FHIR-compatible resources (Patient, Practitioner, Encounter, DocumentReference, Consent).
+	•	Implement advanced security, roles, consent-based access (FHIR Consent), and immutable auditing.
+	•	Prepare endpoints and pipelines for AI modules (clinical summary, semantic extraction, term normalization).
+	•	Be the foundation for future integrations with:
+	•	Laboratories
+	•	Clinics
+	•	Specialists
+	•	Insurance companies
+  •	External clinical systems (SMART on FHIR)
 
-  📂 Arquitectura del backend
+  📂 Backend Architecture
   ```/src
   /modules
     /auth
@@ -109,7 +109,7 @@ Comandos principales:
     /documents
     /consents
     /audit
-    /ai          <- módulo IA (placeholder inicial)
+    /ai          <- AI module (initial placeholder)
   /common
     /guards
     /filters
@@ -121,151 +121,151 @@ Comandos principales:
 ```
 
   •	NestJS + TypeScript
-	•	PostgreSQL (prod) / SQLite (dev opcional)
-	•	FHIR JSON como formato base
-	•	MinIO / S3 para archivos clínicos (DocumentReference)
-	•	OIDC (Keycloak/Auth0) para identidad y roles
-	•	Audit logging obligatorio en cada operación clínica
-	•	Cifrado de datos sensibles + integración futura con KMS
-	•	IA lista para conectarse como microservicio o módulo interno
+	•	PostgreSQL (prod) / SQLite (dev optional)
+	•	FHIR JSON as base format
+	•	MinIO / S3 for clinical files (DocumentReference)
+	•	OIDC (Keycloak/Auth0) for identity and roles
+	•	Mandatory audit logging in every clinical operation
+	•	Sensitive data encryption + future KMS integration
+	•	AI ready to connect as microservice or internal module
 
 ⸻
 
-## 🛠️ Tecnologías y Herramientas
+## 🛠️ Technologies and Tools
 
-### Desarrollo
-- **NestJS** - Framework Node.js progresivo
-- **TypeScript** - Tipado estático
-- **PostgreSQL** - Base de datos relacional
-- **TypeORM** - ORM para TypeScript
-- **Swagger/OpenAPI** - Documentación de API
+### Development
+- **NestJS** - Progressive Node.js framework
+- **TypeScript** - Static typing
+- **PostgreSQL** - Relational database
+- **TypeORM** - ORM for TypeScript
+- **Swagger/OpenAPI** - API documentation
 
-### Calidad de Código
-- **ESLint** - Linter para JavaScript/TypeScript
-- **Prettier** - Formateador de código
+### Code Quality
+- **ESLint** - Linter for JavaScript/TypeScript
+- **Prettier** - Code formatter
 - **Husky** - Git hooks
-- **lint-staged** - Linting en archivos staged
+- **lint-staged** - Linting on staged files
 
 ### FHIR
-- **fhir-kit-client** - Cliente FHIR
-- **fhir-r4** - Tipos y recursos FHIR R4
+- **fhir-kit-client** - FHIR client
+- **fhir-r4** - FHIR R4 types and resources
 
-### Seguridad
-- **Helmet** - Seguridad HTTP headers
+### Security
+- **Helmet** - HTTP security headers
 - **express-rate-limit** - Rate limiting
-- **bcryptjs** - Hash de contraseñas
-- **JWT** - Autenticación basada en tokens
+- **bcryptjs** - Password hashing
+- **JWT** - Token-based authentication
 
 ⸻
 
-## 📋 Estructura del Proyecto
+## 📋 Project Structure
 
 ```
 carecore-api/
 ├── src/
-│   ├── main.ts                 # Punto de entrada
-│   ├── app.module.ts           # Módulo principal
-│   ├── config/                 # Configuraciones
+│   ├── main.ts                 # Entry point
+│   ├── app.module.ts           # Main module
+│   ├── config/                 # Configurations
 │   │   ├── database.config.ts
 │   │   └── fhir.config.ts
-│   ├── common/                 # Utilidades compartidas
+│   ├── common/                 # Shared utilities
 │   │   ├── dto/
 │   │   ├── filters/
 │   │   └── interceptors/
-│   └── modules/                # Módulos de negocio
+│   └── modules/                # Business modules
 │       ├── fhir/
 │       ├── patients/
-│       ├── practitioners/      # (por implementar)
-│       ├── encounters/         # (por implementar)
-│       ├── documents/          # (por implementar)
-│       ├── consents/           # (por implementar)
-│       ├── audit/              # (por implementar)
-│       └── ai/                 # (por implementar)
-├── docker-compose.yml          # Configuración Docker
-├── .eslintrc.js               # Configuración ESLint
-├── .prettierrc                # Configuración Prettier
-├── tsconfig.json              # Configuración TypeScript
-└── package.json               # Dependencias
+│       ├── practitioners/      # (to be implemented)
+│       ├── encounters/         # (to be implemented)
+│       ├── documents/          # (to be implemented)
+│       ├── consents/           # (to be implemented)
+│       ├── audit/              # (to be implemented)
+│       └── ai/                 # (to be implemented)
+├── docker-compose.yml          # Docker configuration
+├── .eslintrc.js               # ESLint configuration
+├── .prettierrc                # Prettier configuration
+├── tsconfig.json              # TypeScript configuration
+└── package.json               # Dependencies
 
 ```
 
 ⸻
 
-## 🔒 Buenas Prácticas Implementadas
+## 🔒 Implemented Best Practices
 
-✅ **Linting y Formateo**
-- ESLint configurado con reglas estrictas
-- Prettier para formateo consistente
-- Pre-commit hooks con Husky y lint-staged
+✅ **Linting and Formatting**
+- ESLint configured with strict rules
+- Prettier for consistent formatting
+- Pre-commit hooks with Husky and lint-staged
 
-✅ **Seguridad**
-- Helmet para headers de seguridad
-- Rate limiting configurado
-- Validación de datos con class-validator
-- Variables de entorno para configuración sensible
+✅ **Security**
+- Helmet for security headers
+- Rate limiting configured
+- Data validation with class-validator
+- Environment variables for sensitive configuration
 
-✅ **Base de Datos**
-- Docker Compose para desarrollo local
-- TypeORM con migraciones
-- Configuración separada por ambiente
+✅ **Database**
+- Docker Compose for local development
+- TypeORM with migrations
+- Environment-specific configuration
 
-✅ **Documentación**
-- Swagger/OpenAPI integrado
-- Endpoints documentados automáticamente
+✅ **Documentation**
+- Swagger/OpenAPI integrated
+- Endpoints automatically documented
 
 ✅ **TypeScript**
-- Configuración estricta
-- Path aliases configurados
-- Tipos explícitos (sin `any`)
+- Strict configuration
+- Path aliases configured
+- Explicit types (no `any`)
 
 ⸻
 
-## 📝 Scripts Disponibles
+## 📝 Available Scripts
 
 ```bash
-npm run start:dev      # Desarrollo con hot-reload
-npm run build          # Compilar para producción
-npm run start:prod     # Ejecutar versión compilada
-npm run lint           # Ejecutar linter
-npm run format         # Formatear código
-npm run test           # Ejecutar tests
-npm run test:cov       # Tests con cobertura
-npm run migration:run  # Ejecutar migraciones
+npm run start:dev      # Development with hot-reload
+npm run build          # Build for production
+npm run start:prod     # Run compiled version
+npm run lint           # Run linter
+npm run format         # Format code
+npm run test           # Run tests
+npm run test:cov       # Tests with coverage
+npm run migration:run  # Run migrations
 ```
 
 ⸻
 
-## 🔐 Variables de Entorno
+## 🔐 Environment Variables
 
-El proyecto usa archivos de entorno por ambiente:
-- **`.env.development`** - Variables para desarrollo
-- **`.env.production`** - Variables para producción
-- **`.env.local`** - Variables locales (sobrescribe las anteriores)
+The project uses environment files per environment:
+- **`.env.development`** - Variables for development
+- **`.env.production`** - Variables for production
+- **`.env.local`** - Local variables (overrides the above)
 
-Para empezar:
+To get started:
 ```bash
 cp .env.development.example .env.development
 cp .env.development.example .env.local
 ```
 
-Las variables principales:
+Main variables:
 
-- `PORT` - Puerto de la aplicación (default: 3000)
-- `DB_HOST` - Host de PostgreSQL
-- `DB_PORT` - Puerto de PostgreSQL (default: 5432)
-- `DB_USER` - Usuario de la base de datos
-- `DB_PASSWORD` - Contraseña de la base de datos
-- `DB_NAME` - Nombre de la base de datos
-- `JWT_SECRET` - Secret para JWT (cambiar en producción)
-- `NODE_ENV` - Ambiente (development/production)
+- `PORT` - Application port (default: 3000)
+- `DB_HOST` - PostgreSQL host
+- `DB_PORT` - PostgreSQL port (default: 5432)
+- `DB_USER` - Database user
+- `DB_PASSWORD` - Database password
+- `DB_NAME` - Database name
+- `JWT_SECRET` - Secret for JWT (change in production)
+- `NODE_ENV` - Environment (development/production)
 
-Para más información sobre la configuración de variables de entorno, consulta [ENV_VARIABLES.md](ENV_VARIABLES.md)
+For more information about environment variable configuration, see [ENV_VARIABLES.md](ENV_VARIABLES.md)
 
 ⸻
 
-## 📚 Recursos FHIR
+## 📚 FHIR Resources
 
-La API soporta los siguientes recursos FHIR R4:
+The API supports the following FHIR R4 resources:
 - Patient
 - Practitioner
 - Encounter
@@ -276,38 +276,38 @@ La API soporta los siguientes recursos FHIR R4:
 - Medication
 - Procedure
 
-Accede a la metadata FHIR en: `/api/fhir/metadata`
+Access FHIR metadata at: `/api/fhir/metadata`
 
 ⸻
 
-## 🤝 Contribución
+## 🤝 Contributing
 
-1. Crear una rama desde `main`
-2. Hacer tus cambios
-3. Asegurar que los tests pasen y el código esté formateado
-4. Crear un Pull Request
+1. Create a branch from `main`
+2. Make your changes
+3. Ensure tests pass and code is formatted
+4. Create a Pull Request
 
-### Convenciones
+### Conventions
 
-El proyecto sigue [Conventional Commits](https://www.conventionalcommits.org/) y tiene hooks automáticos:
+The project follows [Conventional Commits](https://www.conventionalcommits.org/) and has automatic hooks:
 
-- **Pre-commit**: Formatea código y corrige ESLint automáticamente
-- **Commit-msg**: Valida que los mensajes de commit sigan el formato convencional
+- **Pre-commit**: Automatically formats code and fixes ESLint
+- **Commit-msg**: Validates that commit messages follow the conventional format
 
-**Formato de commit:**
+**Commit format:**
 ```
-<tipo>(<scope>): <descripción>
+<type>(<scope>): <description>
 ```
 
-**Ejemplos:**
-- `feat(patients): agregar endpoint de búsqueda`
-- `fix(auth): corregir validación de token`
-- `docs: actualizar guía de configuración`
+**Examples:**
+- `feat(patients): add search endpoint`
+- `fix(auth): fix token validation`
+- `docs: update configuration guide`
 
-Para más detalles, consulta [CONTRIBUTING.md](CONTRIBUTING.md)
+For more details, see [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ⸻
 
-## 📄 Licencia
+## 📄 License
 
-Ver archivo [LICENSE](LICENSE)
+See [LICENSE](LICENSE) file

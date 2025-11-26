@@ -51,19 +51,19 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('CareCore API')
     .setDescription(
-      `API para plataforma de historial médico digital basada en FHIR R4.
+      `API for digital medical records platform based on FHIR R4.
 
-## Características
-- ✅ Recursos FHIR R4 (Patient, Practitioner, Encounter, DocumentReference, Consent)
-- ✅ Autenticación JWT Bearer Token
-- ✅ Validación de datos con class-validator
-- ✅ Paginación y filtrado
-- ✅ Documentación completa de DTOs y Schemas
+## Features
+- ✅ FHIR R4 Resources (Patient, Practitioner, Encounter, DocumentReference, Consent)
+- ✅ JWT Bearer Token Authentication
+- ✅ Data validation with class-validator
+- ✅ Pagination and filtering
+- ✅ Complete DTOs and Schemas documentation
 
-## Autenticación
-Esta API utiliza autenticación JWT. Para usar los endpoints protegidos, incluye el token en el header:
+## Authentication
+This API uses JWT authentication. To use protected endpoints, include the token in the header:
 \`\`\`
-Authorization: Bearer <tu-token>
+Authorization: Bearer <your-token>
 \`\`\`
       `,
     )
@@ -84,8 +84,8 @@ Authorization: Bearer <tu-token>
       'JWT-auth', // This name here is important for matching up with @ApiBearerAuth() in your controller!
     )
     .addTag('Health', 'Health check endpoints')
-    .addTag('FHIR', 'Recursos FHIR R4')
-    .addTag('Patients', 'Gestión de pacientes')
+    .addTag('FHIR', 'FHIR R4 Resources')
+    .addTag('Patients', 'Patient management')
     .addApiKey(
       {
         type: 'apiKey',
@@ -104,16 +104,16 @@ Authorization: Bearer <tu-token>
 
   SwaggerModule.setup('api/docs', app, document, {
     swaggerOptions: {
-      persistAuthorization: true, // Mantiene el token después de recargar
-      displayRequestDuration: true, // Muestra tiempo de respuesta
-      filter: true, // Habilita filtro de búsqueda
-      showExtensions: true, // Muestra extensiones OpenAPI
+      persistAuthorization: true, // Keeps token after reload
+      displayRequestDuration: true, // Shows response time
+      filter: true, // Enables search filter
+      showExtensions: true, // Shows OpenAPI extensions
       showCommonExtensions: true,
       docExpansion: 'list', // 'none', 'list', 'full'
-      defaultModelsExpandDepth: 2, // Profundidad de expansión de schemas
-      defaultModelExpandDepth: 2, // Profundidad de expansión de modelos
-      displayOperationId: false, // Oculta operationId en la UI
-      tryItOutEnabled: true, // Habilita "Try it out"
+      defaultModelsExpandDepth: 2, // Schema expansion depth
+      defaultModelExpandDepth: 2, // Model expansion depth
+      displayOperationId: false, // Hides operationId in UI
+      tryItOutEnabled: true, // Enables "Try it out"
     },
     customSiteTitle: 'CareCore API Documentation',
     customfavIcon: '/favicon.ico',
