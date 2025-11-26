@@ -1,5 +1,12 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
+# Run lint-staged (ESLint + Prettier on staged files)
 npx lint-staged
+
+# Check formatting (fail if files are not formatted)
+npm run format:check
+
+# Run tests with coverage
+npm run test:cov
 

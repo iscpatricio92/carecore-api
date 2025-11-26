@@ -1,202 +1,201 @@
-# Guía de Configuración - CareCore API
+# Setup Guide - CareCore API
 
-Esta guía te ayudará a configurar el proyecto desde cero.
+This guide will help you set up the project from scratch.
 
-## 📋 Checklist de Configuración
+## 📋 Setup Checklist
 
-### 1. Prerrequisitos ✅
-- [ ] Node.js >= 18.x instalado
-- [ ] npm o yarn instalado
-- [ ] Docker y Docker Compose instalados
-- [ ] Git instalado
+### 1. Prerequisites ✅
+- [ ] Node.js >= 18.x installed
+- [ ] npm or yarn installed
+- [ ] Docker and Docker Compose installed
+- [ ] Git installed
 
-Verificar versiones:
+Verify versions:
 ```bash
-node --version  # Debe ser >= 18.x
+node --version  # Must be >= 18.x
 npm --version
 docker --version
 docker-compose --version
 ```
 
-### 2. Instalación de Dependencias ✅
+### 2. Dependency Installation ✅
 
 ```bash
 npm install
 ```
 
-O usando make:
+Or using make:
 ```bash
 make install
 ```
 
-### 3. Configuración de Variables de Entorno ✅
+### 3. Environment Variables Configuration ✅
 
-El proyecto usa archivos de entorno por ambiente. Para desarrollo:
+The project uses environment files per environment. For development:
 
-1. Copiar el archivo de ejemplo de desarrollo:
+1. Copy the development example file:
 ```bash
 cp .env.development.example .env.development
 ```
 
-2. Crear archivo `.env.local` para valores locales (esto sobrescribe `.env.development` para NestJS):
+2. Create `.env.local` file for local values (this overrides `.env.development` for NestJS):
 ```bash
 cp .env.development.example .env.local
 ```
 
-3. Editar `.env.development` y `.env.local` con tus valores personalizados si es necesario.
+3. Edit `.env.development` and `.env.local` with your custom values if necessary.
 
-**Notas:**
-- El archivo `.env.local` tiene prioridad sobre `.env.development` para ambos sistemas:
-  - **NestJS:** Lee primero `.env.${NODE_ENV}` y luego `.env.local` (que sobrescribe)
-  - **Docker Compose:** El Makefile combina ambos archivos automáticamente (`.env.local` sobrescribe)
-- Ambos sistemas usan exactamente la misma lógica de prioridad, manteniendo consistencia total
-- ⚠️ **Seguridad:** El archivo `docker-compose.yml` NO contiene valores por defecto sensibles. Todas las variables deben estar en tus archivos de entorno
+**Notes:**
+- The `.env.local` file has priority over `.env.development` for both systems:
+  - **NestJS:** Reads first `.env.${NODE_ENV}` and then `.env.local` (which overrides)
+  - **Docker Compose:** The Makefile automatically combines both files (`.env.local` overrides)
+- Both systems use exactly the same priority logic, maintaining total consistency
+- ⚠️ **Security:** The `docker-compose.yml` file does NOT contain sensitive default values. All variables must be in your environment files
 
-Para más información, consulta [ENV_VARIABLES.md](ENV_VARIABLES.md)
+For more information, see [ENV_VARIABLES.md](ENV_VARIABLES.md)
 
-### 4. Configuración de Base de Datos (PostgreSQL) ✅
+### 4. Database Configuration (PostgreSQL) ✅
 
-Iniciar PostgreSQL con Docker:
+Start PostgreSQL with Docker:
 ```bash
 docker-compose up -d
 ```
 
-O usando make:
+Or using make:
 ```bash
 make docker-up
 ```
 
-Verificar que el contenedor está corriendo:
+Verify the container is running:
 ```bash
 docker ps
 ```
 
-Deberías ver `carecore-postgres` en la lista.
+You should see `carecore-postgres` in the list.
 
-### 5. Configuración de Git Hooks ✅
+### 5. Git Hooks Configuration ✅
 
-Los pre-commit hooks se configuran automáticamente al instalar dependencias gracias al script `prepare` en `package.json`.
+Pre-commit hooks are automatically configured when installing dependencies thanks to the `prepare` script in `package.json`.
 
-Si necesitas reinstalarlos manualmente:
+If you need to reinstall them manually:
 ```bash
 npx husky install
 ```
 
-### 6. Verificación de Configuración ✅
+### 6. Configuration Verification ✅
 
-1. **Verificar linting:**
+1. **Verify linting:**
 ```bash
 npm run lint
 ```
 
-2. **Formatear código:**
+2. **Format code:**
 ```bash
 npm run format
 ```
 
-3. **Compilar proyecto:**
+3. **Build project:**
 ```bash
 npm run build
 ```
 
-### 7. Iniciar la Aplicación ✅
+### 7. Start the Application ✅
 
-Modo desarrollo (con hot-reload):
+Development mode (with hot-reload):
 ```bash
 npm run start:dev
 ```
 
-O usando make:
+Or using make:
 ```bash
 make dev
 ```
 
-Deberías ver:
+You should see:
 - ✅ Application is running on: http://localhost:3000/api
 - ✅ Swagger documentation: http://localhost:3000/api/docs
 
-### 8. Verificar Endpoints ✅
+### 8. Verify Endpoints ✅
 
 - **Health check:** http://localhost:3000/api
 - **Swagger UI:** http://localhost:3000/api/docs
 - **FHIR Metadata:** http://localhost:3000/api/fhir/metadata
 
-## 🔧 Comandos Útiles
+## 🔧 Useful Commands
 
-### Desarrollo
+### Development
 ```bash
-make dev              # Iniciar en modo desarrollo
-make build            # Compilar para producción
-make lint             # Ejecutar linter
-make format           # Formatear código
+make dev              # Start in development mode
+make build            # Build for production
+make lint             # Run linter
+make format           # Format code
 ```
 
 ### Docker
 ```bash
-make docker-up        # Iniciar contenedores
-make docker-down      # Detener contenedores
-make docker-logs      # Ver logs de Docker
+make docker-up        # Start containers
+make docker-down      # Stop containers
+make docker-logs      # View Docker logs
 ```
 
-### Base de Datos
+### Database
 ```bash
-npm run migration:run        # Ejecutar migraciones
-npm run migration:revert     # Revertir última migración
-npm run migration:generate   # Generar nueva migración
+npm run migration:run        # Run migrations
+npm run migration:revert     # Revert last migration
+npm run migration:generate   # Generate new migration
 ```
 
 ### Testing
 ```bash
-npm run test          # Ejecutar tests
-npm run test:watch    # Tests en modo watch
-npm run test:cov      # Tests con cobertura
+npm run test          # Run tests
+npm run test:watch    # Tests in watch mode
+npm run test:cov      # Tests with coverage
 ```
 
-## 🐛 Solución de Problemas
+## 🐛 Troubleshooting
 
-### Error: Puerto 5432 ya en uso
+### Error: Port 5432 already in use
 ```bash
-# Verificar qué proceso está usando el puerto
+# Check what process is using the port
 lsof -i :5432
 
-# Detener otros contenedores de PostgreSQL
+# Stop other PostgreSQL containers
 docker ps
 docker stop <container-id>
 ```
 
-### Error: No se puede conectar a la base de datos
-1. Verificar que el contenedor está corriendo: `docker ps`
-2. Verificar logs: `docker-compose logs postgres`
-3. Verificar variables de entorno en `.env.local`
-4. Esperar unos segundos después de iniciar el contenedor
+### Error: Cannot connect to database
+1. Verify container is running: `docker ps`
+2. Check logs: `docker-compose logs postgres`
+3. Verify environment variables in `.env.local`
+4. Wait a few seconds after starting the container
 
-### Error: Husky hooks no funcionan
+### Error: Husky hooks not working
 ```bash
-# Reinstalar hooks
+# Reinstall hooks
 rm -rf .husky
 npm install
 ```
 
-### Error: Módulos no encontrados
+### Error: Modules not found
 ```bash
-# Limpiar e instalar de nuevo
+# Clean and reinstall
 rm -rf node_modules package-lock.json
 npm install
 ```
 
-## 📚 Próximos Pasos
+## 📚 Next Steps
 
-1. ✅ Configuración básica completada
-2. ⏭️ Implementar módulos de autenticación
-3. ⏭️ Implementar recursos FHIR completos
-4. ⏭️ Agregar tests unitarios y E2E
-5. ⏭️ Configurar CI/CD
-6. ⏭️ Implementar auditoría
-7. ⏭️ Configurar almacenamiento de archivos (MinIO/S3)
+1. ✅ Basic configuration completed
+2. ⏭️ Implement authentication modules
+3. ⏭️ Implement complete FHIR resources
+4. ⏭️ Add unit and E2E tests
+5. ⏭️ Configure CI/CD
+6. ⏭️ Implement auditing
+7. ⏭️ Configure file storage (MinIO/S3)
 
-## 📞 Soporte
+## 📞 Support
 
-Para más información, consulta:
-- [README.md](README.md) - Documentación general
-- [ENV_VARIABLES.md](ENV_VARIABLES.md) - Variables de entorno
-
+For more information, see:
+- [README.md](README.md) - General documentation
+- [ENV_VARIABLES.md](ENV_VARIABLES.md) - Environment variables

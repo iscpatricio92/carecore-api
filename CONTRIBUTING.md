@@ -1,99 +1,99 @@
-# Guía de Contribución - CareCore API
+# Contribution Guide - CareCore API
 
-Esta guía establece las reglas y convenciones para contribuir al proyecto.
+This guide establishes the rules and conventions for contributing to the project.
 
-## 📝 Convenciones de Commits
+## 📝 Commit Conventions
 
-Seguimos el estándar [Conventional Commits](https://www.conventionalcommits.org/).
+We follow the [Conventional Commits](https://www.conventionalcommits.org/) standard.
 
-### Formato
+### Format
 
 ```
-<tipo>(<scope>): <descripción>
+<type>(<scope>): <description>
 
-[body opcional]
+[optional body]
 
-[footer opcional]
+[optional footer]
 ```
 
-### Tipos de Commit
+### Commit Types
 
-- **`feat`**: Nueva funcionalidad
-- **`fix`**: Corrección de bug
-- **`docs`**: Cambios en documentación
-- **`style`**: Cambios de formato (espacios, comas, etc.) que no afectan el código
-- **`refactor`**: Refactorización de código sin cambiar funcionalidad
-- **`perf`**: Mejoras de rendimiento
-- **`test`**: Agregar o modificar tests
-- **`build`**: Cambios en sistema de build, dependencias, etc.
-- **`ci`**: Cambios en CI/CD
-- **`chore`**: Tareas de mantenimiento
-- **`revert`**: Revertir un commit anterior
+- **`feat`**: New feature
+- **`fix`**: Bug fix
+- **`docs`**: Documentation changes
+- **`style`**: Formatting changes (spaces, commas, etc.) that don't affect code
+- **`refactor`**: Code refactoring without changing functionality
+- **`perf`**: Performance improvements
+- **`test`**: Adding or modifying tests
+- **`build`**: Build system changes, dependencies, etc.
+- **`ci`**: CI/CD changes
+- **`chore`**: Maintenance tasks
+- **`revert`**: Revert a previous commit
 
-### Scope (Opcional)
+### Scope (Optional)
 
-El scope indica el área del código afectada. Ejemplos:
-- `auth`: Autenticación
-- `patients`: Módulo de pacientes
-- `fhir`: Recursos FHIR
-- `db`: Base de datos
-- `config`: Configuración
+The scope indicates the affected code area. Examples:
+- `auth`: Authentication
+- `patients`: Patients module
+- `fhir`: FHIR resources
+- `db`: Database
+- `config`: Configuration
 
-### Ejemplos
+### Examples
 
 ```bash
-# Nueva funcionalidad
-git commit -m "feat(patients): agregar endpoint para buscar pacientes por nombre"
+# New feature
+git commit -m "feat(patients): add endpoint to search patients by name"
 
-# Corrección de bug
-git commit -m "fix(auth): corregir validación de token JWT expirado"
+# Bug fix
+git commit -m "fix(auth): fix JWT expired token validation"
 
-# Documentación
-git commit -m "docs: actualizar guía de configuración de Docker"
+# Documentation
+git commit -m "docs: update Docker configuration guide"
 
-# Refactorización
-git commit -m "refactor(fhir): simplificar lógica de validación de recursos"
+# Refactoring
+git commit -m "refactor(fhir): simplify resource validation logic"
 
-# Con body y footer
-git commit -m "feat(patients): agregar filtros de búsqueda avanzada
+# With body and footer
+git commit -m "feat(patients): add advanced search filters
 
-Permite buscar pacientes por múltiples criterios:
-- Nombre completo
-- Fecha de nacimiento
-- Identificador nacional
+Allows searching patients by multiple criteria:
+- Full name
+- Date of birth
+- National identifier
 
 Closes #123"
 ```
 
-### Reglas
+### Rules
 
-- ✅ El tipo debe estar en minúsculas
-- ✅ El scope (si existe) debe estar en minúsculas
-- ✅ La descripción debe empezar con minúscula
-- ✅ La descripción no debe terminar con punto
-- ✅ La descripción debe tener máximo 100 caracteres
-- ✅ El header completo debe tener máximo 100 caracteres
-- ❌ No uses `WIP`, `fixup`, `squash` en el mensaje principal
+- ✅ Type must be lowercase
+- ✅ Scope (if exists) must be lowercase
+- ✅ Description must start with lowercase
+- ✅ Description must not end with a period
+- ✅ Description must have a maximum of 100 characters
+- ✅ Complete header must have a maximum of 100 characters
+- ❌ Don't use `WIP`, `fixup`, `squash` in the main message
 
-## 🌿 Convenciones de Branches
+## 🌿 Branch Conventions
 
-### Formato
+### Format
 
 ```
-<tipo>/<descripción>
+<type>/<description>
 ```
 
-### Tipos de Branch
+### Branch Types
 
-- **`feature/`**: Nueva funcionalidad
-- **`fix/`**: Corrección de bug
-- **`hotfix/`**: Corrección urgente en producción
-- **`docs/`**: Cambios en documentación
-- **`refactor/`**: Refactorización
-- **`test/`**: Agregar o mejorar tests
-- **`chore/`**: Tareas de mantenimiento
+- **`feature/`**: New feature
+- **`fix/`**: Bug fix
+- **`hotfix/`**: Urgent production fix
+- **`docs/`**: Documentation changes
+- **`refactor/`**: Refactoring
+- **`test/`**: Adding or improving tests
+- **`chore/`**: Maintenance tasks
 
-### Ejemplos
+### Examples
 
 ```bash
 # Feature
@@ -114,83 +114,82 @@ docs/api-documentation-update
 refactor/database-config-module
 ```
 
-### Reglas
+### Rules
 
-- ✅ Usa minúsculas
-- ✅ Separa palabras con guiones (`-`)
-- ✅ Sé descriptivo pero conciso
-- ✅ No uses caracteres especiales
-- ❌ No uses espacios
-- ❌ No uses mayúsculas
+- ✅ Use lowercase
+- ✅ Separate words with hyphens (`-`)
+- ✅ Be descriptive but concise
+- ✅ Don't use special characters
+- ❌ Don't use spaces
+- ❌ Don't use uppercase
 
-## 🔄 Flujo de Trabajo
+## 🔄 Workflow
 
-### 1. Crear Branch
+### 1. Create Branch
 
 ```bash
-# Desde main actualizada
+# From updated main
 git checkout main
 git pull origin main
 
-# Crear nueva branch
-git checkout -b feature/nombre-de-la-funcionalidad
+# Create new branch
+git checkout -b feature/feature-name
 ```
 
-### 2. Hacer Cambios
+### 2. Make Changes
 
-- Escribe código limpio
-- Sigue las convenciones de código del proyecto
-- Agrega tests si es necesario
-- Actualiza documentación si es necesario
+- Write clean code
+- Follow project code conventions
+- Add tests if necessary
+- Update documentation if necessary
 
 ### 3. Commit
 
 ```bash
-# Agregar cambios
+# Add changes
 git add .
 
-# Commit con mensaje convencional
-git commit -m "feat(scope): descripción del cambio"
+# Commit with conventional message
+git commit -m "feat(scope): change description"
 ```
 
-El pre-commit hook ejecutará automáticamente:
-- Formateo con Prettier
-- Corrección de ESLint
-- Validación del mensaje de commit
+The pre-commit hook will automatically run:
+- Formatting with Prettier
+- ESLint fixes
+- Commit message validation
 
-### 4. Push y Pull Request
+### 4. Push and Pull Request
 
 ```bash
-# Push de la branch
-git push origin feature/nombre-de-la-funcionalidad
+# Push branch
+git push origin feature/feature-name
 ```
 
-Luego crea un Pull Request en GitHub/GitLab con:
-- Título descriptivo
-- Descripción de los cambios
-- Referencias a issues relacionados (si aplica)
+Then create a Pull Request on GitHub/GitLab with:
+- Descriptive title
+- Description of changes
+- References to related issues (if applicable)
 
-## ✅ Checklist Antes de PR
+## ✅ Pre-PR Checklist
 
-- [ ] Código formateado (se aplica automáticamente)
-- [ ] Sin errores de ESLint (se corrige automáticamente)
-- [ ] Mensaje de commit sigue convenciones (se valida automáticamente)
-- [ ] Tests pasan: `npm test`
-- [ ] Documentación actualizada (si aplica)
-- [ ] Sin console.logs de debug
-- [ ] Sin código comentado innecesario
+- [ ] Code formatted (applied automatically)
+- [ ] No ESLint errors (fixed automatically)
+- [ ] Commit message follows conventions (validated automatically)
+- [ ] Tests pass: `npm test`
+- [ ] Documentation updated (if applicable)
+- [ ] No debug console.logs
+- [ ] No unnecessary commented code
 
-## 🚫 Qué NO Hacer
+## 🚫 What NOT to Do
 
-- ❌ Commits con mensajes genéricos como "fix", "update", "changes"
-- ❌ Branches con nombres como `fix1`, `test`, `new-feature`
-- ❌ Commits que mezclan múltiples cambios no relacionados
-- ❌ Push directo a `main` o `develop`
-- ❌ Commits que rompen el build o los tests
+- ❌ Commits with generic messages like "fix", "update", "changes"
+- ❌ Branches with names like `fix1`, `test`, `new-feature`
+- ❌ Commits that mix multiple unrelated changes
+- ❌ Direct push to `main` or `develop`
+- ❌ Commits that break the build or tests
 
-## 📚 Recursos
+## 📚 Resources
 
 - [Conventional Commits](https://www.conventionalcommits.org/)
 - [Semantic Versioning](https://semver.org/)
 - [Git Flow](https://nvie.com/posts/a-successful-git-branching-model/)
-
