@@ -50,7 +50,7 @@ async function bootstrap() {
   // Swagger documentation
   const config = new DocumentBuilder()
     .setTitle('CareCore API')
-    .setDescription('API para plataforma de historial médico digital basada en FHIR R4')
+    .setDescription('API para plataforma de historial médico digital basada en FHIR R4 by PAt')
     .setVersion('1.0')
     .addBearerAuth()
     .addTag('FHIR', 'Recursos FHIR R4')

@@ -2,7 +2,14 @@
   "name": "carecore-api",
   "version": "0.1.0",
   "description": "CareCore API - Plataforma de historial médico digital con FHIR",
-  "author": "",
+  "author": "Patricio",
+  "maintainer": "Patricio",
+  "maintainers": [
+    {
+      "name": "Patricio",
+      "email": "isc.patricio@gmail.com"
+    }
+  ],
   "private": true,
   "license": "MIT",
   "scripts": {
