@@ -8,7 +8,8 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies (production only)
-RUN npm ci --omit=dev && \
+# --ignore-scripts prevents running prepare script (husky) which requires dev dependencies
+RUN npm ci --omit=dev --ignore-scripts && \
     npm cache clean --force
 
 # Stage 2: Build
