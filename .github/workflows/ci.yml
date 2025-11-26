@@ -41,11 +41,15 @@ jobs:
 
       - name: Check formatting
         run: |
+          echo "🔍 Verificando formato de archivos..."
           # Verificar formato de archivos TypeScript (incluyendo tests .spec.ts)
-          npx prettier --check "src/**/*.ts" "src/**/*.spec.ts" || {
+          if npx prettier --check "src/**/*.ts" "src/**/*.spec.ts"; then
+            echo "✅ Todos los archivos están correctamente formateados"
+          else
             echo "⚠️  Algunos archivos no están formateados correctamente"
+            echo "💡 Ejecuta 'npm run format' para formatear automáticamente"
             exit 1
-          }
+          fi
 
       - name: Check commit messages (if PR)
         if: github.event_name == 'pull_request'
