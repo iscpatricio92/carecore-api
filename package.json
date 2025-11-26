@@ -15,7 +15,7 @@
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"src/**/*.spec.ts\"",
-    "format:check": "prettier --check \"src/**/*.ts\" \"src/**/*.spec.ts\" || true",
+    "format:check": "prettier --check \"src/**/*.ts\" \"src/**/*.spec.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
