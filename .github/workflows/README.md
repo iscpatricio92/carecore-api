@@ -15,6 +15,15 @@ Workflow de integración continua que se ejecuta en:
 3. **build**: Compila la aplicación
 4. **security**: Escaneo de seguridad con Snyk y npm audit
 
+**Nota:** Los comentarios de coverage se manejan en el workflow separado `coverage-comment.yml` para evitar problemas de permisos.
+
+### 📊 Coverage Comment (`coverage-comment.yml`)
+Workflow dedicado para comentarios automáticos de coverage en PRs:
+- Se ejecuta en PRs a `main` y `develop`
+- Solo funciona con PRs del mismo repositorio (no forks)
+- Crea/actualiza comentario con métricas de coverage
+- Requiere permisos `pull-requests: write` e `issues: write`
+
 ### 🚀 CD (`cd.yml`)
 Workflow de despliegue continuo que se ejecuta en:
 - Push a `main` (producción)
