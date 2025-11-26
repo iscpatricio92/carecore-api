@@ -1,0 +1,14 @@
+# Docker Compose para desarrollo
+# Se usa junto con docker-compose.yml base
+# Ejemplo: docker-compose -f docker-compose.yml -f docker-compose.development.yml up
+# O simplemente: make docker-up (usa este archivo automáticamente cuando NODE_ENV=development)
+
+# En desarrollo, podemos tener configuraciones adicionales como:
+# - Volúmenes para hot-reload
+# - Servicios adicionales (PgAdmin, etc.)
+# - Configuraciones de debugging
+
+services:
+  postgres:
+    # En desarrollo, podemos exponer más puertos o configuraciones específicas
+    # Las variables de entorno vienen de .env.development + .env.local (combinados por Makefile)

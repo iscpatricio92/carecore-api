@@ -1,0 +1,313 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+      - 'fix/**'
+  pull_request:
+    branches:
+      - main
+      - develop
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  lint-and-format:
+    name: Lint & Format Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Check formatting
+        run: |
+          echo "🔍 Verificando formato de archivos..."
+          # Verificar formato de archivos TypeScript (incluyendo tests .spec.ts)
+          if npx prettier --check "src/**/*.ts" "src/**/*.spec.ts"; then
+            echo "✅ Todos los archivos están correctamente formateados"
+          else
+            echo "⚠️  Algunos archivos no están formateados correctamente"
+            echo "💡 Ejecuta 'npm run format' para formatear automáticamente"
+            exit 1
+          fi
+
+      - name: Check commit messages (if PR)
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "🔍 Verificando mensajes de commit del PR..."
+
+          # Obtener commits del PR usando las referencias de GitHub
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+
+          echo "📋 Base: $BASE_SHA"
+          echo "📋 Head: $HEAD_SHA"
+
+          # Obtener mensajes de commit entre base y head
+          COMMITS=$(git log --format=%s $BASE_SHA..$HEAD_SHA 2>/dev/null || git log --format=%s origin/${{ github.base_ref }}..HEAD 2>/dev/null || echo "")
+
+          if [ -z "$COMMITS" ]; then
+            echo "⚠️  No se encontraron commits nuevos para verificar"
+            echo "💡 Esto puede ocurrir si el PR no tiene commits nuevos"
+            exit 0
+          fi
+
+          echo "📝 Encontrados commits para verificar:"
+          echo "$COMMITS" | nl
+          echo ""
+
+          # Verificar cada commit y contar errores
+          HAS_ERRORS=false
+          while IFS= read -r commit_msg; do
+            if [ -n "$commit_msg" ]; then
+              echo "🔍 Verificando: $commit_msg"
+              if ! echo "$commit_msg" | npx commitlint --config commitlint.config.mjs 2>/dev/null; then
+                echo "❌ Commit inválido: $commit_msg"
+                echo "💡 El mensaje debe seguir el formato: <tipo>(<scope>): <descripción>"
+                echo "   Ejemplo: feat(patients): agregar endpoint de búsqueda"
+                HAS_ERRORS=true
+              else
+                echo "✅ Commit válido"
+              fi
+            fi
+          done <<< "$COMMITS"
+
+          if [ "$HAS_ERRORS" = true ]; then
+            echo ""
+            echo "❌ Se encontraron commits con formato inválido"
+            echo "📚 Consulta CONTRIBUTING.md para ver el formato correcto"
+            exit 1
+          fi
+
+          echo ""
+          echo "✅ Todos los commits siguen el formato convencional"
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        env:
+          NODE_ENV: test
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: test_user
+          DB_PASSWORD: test_password
+          DB_NAME: test_db
+          DB_SYNCHRONIZE: 'true'
+        run: npm test
+
+      - name: Generate coverage report
+        if: always()
+        run: npm run test:cov
+
+      - name: Parse coverage summary
+        if: always() && github.event_name == 'pull_request'
+        id: coverage
+        run: |
+          if [ -f "coverage/coverage-summary.json" ]; then
+            # Extraer todas las métricas de coverage
+            LINES=$(node -p "Math.round(require('./coverage/coverage-summary.json').total.lines.pct)")
+            STATEMENTS=$(node -p "Math.round(require('./coverage/coverage-summary.json').total.statements.pct)")
+            FUNCTIONS=$(node -p "Math.round(require('./coverage/coverage-summary.json').total.functions.pct)")
+            BRANCHES=$(node -p "Math.round(require('./coverage/coverage-summary.json').total.branches.pct)")
+
+            echo "lines=$LINES" >> $GITHUB_OUTPUT
+            echo "statements=$STATEMENTS" >> $GITHUB_OUTPUT
+            echo "functions=$FUNCTIONS" >> $GITHUB_OUTPUT
+            echo "branches=$BRANCHES" >> $GITHUB_OUTPUT
+            echo "✅ Coverage parsed: Lines=$LINES%, Statements=$STATEMENTS%, Functions=$FUNCTIONS%, Branches=$BRANCHES%"
+          else
+            echo "lines=0" >> $GITHUB_OUTPUT
+            echo "statements=0" >> $GITHUB_OUTPUT
+            echo "functions=0" >> $GITHUB_OUTPUT
+            echo "branches=0" >> $GITHUB_OUTPUT
+            echo "⚠️  Coverage file not found"
+          fi
+
+      - name: Comment PR with coverage
+        if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN_PAT || secrets.GITHUB_TOKEN }}
+          script: |
+            const lines = parseInt('${{ steps.coverage.outputs.lines }}') || 0;
+            const statements = parseInt('${{ steps.coverage.outputs.statements }}') || 0;
+            const functions = parseInt('${{ steps.coverage.outputs.functions }}') || 0;
+            const branches = parseInt('${{ steps.coverage.outputs.branches }}') || 0;
+
+            // Calcular coverage promedio
+            const avgCoverage = Math.round((lines + statements + functions + branches) / 4);
+
+            // Función para determinar estado según coverage
+            const getCoverageStatus = (coverage) => {
+              if (coverage >= 80) return { emoji: '✅', color: '🟢', status: 'Excellent', message: 'Excellent coverage! Keep up the good work!' };
+              if (coverage >= 60) return { emoji: '⚠️', color: '🟡', status: 'Good', message: 'Coverage is good but could be improved. Consider adding more tests.' };
+              if (coverage >= 40) return { emoji: '⚠️', color: '🟠', status: 'Fair', message: 'Coverage is fair. Please add more tests to improve coverage.' };
+              return { emoji: '❌', color: '🔴', status: 'Poor', message: 'Coverage is below recommended threshold (60%). Please add tests before merging.' };
+            };
+
+            const getStatusIcon = (value) => value >= 80 ? '✅' : value >= 60 ? '⚠️' : '❌';
+
+            const status = getCoverageStatus(avgCoverage);
+
+            const body = `## ${status.emoji} Test Coverage Report
+
+            ${status.color} **Overall Coverage: ${avgCoverage}%** (${status.status})
+
+            | Metric | Coverage | Status |
+            |--------|----------|--------|
+            | 📊 Lines | ${lines}% | ${getStatusIcon(lines)} |
+            | 📝 Statements | ${statements}% | ${getStatusIcon(statements)} |
+            | 🔧 Functions | ${functions}% | ${getStatusIcon(functions)} |
+            | 🌿 Branches | ${branches}% | ${getStatusIcon(branches)} |
+
+            ${status.message}
+
+            ---
+            *This comment is automatically generated by CI. It updates on every push to this PR.*`;
+
+            // Buscar comentario existente del bot
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.data.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('Test Coverage Report')
+            );
+
+            if (botComment) {
+              // Actualizar comentario existente
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+              console.log('✅ Coverage comment updated');
+            } else {
+              // Crear nuevo comentario
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+              console.log('✅ Coverage comment created');
+            }
+
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage/lcov.info
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [lint-and-format, test]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Check build artifacts
+        run: |
+          if [ ! -d "dist" ]; then
+            echo "❌ Build failed: dist directory not found"
+            exit 1
+          fi
+          echo "✅ Build successful"
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Snyk security scan
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+
+      - name: Run npm audit
+        run: npm audit --audit-level=moderate || true
