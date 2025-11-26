@@ -257,3 +257,18 @@ export interface EncounterLocation {
   physicalType?: FhirCodeableConcept;
   period?: FhirPeriod;
 }
+
+// OperationOutcome Resource
+export interface OperationOutcome extends FhirResource {
+  resourceType: 'OperationOutcome';
+  issue: OperationOutcomeIssue[];
+}
+
+export interface OperationOutcomeIssue {
+  severity: 'fatal' | 'error' | 'warning' | 'information';
+  code: string;
+  details?: FhirCodeableConcept;
+  diagnostics?: string;
+  location?: string[];
+  expression?: string[];
+}

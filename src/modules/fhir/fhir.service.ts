@@ -5,6 +5,7 @@ import { PinoLogger } from 'nestjs-pino';
 
 import { Patient } from '../../common/interfaces/fhir.interface';
 import { CreatePatientDto, UpdatePatientDto } from '../../common/dto/fhir-patient.dto';
+import { FhirErrorService } from '../../common/services/fhir-error.service';
 
 /**
  * FHIR service for managing FHIR R4 resources
@@ -115,7 +116,8 @@ export class FhirService {
     const patient = this.patients.get(id);
 
     if (!patient) {
-      throw new NotFoundException(`Patient with ID ${id} not found`);
+      // Throw NotFoundException - will be converted to OperationOutcome by filter
+      throw new NotFoundException(FhirErrorService.createNotFoundError('Patient', id));
     }
 
     return patient;
@@ -169,7 +171,7 @@ export class FhirService {
     const existingPatient = this.patients.get(id);
 
     if (!existingPatient) {
-      throw new NotFoundException(`Patient with ID ${id} not found`);
+      throw new NotFoundException(FhirErrorService.createNotFoundError('Patient', id));
     }
 
     const now = new Date().toISOString();
@@ -199,7 +201,7 @@ export class FhirService {
     const patient = this.patients.get(id);
 
     if (!patient) {
-      throw new NotFoundException(`Patient with ID ${id} not found`);
+      throw new NotFoundException(FhirErrorService.createNotFoundError('Patient', id));
     }
 
     this.patients.delete(id);
