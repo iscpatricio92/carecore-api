@@ -1,0 +1,61 @@
+name: CD
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+      url: ${{ github.ref == 'refs/heads/main' && 'https://api.carecore.example.com' || 'https://staging-api.carecore.example.com' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Run database migrations
+        env:
+          NODE_ENV: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+        run: npm run migration:run
+        continue-on-error: true
+
+      - name: Deploy to server
+        # Aquí puedes agregar tu lógica de deployment
+        # Ejemplos: Docker, Kubernetes, AWS, Heroku, etc.
+        run: |
+          echo "🚀 Deploying to ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}"
+          echo "📦 Build artifacts ready in ./dist"
+          # Agrega aquí tus comandos de deployment
+          # Ejemplo con Docker:
+          # docker build -t carecore-api:${{ github.sha }} .
+          # docker push carecore-api:${{ github.sha }}
+
+      - name: Health check
+        run: |
+          echo "🏥 Running health check..."
+          # Agrega aquí tu lógica de health check
+          # Ejemplo:
+          # curl -f https://api.carecore.example.com/api/health || exit 1

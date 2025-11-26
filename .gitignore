@@ -45,6 +45,9 @@ lerna-debug.log*
 *~
 .DS_Store
 
+# Git config local (no commitear)
+.gitconfig.local
+
 # Temporary files
 .temp/
 .tmp/
