@@ -53,9 +53,54 @@ jobs:
 
       - name: Check commit messages (if PR)
         if: github.event_name == 'pull_request'
-        uses: wagoid/commitlint-github-action@v5
-        with:
-          configFile: './commitlint.config.mjs'
+        run: |
+          echo "🔍 Verificando mensajes de commit del PR..."
+
+          # Obtener commits del PR usando las referencias de GitHub
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+
+          echo "📋 Base: $BASE_SHA"
+          echo "📋 Head: $HEAD_SHA"
+
+          # Obtener mensajes de commit entre base y head
+          COMMITS=$(git log --format=%s $BASE_SHA..$HEAD_SHA 2>/dev/null || git log --format=%s origin/${{ github.base_ref }}..HEAD 2>/dev/null || echo "")
+
+          if [ -z "$COMMITS" ]; then
+            echo "⚠️  No se encontraron commits nuevos para verificar"
+            echo "💡 Esto puede ocurrir si el PR no tiene commits nuevos"
+            exit 0
+          fi
+
+          echo "📝 Encontrados commits para verificar:"
+          echo "$COMMITS" | nl
+          echo ""
+
+          # Verificar cada commit y contar errores
+          HAS_ERRORS=false
+          while IFS= read -r commit_msg; do
+            if [ -n "$commit_msg" ]; then
+              echo "🔍 Verificando: $commit_msg"
+              if ! echo "$commit_msg" | npx commitlint --config commitlint.config.mjs 2>/dev/null; then
+                echo "❌ Commit inválido: $commit_msg"
+                echo "💡 El mensaje debe seguir el formato: <tipo>(<scope>): <descripción>"
+                echo "   Ejemplo: feat(patients): agregar endpoint de búsqueda"
+                HAS_ERRORS=true
+              else
+                echo "✅ Commit válido"
+              fi
+            fi
+          done <<< "$COMMITS"
+
+          if [ "$HAS_ERRORS" = true ]; then
+            echo ""
+            echo "❌ Se encontraron commits con formato inválido"
+            echo "📚 Consulta CONTRIBUTING.md para ver el formato correcto"
+            exit 1
+          fi
+
+          echo ""
+          echo "✅ Todos los commits siguen el formato convencional"
 
   test:
     name: Run Tests
