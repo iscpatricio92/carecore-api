@@ -193,9 +193,12 @@ describe('FhirErrorService', () => {
     it('should generate unique IDs', async () => {
       const result1 = FhirErrorService.createOperationOutcome(400, 'Test 1');
       // Small delay to ensure different timestamp
-      await new Promise((resolve) => setTimeout(resolve, 1));
+      await new Promise((resolve) => setTimeout(resolve, 10));
       const result2 = FhirErrorService.createOperationOutcome(400, 'Test 2');
 
+      expect(result1.id).toBeDefined();
+      expect(result2.id).toBeDefined();
+      // IDs should be different (based on timestamp)
       expect(result1.id).not.toBe(result2.id);
     });
   });
