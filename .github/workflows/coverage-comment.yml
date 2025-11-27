@@ -77,7 +77,9 @@ jobs:
             echo "statements=0" >> $GITHUB_OUTPUT
             echo "functions=0" >> $GITHUB_OUTPUT
             echo "branches=0" >> $GITHUB_OUTPUT
-            echo "⚠️  Coverage file not found"
+            echo "⚠️  Coverage file not found (coverage/coverage-summary.json)"
+            echo "📋 Available files in coverage directory:"
+            ls -la coverage/ || echo "Coverage directory does not exist"
           fi
 
       - name: Create or update coverage comment
