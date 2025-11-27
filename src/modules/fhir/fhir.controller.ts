@@ -14,8 +14,13 @@ import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/
 
 import { FhirService } from './fhir.service';
 import { CreatePatientDto, UpdatePatientDto } from '../../common/dto/fhir-patient.dto';
+import {
+  CreatePractitionerDto,
+  UpdatePractitionerDto,
+} from '../../common/dto/fhir-practitioner.dto';
+import { CreateEncounterDto, UpdateEncounterDto } from '../../common/dto/fhir-encounter.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
-import { Patient } from '../../common/interfaces/fhir.interface';
+import { Patient, Practitioner, Encounter } from '../../common/interfaces/fhir.interface';
 
 @ApiTags('FHIR')
 @Controller('fhir')
@@ -81,5 +86,140 @@ export class FhirController {
   @ApiResponse({ status: 404, description: 'Patient not found' })
   deletePatient(@Param('id') id: string): Promise<void> {
     return this.fhirService.deletePatient(id);
+  }
+
+  // Practitioner endpoints
+  @Post('Practitioner')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create a new Practitioner' })
+  @ApiResponse({ status: 201, description: 'Practitioner created successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid data' })
+  createPractitioner(@Body() createPractitionerDto: CreatePractitionerDto): Promise<Practitioner> {
+    return this.fhirService.createPractitioner(createPractitionerDto);
+  }
+
+  @Get('Practitioner/:id')
+  @ApiOperation({ summary: 'Get a Practitioner by ID' })
+  @ApiParam({ name: 'id', description: 'Practitioner ID' })
+  @ApiResponse({ status: 200, description: 'Practitioner found' })
+  @ApiResponse({ status: 404, description: 'Practitioner not found' })
+  getPractitioner(@Param('id') id: string): Promise<Practitioner> {
+    return this.fhirService.getPractitioner(id);
+  }
+
+  @Get('Practitioner')
+  @ApiOperation({ summary: 'Search Practitioners' })
+  @ApiQuery({ name: 'name', required: false, description: 'Search by name' })
+  @ApiQuery({
+    name: 'identifier',
+    required: false,
+    description: 'Search by identifier (license)',
+  })
+  @ApiResponse({ status: 200, description: 'List of Practitioners' })
+  searchPractitioners(
+    @Query() pagination: PaginationDto,
+    @Query('name') name?: string,
+    @Query('identifier') identifier?: string,
+  ): Promise<{ total: number; entries: Practitioner[] }> {
+    return this.fhirService.searchPractitioners({
+      ...pagination,
+      name,
+      identifier,
+    });
+  }
+
+  @Put('Practitioner/:id')
+  @ApiOperation({ summary: 'Update a Practitioner' })
+  @ApiParam({ name: 'id', description: 'Practitioner ID' })
+  @ApiResponse({ status: 200, description: 'Practitioner updated successfully' })
+  @ApiResponse({ status: 404, description: 'Practitioner not found' })
+  updatePractitioner(
+    @Param('id') id: string,
+    @Body() updatePractitionerDto: UpdatePractitionerDto,
+  ): Promise<Practitioner> {
+    return this.fhirService.updatePractitioner(id, updatePractitionerDto);
+  }
+
+  @Delete('Practitioner/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete a Practitioner' })
+  @ApiParam({ name: 'id', description: 'Practitioner ID' })
+  @ApiResponse({ status: 204, description: 'Practitioner deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Practitioner not found' })
+  deletePractitioner(@Param('id') id: string): Promise<void> {
+    return this.fhirService.deletePractitioner(id);
+  }
+
+  // Encounter endpoints
+  @Post('Encounter')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create a new Encounter' })
+  @ApiResponse({ status: 201, description: 'Encounter created successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid data' })
+  createEncounter(@Body() createEncounterDto: CreateEncounterDto): Promise<Encounter> {
+    return this.fhirService.createEncounter(createEncounterDto);
+  }
+
+  @Get('Encounter/:id')
+  @ApiOperation({ summary: 'Get an Encounter by ID' })
+  @ApiParam({ name: 'id', description: 'Encounter ID' })
+  @ApiResponse({ status: 200, description: 'Encounter found' })
+  @ApiResponse({ status: 404, description: 'Encounter not found' })
+  getEncounter(@Param('id') id: string): Promise<Encounter> {
+    return this.fhirService.getEncounter(id);
+  }
+
+  @Get('Encounter')
+  @ApiOperation({ summary: 'Search Encounters' })
+  @ApiQuery({
+    name: 'subject',
+    required: false,
+    description: 'Search by Patient reference (e.g., Patient/123)',
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    description: 'Filter by status (planned, in-progress, finished, etc.)',
+  })
+  @ApiQuery({
+    name: 'date',
+    required: false,
+    description: 'Filter by date (YYYY-MM-DD)',
+  })
+  @ApiResponse({ status: 200, description: 'List of Encounters' })
+  searchEncounters(
+    @Query() pagination: PaginationDto,
+    @Query('subject') subject?: string,
+    @Query('status') status?: string,
+    @Query('date') date?: string,
+  ): Promise<{ total: number; entries: Encounter[] }> {
+    return this.fhirService.searchEncounters({
+      ...pagination,
+      subject,
+      status,
+      date,
+    });
+  }
+
+  @Put('Encounter/:id')
+  @ApiOperation({ summary: 'Update an Encounter' })
+  @ApiParam({ name: 'id', description: 'Encounter ID' })
+  @ApiResponse({ status: 200, description: 'Encounter updated successfully' })
+  @ApiResponse({ status: 404, description: 'Encounter not found' })
+  updateEncounter(
+    @Param('id') id: string,
+    @Body() updateEncounterDto: UpdateEncounterDto,
+  ): Promise<Encounter> {
+    return this.fhirService.updateEncounter(id, updateEncounterDto);
+  }
+
+  @Delete('Encounter/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete an Encounter' })
+  @ApiParam({ name: 'id', description: 'Encounter ID' })
+  @ApiResponse({ status: 204, description: 'Encounter deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Encounter not found' })
+  deleteEncounter(@Param('id') id: string): Promise<void> {
+    return this.fhirService.deleteEncounter(id);
   }
 }

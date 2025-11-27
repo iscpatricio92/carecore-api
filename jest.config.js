@@ -10,6 +10,8 @@ module.exports = {
     '!**/*.spec.ts',
     '!**/*.interface.ts',
     '!**/*.dto.ts',
+    '!**/*.module.ts',
+    '!**/main.ts',
     '!**/node_modules/**',
   ],
   coverageDirectory: '../coverage',
@@ -20,4 +22,5 @@ module.exports = {
     '^@/config/(.*)$': '<rootDir>/config/$1',
     '^@/modules/(.*)$': '<rootDir>/modules/$1',
   },
+  transformIgnorePatterns: ['node_modules/(?!(uuid|@nestjs-pino)/)'],
 };
