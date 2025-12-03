@@ -32,7 +32,13 @@
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/config/database.config.ts",
     "prepare": "husky install",
     "github:create-tasks-phase1": "node scripts/create-github-tasks-phase1.js",
-    "github:create-tasks-phase1:dry-run": "node scripts/create-github-tasks-phase1.js --dry-run"
+    "github:create-tasks-phase1:dry-run": "node scripts/create-github-tasks-phase1.js --dry-run",
+    "docker:up": "make docker-up",
+    "docker:down": "make docker-down",
+    "docker:logs": "make docker-logs",
+    "docker:keycloak:logs": "docker-compose logs -f keycloak",
+    "docker:keycloak:restart": "docker-compose restart keycloak",
+    "docker:keycloak:shell": "docker-compose exec keycloak /bin/bash"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.20",

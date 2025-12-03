@@ -22,7 +22,7 @@ stop: ## Detener la aplicación
 clean: docker-clean-env ## Limpiar archivos generados
 	rm -rf dist node_modules coverage
 
-docker-up: ## Iniciar contenedores Docker (PostgreSQL)
+docker-up: ## Iniciar contenedores Docker (PostgreSQL + Keycloak + API)
 	@ENV_BASE=$$(echo .env.$${NODE_ENV:-development}); \
 	ENV_LOCAL=.env.local; \
 	ENV_COMBINED=.env.docker; \
@@ -52,9 +52,11 @@ docker-up: ## Iniciar contenedores Docker (PostgreSQL)
 		echo "🐳 Usando configuración: docker-compose.yml (sin override)"; \
 		docker-compose --env-file $$ENV_COMBINED up -d; \
 	fi; \
-	echo "Esperando a que PostgreSQL esté listo..."; \
+	echo "Esperando a que los servicios estén listos..."; \
 	sleep 5; \
-	echo "✅ PostgreSQL está corriendo en puerto 5432"
+	echo "✅ PostgreSQL está corriendo en puerto 5432"; \
+	echo "✅ Keycloak está corriendo en puerto 8080 (http://localhost:8080)"; \
+	echo "✅ API está corriendo en puerto 3000 (http://localhost:3000)"
 
 docker-down: ## Detener contenedores Docker
 	@ENV_BASE=$$(echo .env.$${NODE_ENV:-development}); \

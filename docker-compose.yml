@@ -16,6 +16,11 @@
 # - DB_PASSWORD: Contraseña de PostgreSQL (NUNCA usar valores por defecto)
 # - DB_NAME: Nombre de la base de datos
 # - DB_PORT: Puerto de PostgreSQL (opcional, default: 5432)
+# - KEYCLOAK_ADMIN: Usuario administrador de Keycloak
+# - KEYCLOAK_ADMIN_PASSWORD: Contraseña del administrador de Keycloak
+# - KEYCLOAK_PORT: Puerto de Keycloak (opcional, default: 8080)
+# - PORT: Puerto de la API (opcional, default: 3000)
+# - NODE_ENV: Entorno (development/production)
 
 services:
   postgres:
@@ -39,8 +44,85 @@ services:
       retries: 5
     networks:
       - carecore-network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0.4
+    container_name: carecore-keycloak
+    command: start-dev
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_DB: postgres
+      KC_DB_URL_HOST: postgres
+      KC_DB_URL_DATABASE: keycloak_db
+      KC_DB_USERNAME: ${DB_USER}
+      KC_DB_PASSWORD: ${DB_PASSWORD}
+      KC_DB_URL_PORT: 5432
+      KC_HTTP_ENABLED: 'true'
+      KC_HTTP_PORT: 8080
+    ports:
+      - '${KEYCLOAK_PORT:-8080}:8080'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - carecore-network
+    volumes:
+      - keycloak_data:/var/lib/keycloak/data
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'exec 3<>/dev/tcp/localhost/8080 && echo -e "GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3 && cat <&3 | grep -q "HTTP/1.1 200" || exit 1',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: carecore-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${PORT:-3000}
+      DB_TYPE: postgres
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_SYNCHRONIZE: ${DB_SYNCHRONIZE:-false}
+      KEYCLOAK_URL: ${KEYCLOAK_URL:-http://keycloak:8080}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-carecore}
+    ports:
+      - '${PORT:-3000}:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    networks:
+      - carecore-network
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'node -e "require(\"http\").get(\"http://localhost:3000/api\", (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
 volumes:
   postgres_data:
+    driver: local
+  keycloak_data:
     driver: local
 
 networks:

@@ -14,3 +14,29 @@ services:
     restart: always
     # En producción, las variables de entorno vienen de .env.production + .env.local (combinados por Makefile)
     # Considera usar secrets de Docker en lugar de variables de entorno para mayor seguridad
+
+  keycloak:
+    restart: always
+    # En producción, usar modo production de Keycloak
+    command: start
+    environment:
+      KC_PROXY: edge
+      KC_HTTP_RELATIVE_PATH: /
+
+  api:
+    restart: always
+    # En producción, usar la imagen optimizada (ya configurada en docker-compose.yml base)
+    environment:
+      NODE_ENV: production
+      DB_SYNCHRONIZE: false
+    # Healthcheck más estricto en producción
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'node -e "require(\"http\").get(\"http://localhost:3000/api\", (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
