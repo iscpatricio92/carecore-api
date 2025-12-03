@@ -81,8 +81,8 @@ Agregar todas las variables de entorno necesarias para Keycloak en los archivos 
 
 ## Tareas
 - [ ] Agregar variables a `.env.development.example`:
-  - `KEYCLOAK_ADMIN=admin`
-  - `KEYCLOAK_ADMIN_PASSWORD=admin` (cambiar en producción)
+  - `KEYCLOAK_ADMIN=` (valor vacío, llenar en .env.local)
+  - `KEYCLOAK_ADMIN_PASSWORD=` (valor vacío, llenar en .env.local)
   - `KEYCLOAK_URL=http://localhost:8080`
   - `KEYCLOAK_REALM=carecore`
   - `KEYCLOAK_PORT=8080`
@@ -380,7 +380,7 @@ Crear documentación completa sobre el setup, configuración y uso de Keycloak e
 - [ ] Crear sección "Keycloak Setup" en README.md
 - [ ] Documentar acceso a admin console:
   - URL: http://localhost:8080
-  - Usuario: admin (o KEYCLOAK_ADMIN)
+  - Usuario: (valor de KEYCLOAK_ADMIN de .env.local)
   - Contraseña: (de variable de entorno)
 - [ ] Documentar estructura de carpetas keycloak/
 - [ ] Crear guía de troubleshooting común:

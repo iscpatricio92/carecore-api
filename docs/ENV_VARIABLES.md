@@ -30,7 +30,7 @@ The project uses an environment-specific variable configuration with loading pri
    The Makefile automatically combines the files and uses the result with `--env-file`.
    You don't need to create a separate `.env` file.
 
-   ⚠️ **Note:** Environment files must contain the variables `DB_USER`, `DB_PASSWORD`, `DB_NAME`, and `DB_PORT`.
+   ⚠️ **Note:** Environment files must contain the variables `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_PORT`, `KEYCLOAK_ADMIN`, and `KEYCLOAK_ADMIN_PASSWORD`.
 
 ### For Production:
 
@@ -75,13 +75,13 @@ APP_NAME=CareCore API
 DB_TYPE=postgres
 DB_HOST=localhost
 DB_PORT=5432
-DB_USER=carecore
-DB_PASSWORD=carecore_dev_password
-DB_NAME=carecore_db
+DB_USER=
+DB_PASSWORD=
+DB_NAME=
 DB_SYNCHRONIZE=false
 
 # JWT
-JWT_SECRET=your-super-secret-jwt-key-change-in-production
+JWT_SECRET=
 JWT_EXPIRATION=24h
 
 # FHIR
@@ -98,10 +98,17 @@ CORS_ORIGIN=http://localhost:3000
 RATE_LIMIT_TTL=60
 RATE_LIMIT_MAX=100
 
-# PgAdmin
-PGADMIN_EMAIL=admin@carecore.local
-PGADMIN_PASSWORD=admin
+# PgAdmin (Optional)
+PGADMIN_EMAIL=
+PGADMIN_PASSWORD=
 PGADMIN_PORT=5050
+
+# Keycloak
+KEYCLOAK_ADMIN=
+KEYCLOAK_ADMIN_PASSWORD=
+KEYCLOAK_URL=http://localhost:8080
+KEYCLOAK_REALM=carecore
+KEYCLOAK_PORT=8080
 ```
 
 ## Variable Descriptions
@@ -142,6 +149,22 @@ PGADMIN_PORT=5050
 - `PGADMIN_EMAIL`: Email to access PgAdmin
 - `PGADMIN_PASSWORD`: Password for PgAdmin
 - `PGADMIN_PORT`: Port for PgAdmin (default: 5050)
+
+### Keycloak
+- `KEYCLOAK_ADMIN`: Username for Keycloak administrator (default: `admin`)
+- `KEYCLOAK_ADMIN_PASSWORD`: Password for Keycloak administrator (**change in production!**)
+- `KEYCLOAK_URL`: Base URL of Keycloak server
+  - Development: `http://localhost:8080`
+  - Production: `https://keycloak.yourdomain.com`
+  - Docker internal: `http://keycloak:8080` (when API runs in Docker)
+- `KEYCLOAK_REALM`: Name of the Keycloak realm (default: `carecore`)
+- `KEYCLOAK_PORT`: Port where Keycloak runs (default: `8080`)
+
+⚠️ **Security Notes for Keycloak:**
+- Change `KEYCLOAK_ADMIN_PASSWORD` in production immediately
+- Use strong passwords (minimum 16 characters, mix of letters, numbers, symbols)
+- In production, use HTTPS for `KEYCLOAK_URL`
+- Consider using environment-specific realms (e.g., `carecore-dev`, `carecore-prod`)
 
 ## Loading Priority
 
