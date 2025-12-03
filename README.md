@@ -56,8 +56,8 @@ This repository contains the backend API, built with NestJS, FHIR, and an archit
 
    ⚠️ **Note:**
    - Docker Compose and NestJS use the same environment file system
-   - Both read first `.env.${NODE_ENV}` (or `.env.development` by default)
-   - Both read then `.env.local` if it exists (which overrides values)
+     - Both read first `.env.${NODE_ENV}` (or `.env.development` by default)
+     - Both read then `.env.local` if it exists (which overrides values)
    - The Makefile automatically combines both files for Docker Compose
 
    For detailed configuration, see [ENV_VARIABLES.md](ENV_VARIABLES.md)
@@ -438,13 +438,19 @@ El sistema ahora puede:
 - [ ] **S3/MinIO** — Almacenamiento de documentos (DocumentReference)
 - [ ] **Encrypted fields** — pgcrypto, client-side encryption para ePHI crítico
 
-### Autenticación y Autorización ⏳
+### Autenticación y Autorización ⏳[HU: ARCH_001](https://github.com/users/iscpatricio92/projects/2/views/1?pane=issue&itemId=141432066&issue=iscpatricio92%7Ccarecore-api%7C13#:~:text=ARCH%2D001%20Decisi%C3%B3n%20e%20Integraci%C3%B3n%20del%20Identity%20Provider%20(IdP)%20%5BKeycloak/Auth0/Propio%5D%20%2313) [HU: API_002](https://github.com/users/iscpatricio92/projects/2/views/1?pane=issue&itemId=141430055&issue=iscpatricio92%7Ccarecore-api%7C2#:~:text=Autenticaci%C3%B3n%20(OAuth2/OIDC)-,%232,-Edit)
 
-- [ ] **Identity Provider**
-  - [ ] Auth0, Keycloak, o IdP propio
-  - [ ] OAuth2/OIDC
-  - [ ] MFA
+**📋 Plan detallado:** Ver [docs/AUTH_IMPLEMENTATION_PLAN.md](docs/AUTH_IMPLEMENTATION_PLAN.md)
+**📝 Tareas GitHub Projects Fase 1:** Ver [docs/tasks/PHASE1_KEYCLOAK_SETUP.md](docs/tasks/PHASE1_KEYCLOAK_SETUP.md) ⚠️ *Temporal*
+
+- [ ] **Identity Provider** - Recomendado: Keycloak
+  - [ ] Setup Keycloak en Docker
+  - [ ] Configuración de Realm y Clientes
+  - [ ] Integración con NestJS
+  - [ ] OAuth2/OIDC implementado
+  - [ ] MFA configurado
   - [ ] Verificación de identidad para practitioners (verificación de cédula)
+  - [ ] SMART on FHIR integrado
 
 ### Observabilidad
 
@@ -618,12 +624,20 @@ Access FHIR metadata at: `/api/fhir/metadata`
 
 ---
 
-## 📖 Documentación Técnica
+## 📖 Documentación
 
-Para información técnica detallada, consulta:
+### Documentación Permanente
 
+- [docs/AUTH_IMPLEMENTATION_PLAN.md](docs/AUTH_IMPLEMENTATION_PLAN.md) - Plan completo de autenticación y autorización
 - [ENV_VARIABLES.md](ENV_VARIABLES.md) - Configuración detallada de variables de entorno
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Guías de contribución y convenciones
+
+### Documentación Temporal ⚠️
+
+> Archivos en `docs/tasks/` son temporales y pueden ser eliminados una vez completadas las tareas.
+
+- [docs/tasks/PHASE1_KEYCLOAK_SETUP.md](docs/tasks/PHASE1_KEYCLOAK_SETUP.md) - Tareas detalladas para Fase 1 (Setup Keycloak)
+- [docs/tasks/README.md](docs/tasks/README.md) - Información sobre archivos temporales
 
 ---
 

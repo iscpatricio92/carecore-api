@@ -30,7 +30,9 @@
     "migration:generate": "typeorm-ts-node-commonjs migration:generate -d src/config/database.config.ts",
     "migration:run": "typeorm-ts-node-commonjs migration:run -d src/config/database.config.ts",
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/config/database.config.ts",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "github:create-tasks-phase1": "node scripts/create-github-tasks-phase1.js",
+    "github:create-tasks-phase1:dry-run": "node scripts/create-github-tasks-phase1.js --dry-run"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.20",

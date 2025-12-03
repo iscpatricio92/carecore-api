@@ -53,6 +53,7 @@ lerna-debug.log*
 .tmp/
 *.tmp
 .env.docker
+.tmp-issue-*.md
 
 # TypeScript
 *.tsbuildinfo
