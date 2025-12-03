@@ -11,11 +11,28 @@
 # 2. Selecciona el archivo docker-compose apropiado según NODE_ENV
 # 3. Usa --env-file para cargar el archivo combinado
 #
-# Variables requeridas:
+# Variables requeridas (TODAS deben estar en .env.local o .env.development/.env.production):
 # - DB_USER: Usuario de PostgreSQL
-# - DB_PASSWORD: Contraseña de PostgreSQL (NUNCA usar valores por defecto)
-# - DB_NAME: Nombre de la base de datos
-# - DB_PORT: Puerto de PostgreSQL (opcional, default: 5432)
+# - DB_PASSWORD: Contraseña de PostgreSQL
+# - DB_NAME: Nombre de la base de datos principal
+# - DB_HOST: Host de PostgreSQL (usar 'postgres' dentro de Docker, 'localhost' fuera)
+# - DB_PORT: Puerto externo de PostgreSQL (puerto del host)
+# - DB_INTERNAL_PORT: Puerto interno de PostgreSQL dentro del contenedor (default: 5432)
+# - DB_TYPE: Tipo de base de datos (postgres)
+# - KEYCLOAK_ADMIN: Usuario administrador de Keycloak
+# - KEYCLOAK_ADMIN_PASSWORD: Contraseña del administrador de Keycloak
+# - KEYCLOAK_URL: URL base de Keycloak
+# - KEYCLOAK_REALM: Nombre del realm de Keycloak
+# - KEYCLOAK_PORT: Puerto de Keycloak
+# - KEYCLOAK_DB_TYPE: Tipo de base de datos para Keycloak (postgres)
+# - KEYCLOAK_DB_HOST: Host de la base de datos de Keycloak (usar 'postgres' dentro de Docker)
+# - KEYCLOAK_DB_NAME: Nombre de la base de datos de Keycloak
+# - KEYCLOAK_DB_PORT: Puerto de la base de datos de Keycloak
+# - KEYCLOAK_HTTP_PORT: Puerto HTTP interno de Keycloak dentro del contenedor
+# - KEYCLOAK_HTTP_ENABLED: Habilitar HTTP en Keycloak (true/false)
+# - PORT: Puerto externo de la API (puerto del host)
+# - API_INTERNAL_PORT: Puerto interno de la API dentro del contenedor (default: 3000)
+# - NODE_ENV: Entorno (development/production)
 
 services:
   postgres:
@@ -29,18 +46,107 @@ services:
       POSTGRES_DB: ${DB_NAME}
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
-      - '${DB_PORT:-5432}:5432'
+      - '${DB_PORT}:${DB_INTERNAL_PORT}'
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      # Script que crea la base de datos de Keycloak al inicializar PostgreSQL
+      # Requiere KEYCLOAK_DB_NAME en las variables de entorno
+      - ./scripts/init-keycloak-db.sh:/docker-entrypoint-initdb.d/99-init-keycloak-db.sh:ro
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER}']
+      # Verificar que PostgreSQL esté listo usando el usuario y base de datos correctos
+      # Las variables de entorno están disponibles dentro del contenedor
+      # Usamos $$ para evitar que Docker Compose expanda las variables (se expanden dentro del contenedor)
+      # Especificamos la base de datos para evitar que PostgreSQL intente conectarse a una base con el nombre del usuario
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - carecore-network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0.4
+    container_name: carecore-keycloak
+    command: start-dev
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_DB: ${KEYCLOAK_DB_TYPE}
+      KC_DB_URL_HOST: ${KEYCLOAK_DB_HOST}
+      KC_DB_URL_DATABASE: ${KEYCLOAK_DB_NAME}
+      KC_DB_USERNAME: ${DB_USER}
+      KC_DB_PASSWORD: ${DB_PASSWORD}
+      KC_DB_URL_PORT: ${KEYCLOAK_DB_PORT}
+      KC_HTTP_ENABLED: ${KEYCLOAK_HTTP_ENABLED}
+      KC_HTTP_PORT: ${KEYCLOAK_HTTP_PORT}
+    ports:
+      - '${KEYCLOAK_PORT}:${KEYCLOAK_HTTP_PORT}'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - carecore-network
+    volumes:
+      - keycloak_data:/var/lib/keycloak/data
+    healthcheck:
+      # Keycloak responde en el puerto configurado, verificamos que esté escuchando
+      # Usamos $$ para evitar que Docker Compose expanda las variables (se expanden dentro del contenedor)
+      test:
+        [
+          'CMD-SHELL',
+          'port=$${KC_HTTP_PORT:-8080}; exec 3<>/dev/tcp/localhost/$$port && echo -e "GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3 && cat <&3 | grep -q "HTTP/1.1" || exit 1',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: carecore-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      PORT: ${API_INTERNAL_PORT}
+      API_INTERNAL_PORT: ${API_INTERNAL_PORT}
+      DB_TYPE: ${DB_TYPE}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_INTERNAL_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_SYNCHRONIZE: ${DB_SYNCHRONIZE}
+      KEYCLOAK_URL: ${KEYCLOAK_URL}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+    ports:
+      - '${PORT}:${API_INTERNAL_PORT}'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    networks:
+      - carecore-network
+    healthcheck:
+      # Usa PORT o API_INTERNAL_PORT desde process.env (ambas están disponibles en el contenedor)
+      # PORT se establece desde API_INTERNAL_PORT en línea 109, y es lo que usa NestJS
+      test:
+        [
+          'CMD-SHELL',
+          'node -e "const port = process.env.PORT || process.env.API_INTERNAL_PORT || \"3000\"; require(\"http\").get(\"http://localhost:\" + port + \"/api\", (r) => {process.exit(r.statusCode === 200 ? 0 : 1)}).on(\"error\", () => process.exit(1))"',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
 volumes:
   postgres_data:
+    driver: local
+  keycloak_data:
     driver: local
 
 networks:

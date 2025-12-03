@@ -5,6 +5,13 @@ import { PinoLogger } from 'nestjs-pino';
 
 import { LoggingInterceptor } from './logging.interceptor';
 
+/**
+ * Test constants - These are mock values for testing purposes only.
+ * They are NOT real credentials and should NEVER be used in production.
+ */
+const TEST_PASSWORD = 'secret123'; // Mock password for testing sanitization only
+const TEST_USERNAME = 'user'; // Mock username for testing only
+
 describe('LoggingInterceptor', () => {
   let interceptor: LoggingInterceptor;
 
@@ -85,12 +92,13 @@ describe('LoggingInterceptor', () => {
     });
 
     it('should sanitize sensitive fields in body', (done) => {
+      // Using test constants - these are mock values for testing sanitization only
       const requestWithPassword = {
         switchToHttp: jest.fn().mockReturnValue({
           getRequest: () => ({
             method: 'POST',
             url: '/api/test',
-            body: { password: 'secret123', username: 'user' },
+            body: { password: TEST_PASSWORD, username: TEST_USERNAME },
             query: {},
             params: {},
             requestId: 'test-request-id',

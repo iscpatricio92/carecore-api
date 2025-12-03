@@ -30,7 +30,7 @@ The project uses an environment-specific variable configuration with loading pri
    The Makefile automatically combines the files and uses the result with `--env-file`.
    You don't need to create a separate `.env` file.
 
-   ⚠️ **Note:** Environment files must contain the variables `DB_USER`, `DB_PASSWORD`, `DB_NAME`, and `DB_PORT`.
+   ⚠️ **Note:** Environment files must contain the variables `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_PORT`, `KEYCLOAK_ADMIN`, and `KEYCLOAK_ADMIN_PASSWORD`.
 
 ### For Production:
 
@@ -69,19 +69,21 @@ Here is the typical content of a `.env.local` file:
 # Application
 NODE_ENV=development
 PORT=3000
+API_INTERNAL_PORT=3000
 APP_NAME=CareCore API
 
 # Database
 DB_TYPE=postgres
 DB_HOST=localhost
 DB_PORT=5432
-DB_USER=carecore
-DB_PASSWORD=carecore_dev_password
-DB_NAME=carecore_db
+DB_INTERNAL_PORT=5432
+DB_USER=
+DB_PASSWORD=
+DB_NAME=
 DB_SYNCHRONIZE=false
 
 # JWT
-JWT_SECRET=your-super-secret-jwt-key-change-in-production
+JWT_SECRET=
 JWT_EXPIRATION=24h
 
 # FHIR
@@ -98,27 +100,44 @@ CORS_ORIGIN=http://localhost:3000
 RATE_LIMIT_TTL=60
 RATE_LIMIT_MAX=100
 
-# PgAdmin
-PGADMIN_EMAIL=admin@carecore.local
-PGADMIN_PASSWORD=admin
+# PgAdmin (Optional)
+PGADMIN_EMAIL=
+PGADMIN_PASSWORD=
 PGADMIN_PORT=5050
+
+# Keycloak
+KEYCLOAK_ADMIN=
+KEYCLOAK_ADMIN_PASSWORD=
+KEYCLOAK_URL=http://localhost:8080
+KEYCLOAK_REALM=carecore
+KEYCLOAK_PORT=8080
+KEYCLOAK_DB_TYPE=postgres
+KEYCLOAK_DB_HOST=postgres
+KEYCLOAK_DB_NAME=keycloak_db
+KEYCLOAK_DB_PORT=5432
+KEYCLOAK_HTTP_PORT=8080
+KEYCLOAK_HTTP_ENABLED=true
 ```
 
 ## Variable Descriptions
 
 ### Application
-- `NODE_ENV`: Runtime environment (`development`, `production`, `test`)
-- `PORT`: Port where the application will run (default: 3000)
+- `NODE_ENV`: Runtime environment (`development`, `production`, `test`) (**required**)
+- `PORT`: External port where the application will be accessible from the host (**required**)
+- `API_INTERNAL_PORT`: Internal port where the application runs inside the container (**required**, default: 3000)
 - `APP_NAME`: Application name
 
 ### Database
-- `DB_TYPE`: Database type (currently only `postgres`)
-- `DB_HOST`: PostgreSQL host (use `localhost` in development, service name in Docker)
-- `DB_PORT`: PostgreSQL port (default: 5432)
-- `DB_USER`: Database user
-- `DB_PASSWORD`: Database password
-- `DB_NAME`: Database name
-- `DB_SYNCHRONIZE`: Automatically synchronize schema (only `true` in development)
+- `DB_TYPE`: Database type (currently only `postgres`) (**required**)
+- `DB_HOST`: PostgreSQL host (**required**)
+  - Use `postgres` when running in Docker (service name)
+  - Use `localhost` when running outside Docker
+- `DB_PORT`: External PostgreSQL port (port on the host) (**required**)
+- `DB_INTERNAL_PORT`: Internal PostgreSQL port inside the container (**required**, default: 5432)
+- `DB_USER`: Database user (**required**)
+- `DB_PASSWORD`: Database password (**required**)
+- `DB_NAME`: Database name (**required**)
+- `DB_SYNCHRONIZE`: Automatically synchronize schema (only `true` in development) (**required**)
 
 ### JWT
 - `JWT_SECRET`: Secret key for signing JWT tokens (**change in production!**)
@@ -142,6 +161,46 @@ PGADMIN_PORT=5050
 - `PGADMIN_EMAIL`: Email to access PgAdmin
 - `PGADMIN_PASSWORD`: Password for PgAdmin
 - `PGADMIN_PORT`: Port for PgAdmin (default: 5050)
+
+### Keycloak
+- `KEYCLOAK_ADMIN`: Username for Keycloak administrator (**required**)
+- `KEYCLOAK_ADMIN_PASSWORD`: Password for Keycloak administrator (**required**, **change in production!**)
+- `KEYCLOAK_URL`: Base URL of Keycloak server (**required**)
+  - Development: `http://localhost:8080`
+  - Production: `https://keycloak.yourdomain.com`
+  - Docker internal: `http://keycloak:8080` (when API runs in Docker)
+- `KEYCLOAK_REALM`: Name of the Keycloak realm (**required**)
+- `KEYCLOAK_PORT`: Port where Keycloak runs externally (**required**)
+- `KEYCLOAK_DB_TYPE`: Database type for Keycloak (default: `postgres`) (**required**)
+- `KEYCLOAK_DB_HOST`: Database host for Keycloak (**required**)
+  - Use `postgres` when running in Docker (service name)
+  - Use `localhost` when running outside Docker
+- `KEYCLOAK_DB_NAME`: Name of the Keycloak database (**required**)
+- `KEYCLOAK_DB_PORT`: Database port for Keycloak (**required**)
+- `KEYCLOAK_HTTP_PORT`: Internal HTTP port for Keycloak (**required**)
+- `KEYCLOAK_HTTP_ENABLED`: Enable HTTP in Keycloak (`true` or `false`) (**required**)
+
+### Keycloak Client (API)
+- `KEYCLOAK_CLIENT_ID`: Client ID for the API backend (**required**)
+  - Default: `carecore-api`
+- `KEYCLOAK_CLIENT_SECRET`: Client Secret for the API backend (**required**, **NEVER commit!**)
+  - ⚠️ **SENSITIVE:** Store only in `.env.local`
+  - ⚠️ **NEVER** commit to repository
+  - ⚠️ Rotate periodically in production
+
+### Keycloak Client (Web Frontend)
+- `KEYCLOAK_WEB_CLIENT_ID`: Client ID for the web frontend (**optional**, para referencia)
+  - Default: `carecore-web`
+  - **Nota:** Este cliente es público y no requiere Client Secret
+  - **Nota:** El frontend usará este Client ID, no el backend
+
+⚠️ **Security Notes for Keycloak:**
+- Change `KEYCLOAK_ADMIN_PASSWORD` in production immediately
+- Use strong passwords (minimum 16 characters, mix of letters, numbers, symbols)
+- In production, use HTTPS for `KEYCLOAK_URL`
+- Consider using environment-specific realms (e.g., `carecore-dev`, `carecore-prod`)
+- All Keycloak database variables (`KEYCLOAK_DB_*`) must match your PostgreSQL configuration
+- The `KEYCLOAK_DB_NAME` database will be created automatically by the `init-keycloak-db.sh` script
 
 ## Loading Priority
 

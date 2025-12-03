@@ -12,3 +12,62 @@ services:
   postgres:
     # En desarrollo, podemos exponer más puertos o configuraciones específicas
     # Las variables de entorno vienen de .env.development + .env.local (combinados por Makefile)
+
+  api:
+    # En desarrollo, usar el stage "development" que tiene todas las dependencias sin compilar
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    # Cambiar usuario a root temporalmente para desarrollo (necesario para escribir en volúmenes)
+    user: root
+    # Instalar dependencias primero (necesario porque el volumen anónimo sobrescribe node_modules)
+    # Limpiar dist si existe para evitar errores EBUSY
+    # Luego ejecutar nest start --watch usando npx
+    command: sh -c "npm ci && rm -rf /app/dist && npx nest start --watch"
+    volumes:
+      # Montar código fuente para hot-reload
+      - ./src:/app/src
+      # Montar archivos de configuración para que los cambios se reflejen
+      # IMPORTANTE: Montar tanto package.json como package-lock.json para asegurar consistencia
+      # npm ci requiere que ambos archivos estén sincronizados
+      - ./package.json:/app/package.json:ro
+      - ./package-lock.json:/app/package-lock.json:ro
+      - ./tsconfig.json:/app/tsconfig.json:ro
+      - ./nest-cli.json:/app/nest-cli.json:ro
+      # Excluir node_modules del volumen (usar los del contenedor)
+      # No excluir dist como volumen anónimo - dejamos que se cree normalmente
+      # Esto evita problemas de bloqueo (EBUSY) cuando nest intenta limpiar/recrear dist
+      - /app/node_modules
+    environment:
+      NODE_ENV: development
+      # Variables de base de datos (deben estar en .env.local)
+      DB_TYPE: ${DB_TYPE}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_INTERNAL_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_SYNCHRONIZE: ${DB_SYNCHRONIZE}
+      # Variables de aplicación (deben estar en .env.local)
+      PORT: ${API_INTERNAL_PORT}
+      API_INTERNAL_PORT: ${API_INTERNAL_PORT}
+      # Variables de FHIR (deben estar en .env.local)
+      FHIR_VERSION: ${FHIR_VERSION}
+      FHIR_BASE_URL: ${FHIR_BASE_URL}
+      # Variables de Keycloak (deben estar en .env.local)
+      KEYCLOAK_URL: ${KEYCLOAK_URL}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+    # En desarrollo, no necesitamos healthcheck estricto
+    # Usa PORT o API_INTERNAL_PORT desde process.env (ambas están disponibles en el contenedor)
+    # PORT se establece desde API_INTERNAL_PORT en línea 50, y es lo que usa NestJS
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'node -e "const port = process.env.PORT || process.env.API_INTERNAL_PORT || \"3000\"; require(\"http\").get(\"http://localhost:\" + port + \"/api\", (r) => {process.exit(r.statusCode === 200 ? 0 : 1)}).on(\"error\", () => process.exit(1))"',
+        ]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
