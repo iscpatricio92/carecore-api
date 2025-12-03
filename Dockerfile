@@ -12,7 +12,23 @@ COPY package*.json ./
 RUN npm ci --omit=dev --ignore-scripts && \
     npm cache clean --force
 
-# Stage 2: Build
+# Stage 2: Development (for hot-reload in development)
+FROM node:20-alpine AS development
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY tsconfig.json ./
+COPY nest-cli.json ./
+
+# Install all dependencies (including dev dependencies for development)
+RUN npm ci && \
+    npm cache clean --force
+
+# Don't copy source code or build - it will be mounted as volume in docker-compose
+# This stage is ready for development with hot-reload
+
+# Stage 3: Build
 FROM node:20-alpine AS build
 WORKDIR /app
 
@@ -31,7 +47,7 @@ COPY src ./src
 # Build the application
 RUN npm run build
 
-# Stage 3: Production
+# Stage 4: Production
 FROM node:20-alpine AS production
 WORKDIR /app
 
@@ -49,7 +65,8 @@ COPY --from=build --chown=nestjs:nodejs /app/package*.json ./
 # Switch to non-root user
 USER nestjs
 
-# Expose port (default 3000, can be overridden via PORT env var)
+# Expose port (default 3000, can be overridden via API_INTERNAL_PORT env var)
+# Note: The actual port is controlled by API_INTERNAL_PORT environment variable
 EXPOSE 3000
 
 # Health check

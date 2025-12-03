@@ -69,12 +69,14 @@ Here is the typical content of a `.env.local` file:
 # Application
 NODE_ENV=development
 PORT=3000
+API_INTERNAL_PORT=3000
 APP_NAME=CareCore API
 
 # Database
 DB_TYPE=postgres
 DB_HOST=localhost
 DB_PORT=5432
+DB_INTERNAL_PORT=5432
 DB_USER=
 DB_PASSWORD=
 DB_NAME=
@@ -109,23 +111,33 @@ KEYCLOAK_ADMIN_PASSWORD=
 KEYCLOAK_URL=http://localhost:8080
 KEYCLOAK_REALM=carecore
 KEYCLOAK_PORT=8080
+KEYCLOAK_DB_TYPE=postgres
+KEYCLOAK_DB_HOST=postgres
+KEYCLOAK_DB_NAME=keycloak_db
+KEYCLOAK_DB_PORT=5432
+KEYCLOAK_HTTP_PORT=8080
+KEYCLOAK_HTTP_ENABLED=true
 ```
 
 ## Variable Descriptions
 
 ### Application
-- `NODE_ENV`: Runtime environment (`development`, `production`, `test`)
-- `PORT`: Port where the application will run (default: 3000)
+- `NODE_ENV`: Runtime environment (`development`, `production`, `test`) (**required**)
+- `PORT`: External port where the application will be accessible from the host (**required**)
+- `API_INTERNAL_PORT`: Internal port where the application runs inside the container (**required**, default: 3000)
 - `APP_NAME`: Application name
 
 ### Database
-- `DB_TYPE`: Database type (currently only `postgres`)
-- `DB_HOST`: PostgreSQL host (use `localhost` in development, service name in Docker)
-- `DB_PORT`: PostgreSQL port (default: 5432)
-- `DB_USER`: Database user
-- `DB_PASSWORD`: Database password
-- `DB_NAME`: Database name
-- `DB_SYNCHRONIZE`: Automatically synchronize schema (only `true` in development)
+- `DB_TYPE`: Database type (currently only `postgres`) (**required**)
+- `DB_HOST`: PostgreSQL host (**required**)
+  - Use `postgres` when running in Docker (service name)
+  - Use `localhost` when running outside Docker
+- `DB_PORT`: External PostgreSQL port (port on the host) (**required**)
+- `DB_INTERNAL_PORT`: Internal PostgreSQL port inside the container (**required**, default: 5432)
+- `DB_USER`: Database user (**required**)
+- `DB_PASSWORD`: Database password (**required**)
+- `DB_NAME`: Database name (**required**)
+- `DB_SYNCHRONIZE`: Automatically synchronize schema (only `true` in development) (**required**)
 
 ### JWT
 - `JWT_SECRET`: Secret key for signing JWT tokens (**change in production!**)
@@ -151,20 +163,30 @@ KEYCLOAK_PORT=8080
 - `PGADMIN_PORT`: Port for PgAdmin (default: 5050)
 
 ### Keycloak
-- `KEYCLOAK_ADMIN`: Username for Keycloak administrator (default: `admin`)
-- `KEYCLOAK_ADMIN_PASSWORD`: Password for Keycloak administrator (**change in production!**)
-- `KEYCLOAK_URL`: Base URL of Keycloak server
+- `KEYCLOAK_ADMIN`: Username for Keycloak administrator (**required**)
+- `KEYCLOAK_ADMIN_PASSWORD`: Password for Keycloak administrator (**required**, **change in production!**)
+- `KEYCLOAK_URL`: Base URL of Keycloak server (**required**)
   - Development: `http://localhost:8080`
   - Production: `https://keycloak.yourdomain.com`
   - Docker internal: `http://keycloak:8080` (when API runs in Docker)
-- `KEYCLOAK_REALM`: Name of the Keycloak realm (default: `carecore`)
-- `KEYCLOAK_PORT`: Port where Keycloak runs (default: `8080`)
+- `KEYCLOAK_REALM`: Name of the Keycloak realm (**required**)
+- `KEYCLOAK_PORT`: Port where Keycloak runs externally (**required**)
+- `KEYCLOAK_DB_TYPE`: Database type for Keycloak (default: `postgres`) (**required**)
+- `KEYCLOAK_DB_HOST`: Database host for Keycloak (**required**)
+  - Use `postgres` when running in Docker (service name)
+  - Use `localhost` when running outside Docker
+- `KEYCLOAK_DB_NAME`: Name of the Keycloak database (**required**)
+- `KEYCLOAK_DB_PORT`: Database port for Keycloak (**required**)
+- `KEYCLOAK_HTTP_PORT`: Internal HTTP port for Keycloak (**required**)
+- `KEYCLOAK_HTTP_ENABLED`: Enable HTTP in Keycloak (`true` or `false`) (**required**)
 
 ⚠️ **Security Notes for Keycloak:**
 - Change `KEYCLOAK_ADMIN_PASSWORD` in production immediately
 - Use strong passwords (minimum 16 characters, mix of letters, numbers, symbols)
 - In production, use HTTPS for `KEYCLOAK_URL`
 - Consider using environment-specific realms (e.g., `carecore-dev`, `carecore-prod`)
+- All Keycloak database variables (`KEYCLOAK_DB_*`) must match your PostgreSQL configuration
+- The `KEYCLOAK_DB_NAME` database will be created automatically by the `init-keycloak-db.sh` script
 
 ## Loading Priority
 

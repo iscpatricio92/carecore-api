@@ -380,7 +380,7 @@ services:
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}  # carecore_db
+      POSTGRES_DB: ${DB_NAME}
     # Keycloak creará su propia base de datos
 
   keycloak:
