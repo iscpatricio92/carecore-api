@@ -180,6 +180,14 @@ KEYCLOAK_HTTP_ENABLED=true
 - `KEYCLOAK_HTTP_PORT`: Internal HTTP port for Keycloak (**required**)
 - `KEYCLOAK_HTTP_ENABLED`: Enable HTTP in Keycloak (`true` or `false`) (**required**)
 
+### Keycloak Client (API)
+- `KEYCLOAK_CLIENT_ID`: Client ID for the API backend (**required**)
+  - Default: `carecore-api`
+- `KEYCLOAK_CLIENT_SECRET`: Client Secret for the API backend (**required**, **NEVER commit!**)
+  - ⚠️ **SENSITIVE:** Store only in `.env.local`
+  - ⚠️ **NEVER** commit to repository
+  - ⚠️ Rotate periodically in production
+
 ⚠️ **Security Notes for Keycloak:**
 - Change `KEYCLOAK_ADMIN_PASSWORD` in production immediately
 - Use strong passwords (minimum 16 characters, mix of letters, numbers, symbols)
