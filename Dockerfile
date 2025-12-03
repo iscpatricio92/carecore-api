@@ -65,13 +65,15 @@ COPY --from=build --chown=nestjs:nodejs /app/package*.json ./
 # Switch to non-root user
 USER nestjs
 
-# Expose port (default 3000, can be overridden via API_INTERNAL_PORT env var)
-# Note: The actual port is controlled by API_INTERNAL_PORT environment variable
+# Expose port (default 3000, can be overridden via PORT env var)
+# Note: The actual port is controlled by PORT environment variable (used by NestJS in main.ts)
 EXPOSE 3000
 
-# Health check
+# Health check - uses PORT or API_INTERNAL_PORT environment variable with 3000 as default
+# The healthcheck runs inside the container where PORT/API_INTERNAL_PORT env vars are available at runtime
+# Matches the behavior of docker-compose healthcheck overrides
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/api', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+  CMD node -e "const port = process.env.PORT || process.env.API_INTERNAL_PORT || '3000'; require('http').get('http://localhost:' + port + '/api', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)}).on('error', () => process.exit(1))"
 
 # Start the application
 CMD ["node", "dist/main"]

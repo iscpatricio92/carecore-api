@@ -80,6 +80,13 @@ docker-down: ## Detener contenedores Docker
 		else \
 			docker-compose --env-file $$ENV_COMBINED down; \
 		fi; \
+	elif [ -f "$$ENV_LOCAL" ]; then \
+		cat $$ENV_LOCAL > $$ENV_COMBINED; \
+		if [ -f "$$COMPOSE_ENV" ]; then \
+			docker-compose -f docker-compose.yml -f $$COMPOSE_ENV --env-file $$ENV_COMBINED down; \
+		else \
+			docker-compose --env-file $$ENV_COMBINED down; \
+		fi; \
 	else \
 		docker-compose down; \
 	fi
