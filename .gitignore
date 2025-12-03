@@ -66,3 +66,12 @@ docker-compose.override.yml
 
 # Husky
 .husky/_/
+
+# Keycloak exports (pueden contener información sensible)
+# Permitir solo la plantilla base, bloquear exports completos
+keycloak/realms/*-exported*.json
+keycloak/realms/*-backup*.json
+keycloak/realms/*-*.json
+!keycloak/realms/carecore-realm.json
+!keycloak/realms/.gitkeep
+!keycloak/realms/README.md

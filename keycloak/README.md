@@ -25,26 +25,22 @@ Este script se ejecuta automáticamente cuando:
 - Se inicia PostgreSQL por primera vez
 - El script está montado en `/docker-entrypoint-initdb.d/` dentro del contenedor
 
-### Configuración Manual
+### Configuración del Realm
 
-Para configurar Keycloak manualmente:
+Para crear y configurar el realm "carecore":
 
-1. **Iniciar servicios:**
-   ```bash
-   npm run docker:up
-   ```
+**📖 Guía completa:** Ver [REALM_SETUP.md](./REALM_SETUP.md)
 
-2. **Acceder a Admin Console:**
-   - URL: http://localhost:8080
-   - Usuario: Valor de `KEYCLOAK_ADMIN` en `.env.local`
-   - Contraseña: Valor de `KEYCLOAK_ADMIN_PASSWORD` en `.env.local`
+**Resumen rápido:**
+1. Iniciar servicios: `npm run docker:up`
+2. Acceder a Admin Console: http://localhost:8080
+3. Crear realm "carecore" (manual o importar desde `realms/carecore-realm.json`)
 
-3. **Crear Realm:**
-   - Ver [Tarea #4](../docs/tasks/PHASE1_KEYCLOAK_SETUP.md#tarea-4-crear-realm-carecore-en-keycloak)
+### Configuración de Clientes
 
-4. **Configurar Clientes:**
-   - Ver [Tarea #5](../docs/tasks/PHASE1_KEYCLOAK_SETUP.md#tarea-5-configurar-cliente-carecore-api-en-keycloak)
-   - Ver [Tarea #6](../docs/tasks/PHASE1_KEYCLOAK_SETUP.md#tarea-6-configurar-cliente-carecore-web-en-keycloak)
+Después de crear el realm:
+- Ver [Tarea #5](../docs/tasks/PHASE1_KEYCLOAK_SETUP.md#tarea-5-configurar-cliente-carecore-api-en-keycloak)
+- Ver [Tarea #6](../docs/tasks/PHASE1_KEYCLOAK_SETUP.md#tarea-6-configurar-cliente-carecore-web-en-keycloak)
 
 ## 📝 Scripts
 
