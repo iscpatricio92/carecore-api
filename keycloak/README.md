@@ -41,8 +41,12 @@ Para crear y configurar el realm "carecore":
 Después de crear el realm:
 
 **📖 Guías completas:**
+- [REALM_SETUP.md](./REALM_SETUP.md) - Configurar realm "carecore"
 - [CLIENT_API_SETUP.md](./CLIENT_API_SETUP.md) - Configurar cliente "carecore-api"
 - [CLIENT_WEB_SETUP.md](./CLIENT_WEB_SETUP.md) - Configurar cliente "carecore-web"
+- [CLIENT_WEB_VALIDATION.md](./CLIENT_WEB_VALIDATION.md) - Validar cliente web sin frontend
+- [ROLES_SETUP.md](./ROLES_SETUP.md) - Configurar roles base del sistema
+- [ROLES.md](./ROLES.md) - Documentación de roles y permisos
 
 ## 📝 Scripts
 
