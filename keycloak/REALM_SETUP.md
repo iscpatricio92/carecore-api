@@ -16,7 +16,7 @@ Crear el realm principal "carecore" con configuración básica para el MVP.
    ```
 
 2. Acceder a Admin Console:
-   - URL: http://localhost:8080
+   - URL: `${KEYCLOAK_URL}` (ver `.env.local` para el puerto, típicamente `http://localhost:${KEYCLOAK_HTTP_PORT}`)
    - Usuario: Valor de `KEYCLOAK_ADMIN` en `.env.local`
    - Contraseña: Valor de `KEYCLOAK_ADMIN_PASSWORD` en `.env.local`
 

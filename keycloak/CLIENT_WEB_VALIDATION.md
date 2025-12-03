@@ -88,7 +88,7 @@ curl -I "$FULL_URL"
 
 1. **Crear nueva request:**
    - Método: GET
-   - URL: `http://localhost:8080/realms/carecore/protocol/openid-connect/auth`
+   - URL: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/auth`
 
 2. **Configurar parámetros:**
    - `client_id`: `carecore-web`

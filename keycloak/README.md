@@ -6,11 +6,21 @@ Este directorio contiene la configuración y scripts de inicialización para Key
 
 ```
 keycloak/
-├── README.md           # Este archivo
-├── init/               # Scripts de inicialización
-│   └── README.md       # Documentación de scripts
-└── realms/             # Exports de realms (futuro)
-    └── .gitkeep        # Mantener carpeta en git
+├── README.md                    # Este archivo (documentación principal)
+├── REALM_SETUP.md               # Guía para crear/configurar el realm "carecore"
+├── CLIENT_API_SETUP.md          # Guía para configurar cliente "carecore-api"
+├── CLIENT_WEB_SETUP.md          # Guía para configurar cliente "carecore-web"
+├── CLIENT_WEB_VALIDATION.md     # Guía para validar cliente web sin frontend
+├── ROLES_SETUP.md               # Guía para crear roles base del sistema
+├── ROLES.md                      # Documentación de roles y permisos
+├── TROUBLESHOOTING.md            # Guía de troubleshooting y solución de problemas
+├── BACKUP_RESTORE.md            # Guía de backup y restore
+├── init/                         # Scripts de inicialización
+│   └── README.md                 # Documentación de scripts
+└── realms/                       # Exports de realms
+    ├── .gitkeep                  # Mantener carpeta en git
+    ├── README.md                 # Documentación sobre exports
+    └── carecore-realm.json       # Configuración base del realm (seguro para commit)
 ```
 
 **Nota:** El script `init-keycloak-db.sh` se encuentra en `scripts/init-keycloak-db.sh` y se ejecuta automáticamente cuando PostgreSQL se inicializa.
@@ -33,7 +43,7 @@ Para crear y configurar el realm "carecore":
 
 **Resumen rápido:**
 1. Iniciar servicios: `npm run docker:up`
-2. Acceder a Admin Console: http://localhost:8080
+2. Acceder a Admin Console: `${KEYCLOAK_URL}` (ver `.env.local` para el puerto)
 3. Crear realm "carecore" (manual o importar desde `realms/carecore-realm.json`)
 
 ### Configuración de Clientes
@@ -47,6 +57,9 @@ Después de crear el realm:
 - [CLIENT_WEB_VALIDATION.md](./CLIENT_WEB_VALIDATION.md) - Validar cliente web sin frontend
 - [ROLES_SETUP.md](./ROLES_SETUP.md) - Configurar roles base del sistema
 - [ROLES.md](./ROLES.md) - Documentación de roles y permisos
+- [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) - Guía de troubleshooting y solución de problemas
+- [BACKUP_RESTORE.md](./BACKUP_RESTORE.md) - Guía de backup y restore
+- [ARCHITECTURE.md](./ARCHITECTURE.md) - Arquitectura y diagramas del sistema
 
 ## 📝 Scripts
 
@@ -135,54 +148,22 @@ Los datos de Keycloak se persisten en el volumen `keycloak_data`:
 
 ## 🐛 Troubleshooting
 
-### Keycloak no inicia
+Para una guía completa de troubleshooting, ver [TROUBLESHOOTING.md](./TROUBLESHOOTING.md).
 
-1. Verificar que PostgreSQL esté corriendo:
-   ```bash
-   docker-compose ps postgres
-   ```
+**Problemas comunes:**
+- Keycloak no inicia
+- No puedo acceder a Admin Console
+- Base de datos no se crea
+- Problemas de conexión
+- Problemas con realm o clientes
 
-2. Verificar logs de Keycloak:
-   ```bash
-   docker-compose logs keycloak
-   ```
+## 💾 Backup y Restore
 
-3. Verificar que la base de datos `keycloak_db` exista:
-   ```bash
-   docker exec carecore-postgres psql -U $DB_USER -d $DB_NAME -c "\l" | grep keycloak_db
-   ```
+Para información sobre backup y restore, ver [BACKUP_RESTORE.md](./BACKUP_RESTORE.md).
 
-### No puedo acceder a Admin Console
-
-1. Verificar que Keycloak esté corriendo:
-   ```bash
-   docker-compose ps keycloak
-   ```
-
-2. Verificar que el puerto 8080 esté disponible:
-   ```bash
-   curl http://localhost:8080
-   ```
-
-3. Verificar credenciales en `.env.local`:
-   ```bash
-   grep KEYCLOAK_ADMIN .env.local
-   ```
-
-### Base de datos no se crea
-
-1. Verificar que el script `init-keycloak-db.sh` esté montado:
-   ```bash
-   docker exec carecore-postgres ls -la /docker-entrypoint-initdb.d/ | grep keycloak
-   ```
-
-2. Verificar logs de PostgreSQL:
-   ```bash
-   docker-compose logs postgres | grep keycloak
-   ```
-
-3. Crear manualmente si es necesario:
-   ```bash
-   docker exec carecore-postgres psql -U $DB_USER -d $DB_NAME -c "CREATE DATABASE keycloak_db;"
-   ```
+**Incluye:**
+- Backup del realm
+- Backup de la base de datos
+- Restore completo
+- Scripts automatizados
 
