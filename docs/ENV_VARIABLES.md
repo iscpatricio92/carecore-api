@@ -188,6 +188,12 @@ KEYCLOAK_HTTP_ENABLED=true
   - ⚠️ **NEVER** commit to repository
   - ⚠️ Rotate periodically in production
 
+### Keycloak Client (Web Frontend)
+- `KEYCLOAK_WEB_CLIENT_ID`: Client ID for the web frontend (**optional**, para referencia)
+  - Default: `carecore-web`
+  - **Nota:** Este cliente es público y no requiere Client Secret
+  - **Nota:** El frontend usará este Client ID, no el backend
+
 ⚠️ **Security Notes for Keycloak:**
 - Change `KEYCLOAK_ADMIN_PASSWORD` in production immediately
 - Use strong passwords (minimum 16 characters, mix of letters, numbers, symbols)

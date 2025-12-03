@@ -42,7 +42,7 @@ Después de crear el realm:
 
 **📖 Guías completas:**
 - [CLIENT_API_SETUP.md](./CLIENT_API_SETUP.md) - Configurar cliente "carecore-api"
-- [Tarea #6](../docs/tasks/PHASE1_KEYCLOAK_SETUP.md#tarea-6-configurar-cliente-carecore-web-en-keycloak) - Configurar cliente "carecore-web"
+- [CLIENT_WEB_SETUP.md](./CLIENT_WEB_SETUP.md) - Configurar cliente "carecore-web"
 
 ## 📝 Scripts
 
