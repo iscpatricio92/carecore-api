@@ -159,9 +159,29 @@ describe('DatabaseConfig', () => {
       expect(result.synchronize).toBe(false);
     });
 
+    it('should set synchronize to true in test mode when DB_SYNCHRONIZE is true', () => {
+      mockConfigService.get.mockImplementation((key: string) => {
+        return createMockDbConfig('test', true)[key];
+      });
+
+      const result = config.createTypeOrmOptions();
+
+      expect(result.synchronize).toBe(true);
+    });
+
     it('should enable logging in development', () => {
       mockConfigService.get.mockImplementation((key: string) => {
         return createMockDbConfig('development', false)[key];
+      });
+
+      const result = config.createTypeOrmOptions();
+
+      expect(result.logging).toBe(true);
+    });
+
+    it('should enable logging in test mode', () => {
+      mockConfigService.get.mockImplementation((key: string) => {
+        return createMockDbConfig('test', false)[key];
       });
 
       const result = config.createTypeOrmOptions();
