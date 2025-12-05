@@ -5,15 +5,17 @@ import { PinoLogger } from 'nestjs-pino';
 import * as jwt from 'jsonwebtoken';
 
 // Mock jwks-rsa before importing JwtStrategy
+// Create a shared mock that can be accessed in tests
 const mockGetSigningKey = jest.fn();
-const mockJwksClient = jest.fn(() => ({
+const mockJwksClientFactory = jest.fn(() => ({
   getSigningKey: mockGetSigningKey,
 }));
 
-jest.mock('jwks-rsa', () => ({
-  __esModule: true,
-  default: mockJwksClient,
-}));
+jest.mock('jwks-rsa', () => {
+  // jwks-rsa exports a function directly when imported as namespace (import * as jwksClient)
+  // The mock needs to return a function that returns a client object
+  return mockJwksClientFactory;
+});
 
 // Mock jsonwebtoken
 jest.mock('jsonwebtoken', () => {

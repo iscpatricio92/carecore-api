@@ -23,8 +23,8 @@ services:
     user: root
     # Instalar dependencias primero (necesario porque el volumen anónimo sobrescribe node_modules)
     # Limpiar dist si existe para evitar errores EBUSY
-    # Luego ejecutar nest start --watch usando npx
-    command: sh -c "npm ci && rm -rf /app/dist && npx nest start --watch"
+    # Luego ejecutar nest start --watch usando npx con configuración mejorada para hot reload
+    command: sh -c "npm ci && rm -rf /app/dist && npx nest start --watch --preserveWatchOutput"
     volumes:
       # Montar código fuente para hot-reload
       - ./src:/app/src
@@ -59,6 +59,8 @@ services:
       # Variables de Keycloak (deben estar en .env.local)
       KEYCLOAK_URL: ${KEYCLOAK_URL}
       KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
     # En desarrollo, no necesitamos healthcheck estricto
     # Usa PORT o API_INTERNAL_PORT desde process.env (ambas están disponibles en el contenedor)
     # PORT se establece desde API_INTERNAL_PORT en línea 50, y es lo que usa NestJS
@@ -72,3 +74,12 @@ services:
       timeout: 10s
       retries: 3
       start_period: 120s
+    # Configurar logging para ver logs en tiempo real
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+    # Mantener stdout/stderr para ver logs en tiempo real
+    stdin_open: true
+    tty: true

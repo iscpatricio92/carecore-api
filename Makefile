@@ -61,7 +61,10 @@ docker-up: ## Iniciar contenedores Docker (PostgreSQL + Keycloak + API)
 	sleep 5; \
 	echo "✅ PostgreSQL está corriendo en puerto 5432"; \
 	echo "✅ Keycloak está corriendo en puerto 8080 (http://localhost:8080)"; \
-	echo "✅ API está corriendo en puerto 3000 (http://localhost:3000)"
+	echo "✅ API está corriendo en puerto 3000 (http://localhost:3000)"; \
+	echo ""; \
+	echo "📋 Para ver los logs del API en tiempo real, ejecuta:"; \
+	echo "   make docker-logs-api"
 
 docker-down: ## Detener contenedores Docker
 	@ENV_BASE=$$(echo .env.$${NODE_ENV:-development}); \
@@ -91,7 +94,7 @@ docker-down: ## Detener contenedores Docker
 		docker-compose down; \
 	fi
 
-docker-logs: ## Ver logs de Docker
+docker-logs: ## Ver logs de Docker (todos los servicios)
 	@ENV_BASE=$$(echo .env.$${NODE_ENV:-development}); \
 	ENV_LOCAL=.env.local; \
 	ENV_COMBINED=.env.docker; \
@@ -111,6 +114,15 @@ docker-logs: ## Ver logs de Docker
 	else \
 		docker-compose logs -f; \
 	fi
+
+docker-logs-api: ## Ver logs del API en tiempo real (recomendado para desarrollo)
+	docker logs -f carecore-api
+
+docker-logs-keycloak: ## Ver logs de Keycloak en tiempo real
+	docker logs -f carecore-keycloak
+
+docker-logs-postgres: ## Ver logs de PostgreSQL en tiempo real
+	docker logs -f carecore-postgres
 
 docker-clean-env: ## Limpiar archivo temporal .env.docker
 	@rm -f .env.docker

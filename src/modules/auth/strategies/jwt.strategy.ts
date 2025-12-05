@@ -4,7 +4,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, ExtractJwt } from 'passport-jwt';
 import { PinoLogger } from 'nestjs-pino';
 import * as jwt from 'jsonwebtoken';
-import jwksClient from 'jwks-rsa';
+import * as jwksClient from 'jwks-rsa';
 
 import { User } from '../interfaces/user.interface';
 
@@ -23,7 +23,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   private readonly keycloakRealm: string;
   private readonly jwksUri: string;
   private readonly issuer: string;
-  private jwksClientInstance: ReturnType<typeof jwksClient>;
+  private jwksClientInstance: jwksClient.JwksClient;
 
   constructor(
     private configService: ConfigService,
@@ -44,6 +44,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     const issuer = `${keycloakUrl}/realms/${keycloakRealm}`;
 
     // Initialize JWKS client
+    // jwks-rsa v3.x exports the function directly (not as default export)
     const jwksClientInstance = jwksClient({
       jwksUri,
       cache: true,
@@ -92,19 +93,22 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       const kid = decoded.header.kid;
 
       // Get the signing key from JWKS
-      this.jwksClientInstance.getSigningKey(kid, (err, key) => {
-        if (err) {
-          this.logger.error({ err, kid }, 'Failed to get signing key from JWKS');
-          return done(new UnauthorizedException('Failed to verify token signature'));
-        }
+      this.jwksClientInstance.getSigningKey(
+        kid,
+        (err: Error | null, key?: { getPublicKey(): string }) => {
+          if (err) {
+            this.logger.error({ err, kid }, 'Failed to get signing key from JWKS');
+            return done(new UnauthorizedException('Failed to verify token signature'));
+          }
 
-        const signingKey = key?.getPublicKey();
-        if (!signingKey) {
-          return done(new UnauthorizedException('Signing key not found'));
-        }
+          const signingKey = key?.getPublicKey();
+          if (!signingKey) {
+            return done(new UnauthorizedException('Signing key not found'));
+          }
 
-        done(null, signingKey);
-      });
+          done(null, signingKey);
+        },
+      );
     } catch (error) {
       this.logger.error({ error }, 'Error getting key from token');
       done(new UnauthorizedException('Invalid token'));
