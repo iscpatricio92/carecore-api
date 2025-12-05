@@ -21,22 +21,6 @@ describe('LoggingInterceptor', () => {
     error: jest.fn(),
   };
 
-  const mockExecutionContext = {
-    switchToHttp: jest.fn().mockReturnValue({
-      getRequest: () => ({
-        method: 'GET',
-        url: '/api/test',
-        body: {},
-        query: {},
-        params: {},
-        requestId: 'test-request-id',
-      }),
-      getResponse: () => ({
-        statusCode: 200,
-      }),
-    }),
-  } as unknown as ExecutionContext;
-
   const mockCallHandler = {
     handle: jest.fn(),
   } as unknown as CallHandler;
@@ -66,9 +50,28 @@ describe('LoggingInterceptor', () => {
   describe('intercept', () => {
     it('should log request and response', (done) => {
       const data = { result: 'success' };
+      const request = {
+        method: 'GET',
+        url: '/api/test',
+        body: {},
+        query: {},
+        params: {},
+        requestId: 'test-request-id',
+      };
+      const response = {
+        statusCode: 200,
+      };
+
+      const context = {
+        switchToHttp: jest.fn().mockReturnValue({
+          getRequest: () => request,
+          getResponse: () => response,
+        }),
+      } as unknown as ExecutionContext;
+
       mockCallHandler.handle = jest.fn().mockReturnValue(of(data));
 
-      interceptor.intercept(mockExecutionContext, mockCallHandler).subscribe({
+      interceptor.intercept(context, mockCallHandler).subscribe({
         next: (result) => {
           expect(result).toEqual(data);
           expect(mockLogger.debug).toHaveBeenCalled();
@@ -80,9 +83,28 @@ describe('LoggingInterceptor', () => {
 
     it('should log errors', (done) => {
       const error = new Error('Test error');
+      const request = {
+        method: 'GET',
+        url: '/api/test',
+        body: {},
+        query: {},
+        params: {},
+        requestId: 'test-request-id',
+      };
+      const response = {
+        statusCode: 500,
+      };
+
+      const context = {
+        switchToHttp: jest.fn().mockReturnValue({
+          getRequest: () => request,
+          getResponse: () => response,
+        }),
+      } as unknown as ExecutionContext;
+
       mockCallHandler.handle = jest.fn().mockReturnValue(throwError(() => error));
 
-      interceptor.intercept(mockExecutionContext, mockCallHandler).subscribe({
+      interceptor.intercept(context, mockCallHandler).subscribe({
         error: (err) => {
           expect(err).toBe(error);
           expect(mockLogger.error).toHaveBeenCalled();

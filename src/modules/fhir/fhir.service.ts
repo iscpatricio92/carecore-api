@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, IsNull } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { PinoLogger } from 'nestjs-pino';
 
@@ -11,20 +13,23 @@ import {
 } from '../../common/dto/fhir-practitioner.dto';
 import { CreateEncounterDto, UpdateEncounterDto } from '../../common/dto/fhir-encounter.dto';
 import { FhirErrorService } from '../../common/services/fhir-error.service';
+import { PatientEntity } from '../../entities/patient.entity';
+import { PractitionerEntity } from '../../entities/practitioner.entity';
+import { EncounterEntity } from '../../entities/encounter.entity';
 
 /**
  * FHIR service for managing FHIR R4 resources
- * Currently implements basic in-memory operations
- * TODO: Integrate with database and HAPI FHIR if needed
+ * Uses TypeORM entities for database persistence
  */
 @Injectable()
 export class FhirService {
-  // Temporary in-memory storage (replace with database)
-  private patients: Map<string, Patient> = new Map();
-  private practitioners: Map<string, Practitioner> = new Map();
-  private encounters: Map<string, Encounter> = new Map();
-
   constructor(
+    @InjectRepository(PatientEntity)
+    private patientRepository: Repository<PatientEntity>,
+    @InjectRepository(PractitionerEntity)
+    private practitionerRepository: Repository<PractitionerEntity>,
+    @InjectRepository(EncounterEntity)
+    private encounterRepository: Repository<EncounterEntity>,
     private configService: ConfigService,
     private readonly logger: PinoLogger,
   ) {
@@ -104,6 +109,77 @@ export class FhirService {
     };
   }
 
+  // ========== Helper Methods ==========
+
+  /**
+   * Converts PatientEntity to Patient resource
+   */
+  private entityToPatient(entity: PatientEntity): Patient {
+    if (!entity.fhirResource) {
+      throw new Error('Patient entity missing fhirResource');
+    }
+    return entity.fhirResource;
+  }
+
+  /**
+   * Converts Patient resource to PatientEntity
+   */
+  private patientToEntity(patient: Patient): PatientEntity {
+    const entity = new PatientEntity();
+    entity.fhirResource = patient;
+    entity.resourceType = 'Patient';
+    entity.active = patient.active ?? true;
+    entity.patientId = patient.id || '';
+    return entity;
+  }
+
+  /**
+   * Converts PractitionerEntity to Practitioner resource
+   */
+  private entityToPractitioner(entity: PractitionerEntity): Practitioner {
+    if (!entity.fhirResource) {
+      throw new Error('Practitioner entity missing fhirResource');
+    }
+    return entity.fhirResource;
+  }
+
+  /**
+   * Converts Practitioner resource to PractitionerEntity
+   */
+  private practitionerToEntity(practitioner: Practitioner): PractitionerEntity {
+    const entity = new PractitionerEntity();
+    entity.fhirResource = practitioner;
+    entity.resourceType = 'Practitioner';
+    entity.active = practitioner.active ?? true;
+    entity.practitionerId = practitioner.id || '';
+    return entity;
+  }
+
+  /**
+   * Converts EncounterEntity to Encounter resource
+   */
+  private entityToEncounter(entity: EncounterEntity): Encounter {
+    if (!entity.fhirResource) {
+      throw new Error('Encounter entity missing fhirResource');
+    }
+    return entity.fhirResource;
+  }
+
+  /**
+   * Converts Encounter resource to EncounterEntity
+   */
+  private encounterToEntity(encounter: Encounter): EncounterEntity {
+    const entity = new EncounterEntity();
+    entity.fhirResource = encounter;
+    entity.resourceType = 'Encounter';
+    entity.status = encounter.status;
+    entity.encounterId = encounter.id || '';
+    entity.subjectReference = encounter.subject?.reference || '';
+    return entity;
+  }
+
+  // ========== Patient Methods ==========
+
   /**
    * Creates a new Patient
    */
@@ -121,24 +197,26 @@ export class FhirService {
       ...createPatientDto,
     };
 
-    this.patients.set(patientId, patient);
+    const entity = this.patientToEntity(patient);
+    const savedEntity = await this.patientRepository.save(entity);
     this.logger.info({ patientId }, 'Patient created');
 
-    return patient;
+    return this.entityToPatient(savedEntity);
   }
 
   /**
-   * Gets a Patient by ID
+   * Gets a Patient by ID (FHIR resource ID, not database UUID)
    */
   async getPatient(id: string): Promise<Patient> {
-    const patient = this.patients.get(id);
+    const entity = await this.patientRepository.findOne({
+      where: { patientId: id, deletedAt: IsNull() },
+    });
 
-    if (!patient) {
-      // Throw NotFoundException - will be converted to OperationOutcome by filter
+    if (!entity) {
       throw new NotFoundException(FhirErrorService.createNotFoundError('Patient', id));
     }
 
-    return patient;
+    return this.entityToPatient(entity);
   }
 
   /**
@@ -151,31 +229,36 @@ export class FhirService {
     identifier?: string;
   }): Promise<{ total: number; entries: Patient[] }> {
     const { page = 1, limit = 10, name, identifier } = params;
-    let results = Array.from(this.patients.values());
+    const queryBuilder = this.patientRepository
+      .createQueryBuilder('patient')
+      .where('patient.deletedAt IS NULL');
 
-    // Filter by name
+    // Filter by name (search in JSONB)
     if (name) {
       const searchName = name.toLowerCase();
-      results = results.filter((patient) => {
-        return patient.name?.some((n) => {
-          const fullName = `${n.given?.join(' ') || ''} ${n.family || ''}`.toLowerCase();
-          return fullName.includes(searchName);
-        });
+      queryBuilder.andWhere(
+        `LOWER(patient.fhirResource->'name'->0->>'family') LIKE :name OR LOWER(patient.fhirResource->'name'->0->>'given'->>0) LIKE :name`,
+        { name: `%${searchName}%` },
+      );
+    }
+
+    // Filter by identifier (search in JSONB)
+    if (identifier) {
+      queryBuilder.andWhere(`patient.fhirResource->'identifier' @> :identifier`, {
+        identifier: JSON.stringify([{ value: identifier }]),
       });
     }
 
-    // Filter by identifier
-    if (identifier) {
-      results = results.filter((patient) => {
-        return patient.identifier?.some((id) => id.value === identifier);
-      });
-    }
+    // Get total count
+    const total = await queryBuilder.getCount();
 
     // Pagination
-    const total = results.length;
-    const start = (page - 1) * limit;
-    const end = start + limit;
-    const entries = results.slice(start, end);
+    const entities = await queryBuilder
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getMany();
+
+    const entries = entities.map((entity) => this.entityToPatient(entity));
 
     this.logger.debug({ total, page, limit }, 'Patients searched');
 
@@ -186,12 +269,15 @@ export class FhirService {
    * Updates an existing Patient
    */
   async updatePatient(id: string, updatePatientDto: UpdatePatientDto): Promise<Patient> {
-    const existingPatient = this.patients.get(id);
+    const entity = await this.patientRepository.findOne({
+      where: { patientId: id, deletedAt: IsNull() },
+    });
 
-    if (!existingPatient) {
+    if (!entity) {
       throw new NotFoundException(FhirErrorService.createNotFoundError('Patient', id));
     }
 
+    const existingPatient = this.entityToPatient(entity);
     const now = new Date().toISOString();
     const currentVersion = parseInt(existingPatient.meta?.versionId || '1', 10);
 
@@ -206,23 +292,30 @@ export class FhirService {
       },
     };
 
-    this.patients.set(id, updatedPatient);
+    const updatedEntity = this.patientToEntity(updatedPatient);
+    updatedEntity.id = entity.id; // Preserve database UUID
+    updatedEntity.createdAt = entity.createdAt; // Preserve creation date
+
+    const savedEntity = await this.patientRepository.save(updatedEntity);
     this.logger.info({ patientId: id }, 'Patient updated');
 
-    return updatedPatient;
+    return this.entityToPatient(savedEntity);
   }
 
   /**
-   * Deletes a Patient
+   * Deletes a Patient (soft delete)
    */
   async deletePatient(id: string): Promise<void> {
-    const patient = this.patients.get(id);
+    const entity = await this.patientRepository.findOne({
+      where: { patientId: id, deletedAt: IsNull() },
+    });
 
-    if (!patient) {
+    if (!entity) {
       throw new NotFoundException(FhirErrorService.createNotFoundError('Patient', id));
     }
 
-    this.patients.delete(id);
+    entity.deletedAt = new Date();
+    await this.patientRepository.save(entity);
     this.logger.info({ patientId: id }, 'Patient deleted');
   }
 
@@ -245,23 +338,26 @@ export class FhirService {
       ...createPractitionerDto,
     };
 
-    this.practitioners.set(practitionerId, practitioner);
+    const entity = this.practitionerToEntity(practitioner);
+    const savedEntity = await this.practitionerRepository.save(entity);
     this.logger.info({ practitionerId }, 'Practitioner created');
 
-    return practitioner;
+    return this.entityToPractitioner(savedEntity);
   }
 
   /**
-   * Gets a Practitioner by ID
+   * Gets a Practitioner by ID (FHIR resource ID, not database UUID)
    */
   async getPractitioner(id: string): Promise<Practitioner> {
-    const practitioner = this.practitioners.get(id);
+    const entity = await this.practitionerRepository.findOne({
+      where: { practitionerId: id, deletedAt: IsNull() },
+    });
 
-    if (!practitioner) {
+    if (!entity) {
       throw new NotFoundException(FhirErrorService.createNotFoundError('Practitioner', id));
     }
 
-    return practitioner;
+    return this.entityToPractitioner(entity);
   }
 
   /**
@@ -274,31 +370,36 @@ export class FhirService {
     identifier?: string;
   }): Promise<{ total: number; entries: Practitioner[] }> {
     const { page = 1, limit = 10, name, identifier } = params;
-    let results = Array.from(this.practitioners.values());
+    const queryBuilder = this.practitionerRepository
+      .createQueryBuilder('practitioner')
+      .where('practitioner.deletedAt IS NULL');
 
-    // Filter by name
+    // Filter by name (search in JSONB)
     if (name) {
       const searchName = name.toLowerCase();
-      results = results.filter((practitioner) => {
-        return practitioner.name?.some((n) => {
-          const fullName = `${n.given?.join(' ') || ''} ${n.family || ''}`.toLowerCase();
-          return fullName.includes(searchName);
-        });
+      queryBuilder.andWhere(
+        `LOWER(practitioner.fhirResource->'name'->0->>'family') LIKE :name OR LOWER(practitioner.fhirResource->'name'->0->>'given'->>0) LIKE :name`,
+        { name: `%${searchName}%` },
+      );
+    }
+
+    // Filter by identifier (search in JSONB)
+    if (identifier) {
+      queryBuilder.andWhere(`practitioner.fhirResource->'identifier' @> :identifier`, {
+        identifier: JSON.stringify([{ value: identifier }]),
       });
     }
 
-    // Filter by identifier
-    if (identifier) {
-      results = results.filter((practitioner) => {
-        return practitioner.identifier?.some((id) => id.value === identifier);
-      });
-    }
+    // Get total count
+    const total = await queryBuilder.getCount();
 
     // Pagination
-    const total = results.length;
-    const start = (page - 1) * limit;
-    const end = start + limit;
-    const entries = results.slice(start, end);
+    const entities = await queryBuilder
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getMany();
+
+    const entries = entities.map((entity) => this.entityToPractitioner(entity));
 
     this.logger.debug({ total, page, limit }, 'Practitioners searched');
 
@@ -312,12 +413,15 @@ export class FhirService {
     id: string,
     updatePractitionerDto: UpdatePractitionerDto,
   ): Promise<Practitioner> {
-    const existingPractitioner = this.practitioners.get(id);
+    const entity = await this.practitionerRepository.findOne({
+      where: { practitionerId: id, deletedAt: IsNull() },
+    });
 
-    if (!existingPractitioner) {
+    if (!entity) {
       throw new NotFoundException(FhirErrorService.createNotFoundError('Practitioner', id));
     }
 
+    const existingPractitioner = this.entityToPractitioner(entity);
     const now = new Date().toISOString();
     const currentVersion = parseInt(existingPractitioner.meta?.versionId || '1', 10);
 
@@ -332,23 +436,30 @@ export class FhirService {
       },
     };
 
-    this.practitioners.set(id, updatedPractitioner);
+    const updatedEntity = this.practitionerToEntity(updatedPractitioner);
+    updatedEntity.id = entity.id; // Preserve database UUID
+    updatedEntity.createdAt = entity.createdAt; // Preserve creation date
+
+    const savedEntity = await this.practitionerRepository.save(updatedEntity);
     this.logger.info({ practitionerId: id }, 'Practitioner updated');
 
-    return updatedPractitioner;
+    return this.entityToPractitioner(savedEntity);
   }
 
   /**
-   * Deletes a Practitioner
+   * Deletes a Practitioner (soft delete)
    */
   async deletePractitioner(id: string): Promise<void> {
-    const practitioner = this.practitioners.get(id);
+    const entity = await this.practitionerRepository.findOne({
+      where: { practitionerId: id, deletedAt: IsNull() },
+    });
 
-    if (!practitioner) {
+    if (!entity) {
       throw new NotFoundException(FhirErrorService.createNotFoundError('Practitioner', id));
     }
 
-    this.practitioners.delete(id);
+    entity.deletedAt = new Date();
+    await this.practitionerRepository.save(entity);
     this.logger.info({ practitionerId: id }, 'Practitioner deleted');
   }
 
@@ -371,23 +482,26 @@ export class FhirService {
       ...createEncounterDto,
     };
 
-    this.encounters.set(encounterId, encounter);
+    const entity = this.encounterToEntity(encounter);
+    const savedEntity = await this.encounterRepository.save(entity);
     this.logger.info({ encounterId }, 'Encounter created');
 
-    return encounter;
+    return this.entityToEncounter(savedEntity);
   }
 
   /**
-   * Gets an Encounter by ID
+   * Gets an Encounter by ID (FHIR resource ID, not database UUID)
    */
   async getEncounter(id: string): Promise<Encounter> {
-    const encounter = this.encounters.get(id);
+    const entity = await this.encounterRepository.findOne({
+      where: { encounterId: id, deletedAt: IsNull() },
+    });
 
-    if (!encounter) {
+    if (!entity) {
       throw new NotFoundException(FhirErrorService.createNotFoundError('Encounter', id));
     }
 
-    return encounter;
+    return this.entityToEncounter(entity);
   }
 
   /**
@@ -401,38 +515,40 @@ export class FhirService {
     date?: string;
   }): Promise<{ total: number; entries: Encounter[] }> {
     const { page = 1, limit = 10, subject, status, date } = params;
-    let results = Array.from(this.encounters.values());
+    const queryBuilder = this.encounterRepository
+      .createQueryBuilder('encounter')
+      .where('encounter.deletedAt IS NULL');
 
-    // Filter by subject (Patient reference)
+    // Filter by subject (using indexed field)
     if (subject) {
-      results = results.filter((encounter) => {
-        return (
-          encounter.subject?.reference === subject ||
-          encounter.subject?.reference?.endsWith(`/${subject}`)
-        );
+      queryBuilder.andWhere('encounter.subjectReference = :subject', {
+        subject: subject.includes('/') ? subject : `Patient/${subject}`,
       });
     }
 
-    // Filter by status
+    // Filter by status (using indexed field)
     if (status) {
-      results = results.filter((encounter) => encounter.status === status);
+      queryBuilder.andWhere('encounter.status = :status', { status });
     }
 
-    // Filter by date (within period)
+    // Filter by date (search in JSONB)
     if (date) {
       const searchDateStr = date.split('T')[0]; // Get YYYY-MM-DD part
-      results = results.filter((encounter) => {
-        if (!encounter.period?.start) return false;
-        const encounterDateStr = encounter.period.start.split('T')[0]; // Get YYYY-MM-DD part
-        return encounterDateStr === searchDateStr;
+      queryBuilder.andWhere(`DATE(encounter.fhirResource->'period'->>'start') = :date`, {
+        date: searchDateStr,
       });
     }
 
+    // Get total count
+    const total = await queryBuilder.getCount();
+
     // Pagination
-    const total = results.length;
-    const start = (page - 1) * limit;
-    const end = start + limit;
-    const entries = results.slice(start, end);
+    const entities = await queryBuilder
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getMany();
+
+    const entries = entities.map((entity) => this.entityToEncounter(entity));
 
     this.logger.debug({ total, page, limit }, 'Encounters searched');
 
@@ -443,12 +559,15 @@ export class FhirService {
    * Updates an existing Encounter
    */
   async updateEncounter(id: string, updateEncounterDto: UpdateEncounterDto): Promise<Encounter> {
-    const existingEncounter = this.encounters.get(id);
+    const entity = await this.encounterRepository.findOne({
+      where: { encounterId: id, deletedAt: IsNull() },
+    });
 
-    if (!existingEncounter) {
+    if (!entity) {
       throw new NotFoundException(FhirErrorService.createNotFoundError('Encounter', id));
     }
 
+    const existingEncounter = this.entityToEncounter(entity);
     const now = new Date().toISOString();
     const currentVersion = parseInt(existingEncounter.meta?.versionId || '1', 10);
 
@@ -463,23 +582,30 @@ export class FhirService {
       },
     };
 
-    this.encounters.set(id, updatedEncounter);
+    const updatedEntity = this.encounterToEntity(updatedEncounter);
+    updatedEntity.id = entity.id; // Preserve database UUID
+    updatedEntity.createdAt = entity.createdAt; // Preserve creation date
+
+    const savedEntity = await this.encounterRepository.save(updatedEntity);
     this.logger.info({ encounterId: id }, 'Encounter updated');
 
-    return updatedEncounter;
+    return this.entityToEncounter(savedEntity);
   }
 
   /**
-   * Deletes an Encounter
+   * Deletes an Encounter (soft delete)
    */
   async deleteEncounter(id: string): Promise<void> {
-    const encounter = this.encounters.get(id);
+    const entity = await this.encounterRepository.findOne({
+      where: { encounterId: id, deletedAt: IsNull() },
+    });
 
-    if (!encounter) {
+    if (!entity) {
       throw new NotFoundException(FhirErrorService.createNotFoundError('Encounter', id));
     }
 
-    this.encounters.delete(id);
+    entity.deletedAt = new Date();
+    await this.encounterRepository.save(entity);
     this.logger.info({ encounterId: id }, 'Encounter deleted');
   }
 }
