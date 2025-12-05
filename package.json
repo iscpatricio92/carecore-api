@@ -38,7 +38,8 @@
     "docker:logs": "make docker-logs",
     "docker:keycloak:logs": "docker-compose logs -f keycloak",
     "docker:keycloak:restart": "docker-compose restart keycloak",
-    "docker:keycloak:shell": "docker-compose exec keycloak /bin/bash"
+    "docker:keycloak:shell": "docker-compose exec keycloak /bin/bash",
+    "encryption:verify": "ts-node scripts/verify-encryption.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.20",

@@ -641,6 +641,7 @@ Access FHIR metadata at: `/api/fhir/metadata`
 ### Documentación Permanente
 
 - [docs/AUTH_IMPLEMENTATION_PLAN.md](docs/AUTH_IMPLEMENTATION_PLAN.md) - Plan completo de autenticación y autorización
+- [docs/DATABASE_ENCRYPTION.md](docs/DATABASE_ENCRYPTION.md) - Guía completa de cifrado de datos en reposo
 - [ENV_VARIABLES.md](ENV_VARIABLES.md) - Configuración detallada de variables de entorno
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Guías de contribución y convenciones
 

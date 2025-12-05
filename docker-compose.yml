@@ -146,8 +146,14 @@ services:
 volumes:
   postgres_data:
     driver: local
+    # Nota: Para cifrado de disco en producción, configurar driver_opts
+    # Ejemplo con LUKS o cifrado a nivel de sistema:
+    # driver_opts:
+    #   type: crypt
+    #   device: /path/to/encrypted/device
   keycloak_data:
     driver: local
+    # Nota: Para cifrado de disco en producción, configurar driver_opts
 
 networks:
   carecore-network:
