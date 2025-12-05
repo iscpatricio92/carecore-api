@@ -23,8 +23,11 @@ import {
 import { FhirService } from './fhir.service';
 import { Public } from '../auth/decorators/public.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User } from '../auth/interfaces/user.interface';
+import { ROLES } from '../../common/constants/roles';
 import { CreatePatientDto, UpdatePatientDto } from '../../common/dto/fhir-patient.dto';
 import {
   CreatePractitionerDto,
@@ -123,11 +126,14 @@ export class FhirController {
   // Practitioner endpoints
   @Post('Practitioner')
   @HttpCode(HttpStatus.CREATED)
+  @UseGuards(RolesGuard)
+  @Roles(ROLES.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Create a new Practitioner' })
   @ApiResponse({ status: 201, description: 'Practitioner created successfully' })
   @ApiResponse({ status: 400, description: 'Invalid data' })
   @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
   createPractitioner(@Body() createPractitionerDto: CreatePractitionerDto): Promise<Practitioner> {
     return this.fhirService.createPractitioner(createPractitionerDto);
   }
@@ -167,11 +173,14 @@ export class FhirController {
   }
 
   @Put('Practitioner/:id')
+  @UseGuards(RolesGuard)
+  @Roles(ROLES.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update a Practitioner' })
   @ApiParam({ name: 'id', description: 'Practitioner ID' })
   @ApiResponse({ status: 200, description: 'Practitioner updated successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
   @ApiResponse({ status: 404, description: 'Practitioner not found' })
   updatePractitioner(
     @Param('id') id: string,
@@ -182,11 +191,14 @@ export class FhirController {
 
   @Delete('Practitioner/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(RolesGuard)
+  @Roles(ROLES.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Delete a Practitioner' })
   @ApiParam({ name: 'id', description: 'Practitioner ID' })
   @ApiResponse({ status: 204, description: 'Practitioner deleted successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
   @ApiResponse({ status: 404, description: 'Practitioner not found' })
   deletePractitioner(@Param('id') id: string): Promise<void> {
     return this.fhirService.deletePractitioner(id);
@@ -195,11 +207,14 @@ export class FhirController {
   // Encounter endpoints
   @Post('Encounter')
   @HttpCode(HttpStatus.CREATED)
+  @UseGuards(RolesGuard)
+  @Roles(ROLES.PRACTITIONER, ROLES.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Create a new Encounter' })
   @ApiResponse({ status: 201, description: 'Encounter created successfully' })
   @ApiResponse({ status: 400, description: 'Invalid data' })
   @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Practitioner or Admin role required' })
   createEncounter(@Body() createEncounterDto: CreateEncounterDto): Promise<Encounter> {
     return this.fhirService.createEncounter(createEncounterDto);
   }
@@ -250,11 +265,14 @@ export class FhirController {
   }
 
   @Put('Encounter/:id')
+  @UseGuards(RolesGuard)
+  @Roles(ROLES.PRACTITIONER, ROLES.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update an Encounter' })
   @ApiParam({ name: 'id', description: 'Encounter ID' })
   @ApiResponse({ status: 200, description: 'Encounter updated successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Practitioner or Admin role required' })
   @ApiResponse({ status: 404, description: 'Encounter not found' })
   updateEncounter(
     @Param('id') id: string,
