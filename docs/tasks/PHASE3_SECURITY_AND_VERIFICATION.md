@@ -258,10 +258,11 @@ Implementar el sistema de almacenamiento de documentos subidos para verificació
   - Tipos permitidos: PDF, JPG, PNG
   - Tamaño máximo: 10MB
   - Validar que el archivo no esté corrupto
-- [ ] Agregar variables de entorno:
+- [x] Agregar variables de entorno:
   - `VERIFICATION_DOCUMENTS_PATH` (default: `storage/verifications`)
   - `MAX_DOCUMENT_SIZE` (default: 10485760 - 10MB)
-- [ ] Agregar `storage/verifications/` a `.gitignore`
+- [x] Agregar `storage/verifications/` a `.gitignore` (ya está en `storage/`)
+- [x] Documentar variables en `docs/ENV_VARIABLES.md`
 - [ ] Crear método de limpieza para documentos expirados/rechazados
 - [ ] Integrar con `AuthService.requestVerification()`
 

@@ -10,7 +10,11 @@ import {
   Body,
   BadRequestException,
   UnauthorizedException,
+  UseInterceptors,
+  UploadedFile,
+  UseGuards,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
 import {
   ApiTags,
@@ -19,6 +23,7 @@ import {
   ApiBearerAuth,
   ApiQuery,
   ApiBody,
+  ApiConsumes,
 } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { PinoLogger } from 'nestjs-pino';
@@ -27,6 +32,14 @@ import { AuthService } from './auth.service';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { User } from './interfaces/user.interface';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { RolesGuard } from './guards/roles.guard';
+import { Roles } from './decorators/roles.decorator';
+import { ROLES } from '../../common/constants/roles';
+import {
+  VerifyPractitionerDto,
+  VerifyPractitionerResponseDto,
+} from './dto/verify-practitioner.dto';
 
 /**
  * Authentication Controller
@@ -520,5 +533,85 @@ export class AuthController {
     // TODO: Implement in Tarea 12
     // The user is already extracted by @CurrentUser() decorator
     return user;
+  }
+
+  /**
+   * Request practitioner verification
+   * Allows practitioners to submit verification documents (cedula/licencia)
+   */
+  @Post('verify-practitioner')
+  @HttpCode(HttpStatus.CREATED)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(ROLES.PRACTITIONER, ROLES.ADMIN)
+  @UseInterceptors(FileInterceptor('documentFile'))
+  @ApiBearerAuth('JWT-auth')
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: 'Request practitioner verification',
+    description:
+      'Submit verification documents (cedula or licencia) to request practitioner identity verification. Only practitioners and admins can submit verification requests.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['practitionerId', 'documentType', 'documentFile'],
+      properties: {
+        practitionerId: {
+          type: 'string',
+          description: 'FHIR Practitioner ID to verify',
+          example: 'practitioner-123',
+        },
+        documentType: {
+          type: 'string',
+          enum: ['cedula', 'licencia'],
+          description: 'Type of document being submitted',
+          example: 'cedula',
+        },
+        documentFile: {
+          type: 'string',
+          format: 'binary',
+          description: 'Document file (PDF, JPG, PNG) - Max 10MB',
+        },
+        additionalInfo: {
+          type: 'string',
+          description: 'Additional information or notes (optional)',
+          example: 'License expires in 6 months',
+          maxLength: 1000,
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Verification request submitted successfully',
+    type: VerifyPractitionerResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid data or file validation failed',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token required',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Practitioner or Admin role required',
+  })
+  async verifyPractitioner(
+    @Body() dto: VerifyPractitionerDto,
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: User,
+  ): Promise<VerifyPractitionerResponseDto> {
+    try {
+      const result = await this.authService.requestVerification(dto, file, user.id);
+      return result;
+    } catch (error) {
+      this.logger.error({ error, userId: user.id }, 'Failed to submit verification request');
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException('Failed to submit verification request');
+    }
   }
 }

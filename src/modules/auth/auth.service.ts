@@ -1,7 +1,15 @@
 import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { PinoLogger } from 'nestjs-pino';
 import { randomBytes } from 'node:crypto';
+import { DocumentStorageService } from './services/document-storage.service';
+import { VerifyPractitionerDto } from './dto/verify-practitioner.dto';
+import {
+  PractitionerVerificationEntity,
+  VerificationStatus,
+} from '../../entities/practitioner-verification.entity';
 
 /**
  * Auth Service
@@ -16,6 +24,9 @@ export class AuthService {
   constructor(
     private readonly configService: ConfigService,
     private readonly logger: PinoLogger,
+    private readonly documentStorageService: DocumentStorageService,
+    @InjectRepository(PractitionerVerificationEntity)
+    private readonly verificationRepository: Repository<PractitionerVerificationEntity>,
   ) {
     this.logger.setContext(AuthService.name);
   }
@@ -482,5 +493,74 @@ export class AuthService {
     // TODO: Implement in Tarea 12
     this.logger.warn('getUserInfo() not yet implemented');
     throw new Error('Not implemented');
+  }
+
+  /**
+   * Request practitioner verification
+   * @param dto Verification request data
+   * @param file Uploaded document file
+   * @param userId Current user ID (from JWT)
+   * @returns Verification request information
+   */
+  async requestVerification(
+    dto: VerifyPractitionerDto,
+    file: Express.Multer.File,
+    userId: string,
+  ): Promise<{
+    verificationId: string;
+    status: string;
+    message: string;
+    estimatedReviewTime: string;
+  }> {
+    // Validate file is provided
+    if (!file) {
+      throw new BadRequestException('Document file is required');
+    }
+
+    // Validate practitioner ID
+    if (!dto.practitionerId || dto.practitionerId.trim() === '') {
+      throw new BadRequestException('Practitioner ID is required');
+    }
+
+    // TODO: Validate that the practitioner exists in the system
+    // TODO: Validate that the user has permission to verify this practitioner
+    // (should be the practitioner themselves or an admin)
+
+    // Store document
+    const documentPath = await this.documentStorageService.storeVerificationDocument(
+      file,
+      dto.practitionerId,
+      dto.documentType,
+    );
+
+    // Create verification record
+    const verification = this.verificationRepository.create({
+      practitionerId: dto.practitionerId,
+      keycloakUserId: userId,
+      documentType: dto.documentType,
+      documentPath,
+      status: VerificationStatus.PENDING,
+      additionalInfo: dto.additionalInfo || null,
+    });
+
+    const savedVerification = await this.verificationRepository.save(verification);
+
+    this.logger.info(
+      {
+        verificationId: savedVerification.id,
+        practitionerId: dto.practitionerId,
+        documentType: dto.documentType,
+        documentPath,
+        userId,
+      },
+      'Practitioner verification request submitted',
+    );
+
+    return {
+      verificationId: savedVerification.id,
+      status: savedVerification.status,
+      message: 'Verification request submitted successfully',
+      estimatedReviewTime: '2-3 business days',
+    };
   }
 }

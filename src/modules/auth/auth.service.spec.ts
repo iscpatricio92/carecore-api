@@ -1,9 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { PinoLogger } from 'nestjs-pino';
 
 import { AuthService } from './auth.service';
+import { DocumentStorageService } from './services/document-storage.service';
+import { PractitionerVerificationEntity } from '../../entities/practitioner-verification.entity';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -20,6 +23,20 @@ describe('AuthService', () => {
     info: jest.fn(),
   };
 
+  const mockDocumentStorageService = {
+    storeVerificationDocument: jest.fn(),
+    validateFile: jest.fn(),
+    getDocumentPath: jest.fn(),
+    deleteDocument: jest.fn(),
+  };
+
+  const mockVerificationRepository = {
+    create: jest.fn(),
+    save: jest.fn(),
+    findOne: jest.fn(),
+    find: jest.fn(),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -33,6 +50,14 @@ describe('AuthService', () => {
         {
           provide: PinoLogger,
           useValue: mockLogger,
+        },
+        {
+          provide: DocumentStorageService,
+          useValue: mockDocumentStorageService,
+        },
+        {
+          provide: getRepositoryToken(PractitionerVerificationEntity),
+          useValue: mockVerificationRepository,
         },
       ],
     }).compile();

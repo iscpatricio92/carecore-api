@@ -16,7 +16,9 @@ describe('Authorization E2E', () => {
   });
 
   afterAll(async () => {
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   describe('Role-based access control - Patients', () => {

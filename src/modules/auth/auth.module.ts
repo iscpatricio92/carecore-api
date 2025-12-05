@@ -2,12 +2,15 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { DocumentStorageService } from './services/document-storage.service';
+import { PractitionerVerificationEntity } from '../../entities/practitioner-verification.entity';
 
 /**
  * Auth Module
@@ -28,9 +31,11 @@ import { AuthService } from './auth.service';
     // JwtModule is registered but not used for token validation
     // Token validation is handled by passport-jwt with Keycloak's public keys
     JwtModule.register({}),
+    // TypeORM for PractitionerVerification entity
+    TypeOrmModule.forFeature([PractitionerVerificationEntity]),
   ],
   controllers: [AuthController],
-  providers: [JwtStrategy, JwtAuthGuard, RolesGuard, AuthService],
+  providers: [JwtStrategy, JwtAuthGuard, RolesGuard, AuthService, DocumentStorageService],
   exports: [PassportModule, JwtModule, JwtAuthGuard, RolesGuard, AuthService],
 })
 export class AuthModule {}

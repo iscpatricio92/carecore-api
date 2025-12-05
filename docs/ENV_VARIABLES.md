@@ -101,6 +101,10 @@ CORS_ORIGIN=http://localhost:3000
 RATE_LIMIT_TTL=60
 RATE_LIMIT_MAX=100
 
+# Practitioner Verification Documents Storage
+VERIFICATION_DOCUMENTS_PATH=storage/verifications
+MAX_DOCUMENT_SIZE=10485760
+
 # PgAdmin (Optional)
 PGADMIN_EMAIL=
 PGADMIN_PASSWORD=
@@ -164,6 +168,15 @@ KEYCLOAK_HTTP_ENABLED=true
 ### Rate Limiting
 - `RATE_LIMIT_TTL`: Time window in seconds for rate limiting
 - `RATE_LIMIT_MAX`: Maximum number of requests per window
+
+### Practitioner Verification Documents Storage
+- `VERIFICATION_DOCUMENTS_PATH`: Path where verification documents (cedula/licencia) are stored (default: `storage/verifications`)
+  - Documents are stored temporarily on local disk (not committed to git)
+  - TODO: Migrate to cloud storage (S3/MinIO) in the future for production
+  - Can be absolute or relative to project root
+- `MAX_DOCUMENT_SIZE`: Maximum file size in bytes for verification documents (default: `10485760` = 10MB)
+  - Used to validate uploaded documents before storage
+  - Documents exceeding this size will be rejected
 
 ### PgAdmin (Optional)
 - `PGADMIN_EMAIL`: Email to access PgAdmin
