@@ -579,16 +579,286 @@ describe('AuthService', () => {
   });
 
   describe('refreshToken', () => {
-    it('should throw error as not implemented', async () => {
-      await expect(service.refreshToken('refresh-token')).rejects.toThrow('Not implemented');
-      expect(mockLogger.warn).toHaveBeenCalledWith('refreshToken() not yet implemented');
+    const mockKeycloakUrl = 'http://localhost:8080';
+    const mockKeycloakRealm = 'carecore';
+    const mockClientId = 'carecore-api';
+    const mockClientSecret = 'secret-123';
+    const mockRefreshToken = 'refresh-token-123';
+
+    beforeEach(() => {
+      mockConfigService.get.mockImplementation((key: string) => {
+        const config: Record<string, string> = {
+          KEYCLOAK_URL: mockKeycloakUrl,
+          KEYCLOAK_REALM: mockKeycloakRealm,
+          KEYCLOAK_CLIENT_ID: mockClientId,
+          KEYCLOAK_CLIENT_SECRET: mockClientSecret,
+        };
+        return config[key] || null;
+      });
+    });
+
+    it('should throw BadRequestException if KEYCLOAK_URL is not configured', async () => {
+      mockConfigService.get.mockImplementation((key: string) => {
+        const config: Record<string, string> = {
+          KEYCLOAK_CLIENT_ID: mockClientId,
+          KEYCLOAK_CLIENT_SECRET: mockClientSecret,
+        };
+        return config[key] || null;
+      });
+
+      await expect(service.refreshToken(mockRefreshToken)).rejects.toThrow(BadRequestException);
+      expect(mockLogger.error).toHaveBeenCalledWith('KEYCLOAK_URL is not configured');
+    });
+
+    it('should throw BadRequestException if KEYCLOAK_CLIENT_ID is not configured', async () => {
+      mockConfigService.get.mockImplementation((key: string) => {
+        const config: Record<string, string> = {
+          KEYCLOAK_URL: mockKeycloakUrl,
+          KEYCLOAK_CLIENT_SECRET: mockClientSecret,
+        };
+        return config[key] || null;
+      });
+
+      await expect(service.refreshToken(mockRefreshToken)).rejects.toThrow(BadRequestException);
+      expect(mockLogger.error).toHaveBeenCalledWith('KEYCLOAK_CLIENT_ID is not configured');
+    });
+
+    it('should throw BadRequestException if KEYCLOAK_CLIENT_SECRET is not configured', async () => {
+      mockConfigService.get.mockImplementation((key: string) => {
+        const config: Record<string, string> = {
+          KEYCLOAK_URL: mockKeycloakUrl,
+          KEYCLOAK_CLIENT_ID: mockClientId,
+        };
+        return config[key] || null;
+      });
+
+      await expect(service.refreshToken(mockRefreshToken)).rejects.toThrow(BadRequestException);
+      expect(mockLogger.error).toHaveBeenCalledWith('KEYCLOAK_CLIENT_SECRET is not configured');
+    });
+
+    it('should throw BadRequestException if refresh token is empty', async () => {
+      await expect(service.refreshToken('')).rejects.toThrow(BadRequestException);
+      expect(mockLogger.error).toHaveBeenCalledWith('Refresh token is required');
+    });
+
+    it('should successfully refresh token', async () => {
+      const mockTokenResponse = {
+        access_token: 'new-access-token',
+        refresh_token: 'new-refresh-token',
+        expires_in: 3600,
+        token_type: 'Bearer',
+      };
+
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: async () => mockTokenResponse,
+      });
+
+      const result = await service.refreshToken(mockRefreshToken);
+
+      expect(result).toEqual({
+        accessToken: 'new-access-token',
+        refreshToken: 'new-refresh-token',
+        expiresIn: 3600,
+        tokenType: 'Bearer',
+      });
+      expect(mockLogger.debug).toHaveBeenCalled();
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/protocol/openid-connect/token'),
+        expect.objectContaining({
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        }),
+      );
+    });
+
+    it('should use old refresh token if new one is not provided', async () => {
+      const mockTokenResponse = {
+        access_token: 'new-access-token',
+        expires_in: 3600,
+        token_type: 'Bearer',
+      };
+
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: async () => mockTokenResponse,
+      });
+
+      const result = await service.refreshToken(mockRefreshToken);
+
+      expect(result.refreshToken).toBe(mockRefreshToken);
+    });
+
+    it('should throw UnauthorizedException when response is not ok (400)', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        text: async () => 'Invalid refresh token',
+      });
+
+      await expect(service.refreshToken(mockRefreshToken)).rejects.toThrow(UnauthorizedException);
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should throw UnauthorizedException when response is not ok (401)', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: false,
+        status: 401,
+        text: async () => 'Unauthorized',
+      });
+
+      await expect(service.refreshToken(mockRefreshToken)).rejects.toThrow(UnauthorizedException);
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should throw UnauthorizedException when access_token is missing', async () => {
+      const mockTokenResponse = {
+        refresh_token: 'new-refresh-token',
+      };
+
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: async () => mockTokenResponse,
+      });
+
+      await expect(service.refreshToken(mockRefreshToken)).rejects.toThrow(UnauthorizedException);
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should handle fetch errors', async () => {
+      global.fetch = jest.fn().mockRejectedValue(new Error('Network error'));
+
+      await expect(service.refreshToken(mockRefreshToken)).rejects.toThrow(UnauthorizedException);
+      expect(mockLogger.error).toHaveBeenCalled();
     });
   });
 
   describe('logout', () => {
-    it('should log warning as not implemented', async () => {
-      await service.logout('refresh-token');
-      expect(mockLogger.warn).toHaveBeenCalledWith('logout() not yet implemented');
+    const mockKeycloakUrl = 'http://localhost:8080';
+    const mockKeycloakRealm = 'carecore';
+    const mockClientId = 'carecore-api';
+    const mockClientSecret = 'secret-123';
+    const mockRefreshToken = 'refresh-token-123';
+
+    beforeEach(() => {
+      mockConfigService.get.mockImplementation((key: string) => {
+        const config: Record<string, string> = {
+          KEYCLOAK_URL: mockKeycloakUrl,
+          KEYCLOAK_REALM: mockKeycloakRealm,
+          KEYCLOAK_CLIENT_ID: mockClientId,
+          KEYCLOAK_CLIENT_SECRET: mockClientSecret,
+        };
+        return config[key] || null;
+      });
+    });
+
+    it('should throw BadRequestException if KEYCLOAK_URL is not configured', async () => {
+      mockConfigService.get.mockImplementation((key: string) => {
+        const config: Record<string, string> = {
+          KEYCLOAK_CLIENT_ID: mockClientId,
+          KEYCLOAK_CLIENT_SECRET: mockClientSecret,
+        };
+        return config[key] || null;
+      });
+
+      await expect(service.logout(mockRefreshToken)).rejects.toThrow(BadRequestException);
+      expect(mockLogger.error).toHaveBeenCalledWith('KEYCLOAK_URL is not configured');
+    });
+
+    it('should throw BadRequestException if KEYCLOAK_CLIENT_ID is not configured', async () => {
+      mockConfigService.get.mockImplementation((key: string) => {
+        const config: Record<string, string> = {
+          KEYCLOAK_URL: mockKeycloakUrl,
+          KEYCLOAK_CLIENT_SECRET: mockClientSecret,
+        };
+        return config[key] || null;
+      });
+
+      await expect(service.logout(mockRefreshToken)).rejects.toThrow(BadRequestException);
+      expect(mockLogger.error).toHaveBeenCalledWith('KEYCLOAK_CLIENT_ID is not configured');
+    });
+
+    it('should throw BadRequestException if KEYCLOAK_CLIENT_SECRET is not configured', async () => {
+      mockConfigService.get.mockImplementation((key: string) => {
+        const config: Record<string, string> = {
+          KEYCLOAK_URL: mockKeycloakUrl,
+          KEYCLOAK_CLIENT_ID: mockClientId,
+        };
+        return config[key] || null;
+      });
+
+      await expect(service.logout(mockRefreshToken)).rejects.toThrow(BadRequestException);
+      expect(mockLogger.error).toHaveBeenCalledWith('KEYCLOAK_CLIENT_SECRET is not configured');
+    });
+
+    it('should throw BadRequestException if refresh token is empty', async () => {
+      await expect(service.logout('')).rejects.toThrow(BadRequestException);
+      expect(mockLogger.error).toHaveBeenCalledWith('Refresh token is required for logout');
+    });
+
+    it('should successfully revoke tokens in Keycloak (204 No Content)', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        status: 204,
+      });
+
+      await service.logout(mockRefreshToken);
+
+      expect(mockLogger.debug).toHaveBeenCalled();
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/protocol/openid-connect/logout'),
+        expect.objectContaining({
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        }),
+      );
+    });
+
+    it('should successfully revoke tokens in Keycloak (200 OK)', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+      });
+
+      await service.logout(mockRefreshToken);
+
+      expect(mockLogger.debug).toHaveBeenCalledWith('Tokens successfully revoked in Keycloak');
+    });
+
+    it('should continue with logout even if Keycloak returns error (400)', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        text: async () => 'Invalid refresh token',
+      });
+
+      // Should not throw - logout should succeed even if Keycloak fails
+      await expect(service.logout(mockRefreshToken)).resolves.not.toThrow();
+      expect(mockLogger.warn).toHaveBeenCalled();
+    });
+
+    it('should continue with logout even if Keycloak returns error (401)', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: false,
+        status: 401,
+        text: async () => 'Unauthorized',
+      });
+
+      // Should not throw - logout should succeed even if Keycloak fails
+      await expect(service.logout(mockRefreshToken)).resolves.not.toThrow();
+      expect(mockLogger.warn).toHaveBeenCalled();
+    });
+
+    it('should continue with logout even if fetch fails', async () => {
+      global.fetch = jest.fn().mockRejectedValue(new Error('Network error'));
+
+      // Should not throw - logout should succeed even if Keycloak is unreachable
+      await expect(service.logout(mockRefreshToken)).resolves.not.toThrow();
+      expect(mockLogger.error).toHaveBeenCalled();
     });
   });
 

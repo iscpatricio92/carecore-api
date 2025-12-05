@@ -644,18 +644,18 @@ async callback(
 Implementar el endpoint que refresca el access token usando el refresh token.
 
 ## Tareas
-- [ ] Implementar método `refresh()` en `AuthController`
-- [ ] Extraer refresh token del request (cookie o body)
-- [ ] Intercambiar refresh token por nuevo access token:
+- [x] Implementar método `refresh()` en `AuthController`
+- [x] Extraer refresh token del request (cookie o body)
+- [x] Intercambiar refresh token por nuevo access token:
   - POST a `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token`
   - Parámetros:
     - `grant_type`: `refresh_token`
     - `refresh_token`: token recibido
     - `client_id`: `KEYCLOAK_CLIENT_ID`
     - `client_secret`: `KEYCLOAK_CLIENT_SECRET`
-- [ ] Retornar nuevos tokens
-- [ ] Manejar errores (token expirado, inválido)
-- [ ] Agregar tests
+- [x] Retornar nuevos tokens
+- [x] Manejar errores (token expirado, inválido)
+- [x] Agregar tests
 
 ## Implementación Esperada
 ```typescript
@@ -669,10 +669,10 @@ async refresh(@Body() body: { refresh_token: string }) {
 ```
 
 ## Criterios de Aceptación
-- [ ] Endpoint refresca tokens correctamente
-- [ ] Maneja tokens expirados
-- [ ] Retorna nuevos tokens
-- [ ] Tests pasando
+- [x] Endpoint refresca tokens correctamente
+- [x] Maneja tokens expirados
+- [x] Retorna nuevos tokens
+- [x] Tests pasando
 
 ## Referencias
 - [OAuth2 Refresh Token](https://oauth.net/2/grant-types/refresh-token/)
@@ -692,18 +692,18 @@ async refresh(@Body() body: { refresh_token: string }) {
 Implementar el endpoint de logout que revoca los tokens en Keycloak y limpia la sesión.
 
 ## Tareas
-- [ ] Implementar método `logout()` en `AuthController`
-- [ ] Extraer refresh token del request
-- [ ] Revocar tokens en Keycloak:
+- [x] Implementar método `logout()` en `AuthController`
+- [x] Extraer refresh token del request
+- [x] Revocar tokens en Keycloak:
   - POST a `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/logout`
   - Parámetros:
     - `client_id`: `KEYCLOAK_CLIENT_ID`
     - `client_secret`: `KEYCLOAK_CLIENT_SECRET`
     - `refresh_token`: token a revocar
-- [ ] Limpiar cookies/tokens locales
-- [ ] Retornar confirmación
-- [ ] Manejar errores
-- [ ] Agregar tests
+- [x] Limpiar cookies/tokens locales
+- [x] Retornar confirmación
+- [x] Manejar errores
+- [x] Agregar tests
 
 ## Implementación Esperada
 ```typescript
@@ -719,10 +719,10 @@ async logout(
 ```
 
 ## Criterios de Aceptación
-- [ ] Endpoint revoca tokens en Keycloak
-- [ ] Limpia sesión local
-- [ ] Maneja errores correctamente
-- [ ] Tests pasando
+- [x] Endpoint revoca tokens en Keycloak
+- [x] Limpia sesión local
+- [x] Maneja errores correctamente
+- [x] Tests pasando
 
 ## Referencias
 - [Keycloak Logout](https://www.keycloak.org/docs/latest/securing_apps/#_logout_endpoint)

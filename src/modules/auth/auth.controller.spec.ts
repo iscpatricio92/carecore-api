@@ -300,38 +300,300 @@ describe('AuthController', () => {
   });
 
   describe('refresh', () => {
-    it('should refresh token successfully', async () => {
-      mockAuthService.refreshToken.mockResolvedValue({
-        accessToken: 'new-token',
-        refreshToken: 'new-refresh',
-      });
-
-      const result = await controller.refresh('refresh-token');
-
-      expect(mockAuthService.refreshToken).toHaveBeenCalledWith('refresh-token');
-      expect(result).toEqual({
-        accessToken: 'new-token',
-        refreshToken: 'new-refresh',
+    beforeEach(() => {
+      mockConfigService.get.mockImplementation((key: string) => {
+        if (key === 'FRONTEND_URL' || key === 'CLIENT_URL') {
+          return 'http://localhost:3001';
+        }
+        return null;
       });
     });
 
-    it('should throw error if refresh token is missing', async () => {
-      await expect(controller.refresh('')).rejects.toThrow('Refresh token is required');
+    it('should refresh token successfully from body', async () => {
+      const mockRequest = {
+        cookies: {},
+      } as unknown as Request;
+
+      const mockResponse = {
+        cookie: jest.fn(),
+        json: jest.fn(),
+        status: jest.fn().mockReturnThis(),
+      } as unknown as Response;
+
+      mockAuthService.refreshToken.mockResolvedValue({
+        accessToken: 'new-token',
+        refreshToken: 'new-refresh',
+        expiresIn: 3600,
+        tokenType: 'Bearer',
+      });
+
+      await controller.refresh('refresh-token', mockRequest, mockResponse);
+
+      expect(mockAuthService.refreshToken).toHaveBeenCalledWith('refresh-token');
+      expect(mockResponse.cookie).toHaveBeenCalledWith(
+        'access_token',
+        'new-token',
+        expect.objectContaining({
+          httpOnly: true,
+          secure: false,
+          sameSite: 'lax',
+          maxAge: 3600000,
+          path: '/',
+        }),
+      );
+      expect(mockResponse.cookie).toHaveBeenCalledWith(
+        'refresh_token',
+        'new-refresh',
+        expect.objectContaining({
+          httpOnly: true,
+          secure: false,
+          sameSite: 'lax',
+          path: '/',
+        }),
+      );
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        accessToken: 'new-token',
+        refreshToken: 'new-refresh',
+        expiresIn: 3600,
+        tokenType: 'Bearer',
+      });
+    });
+
+    it('should refresh token successfully from cookie', async () => {
+      const mockRequest = {
+        cookies: {
+          refresh_token: 'refresh-token-from-cookie',
+        },
+      } as unknown as Request;
+
+      const mockResponse = {
+        cookie: jest.fn(),
+        json: jest.fn(),
+        status: jest.fn().mockReturnThis(),
+      } as unknown as Response;
+
+      mockAuthService.refreshToken.mockResolvedValue({
+        accessToken: 'new-token',
+        refreshToken: 'new-refresh',
+        expiresIn: 3600,
+        tokenType: 'Bearer',
+      });
+
+      await controller.refresh(undefined, mockRequest, mockResponse);
+
+      expect(mockAuthService.refreshToken).toHaveBeenCalledWith('refresh-token-from-cookie');
+      expect(mockResponse.json).toHaveBeenCalled();
+    });
+
+    it('should return 400 if refresh token is missing', async () => {
+      const mockRequest = {
+        cookies: {},
+      } as unknown as Request;
+
+      const mockResponse = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      } as unknown as Response;
+
+      await controller.refresh(undefined, mockRequest, mockResponse);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        message: 'Refresh token is required. Provide it in the request body or as a cookie.',
+      });
+    });
+
+    it('should handle UnauthorizedException', async () => {
+      const mockRequest = {
+        cookies: {},
+      } as unknown as Request;
+
+      const mockResponse = {
+        cookie: jest.fn(),
+        json: jest.fn(),
+        status: jest.fn().mockReturnThis(),
+      } as unknown as Response;
+
+      mockAuthService.refreshToken.mockRejectedValue(
+        new UnauthorizedException('Refresh token is invalid or expired'),
+      );
+
+      await controller.refresh('invalid-token', mockRequest, mockResponse);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.UNAUTHORIZED);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        message: 'Refresh token is invalid or expired',
+        error: 'Refresh token is invalid or expired',
+      });
+    });
+
+    it('should handle BadRequestException', async () => {
+      const mockRequest = {
+        cookies: {},
+      } as unknown as Request;
+
+      const mockResponse = {
+        cookie: jest.fn(),
+        json: jest.fn(),
+        status: jest.fn().mockReturnThis(),
+      } as unknown as Response;
+
+      mockAuthService.refreshToken.mockRejectedValue(
+        new BadRequestException('Keycloak URL is not configured'),
+      );
+
+      await controller.refresh('refresh-token', mockRequest, mockResponse);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        message: 'Keycloak URL is not configured',
+        error: 'Keycloak URL is not configured',
+      });
+    });
+
+    it('should not update refresh token cookie if same token is returned', async () => {
+      const mockRequest = {
+        cookies: {},
+      } as unknown as Request;
+
+      const mockResponse = {
+        cookie: jest.fn(),
+        json: jest.fn(),
+        status: jest.fn().mockReturnThis(),
+      } as unknown as Response;
+
+      const refreshToken = 'same-refresh-token';
+      mockAuthService.refreshToken.mockResolvedValue({
+        accessToken: 'new-token',
+        refreshToken: refreshToken, // Same token
+        expiresIn: 3600,
+        tokenType: 'Bearer',
+      });
+
+      await controller.refresh(refreshToken, mockRequest, mockResponse);
+
+      // Should set access_token cookie
+      expect(mockResponse.cookie).toHaveBeenCalledWith(
+        'access_token',
+        'new-token',
+        expect.any(Object),
+      );
+      // Should NOT set refresh_token cookie if same token
+      expect(mockResponse.cookie).not.toHaveBeenCalledWith(
+        'refresh_token',
+        expect.any(String),
+        expect.any(Object),
+      );
     });
   });
 
   describe('logout', () => {
-    it('should logout successfully', async () => {
+    it('should logout successfully from body', async () => {
+      const mockRequest = {
+        cookies: {},
+      } as unknown as Request;
+
+      const mockResponse = {
+        clearCookie: jest.fn(),
+        json: jest.fn(),
+        status: jest.fn().mockReturnThis(),
+      } as unknown as Response;
+
       mockAuthService.logout.mockResolvedValue(undefined);
 
-      const result = await controller.logout('refresh-token');
+      await controller.logout('refresh-token', mockRequest, mockResponse);
 
       expect(mockAuthService.logout).toHaveBeenCalledWith('refresh-token');
-      expect(result).toEqual({ message: 'Logged out successfully' });
+      expect(mockResponse.clearCookie).toHaveBeenCalledWith('access_token', expect.any(Object));
+      expect(mockResponse.clearCookie).toHaveBeenCalledWith('refresh_token', expect.any(Object));
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        message: 'Logged out successfully',
+      });
     });
 
-    it('should throw error if refresh token is missing', async () => {
-      await expect(controller.logout('')).rejects.toThrow('Refresh token is required');
+    it('should logout successfully from cookie', async () => {
+      const mockRequest = {
+        cookies: {
+          refresh_token: 'refresh-token-from-cookie',
+        },
+      } as unknown as Request;
+
+      const mockResponse = {
+        clearCookie: jest.fn(),
+        json: jest.fn(),
+        status: jest.fn().mockReturnThis(),
+      } as unknown as Response;
+
+      mockAuthService.logout.mockResolvedValue(undefined);
+
+      await controller.logout(undefined, mockRequest, mockResponse);
+
+      expect(mockAuthService.logout).toHaveBeenCalledWith('refresh-token-from-cookie');
+      expect(mockResponse.json).toHaveBeenCalled();
+    });
+
+    it('should return 400 if refresh token is missing', async () => {
+      const mockRequest = {
+        cookies: {},
+      } as unknown as Request;
+
+      const mockResponse = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      } as unknown as Response;
+
+      await controller.logout(undefined, mockRequest, mockResponse);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        message: 'Refresh token is required. Provide it in the request body or as a cookie.',
+      });
+    });
+
+    it('should handle BadRequestException', async () => {
+      const mockRequest = {
+        cookies: {},
+      } as unknown as Request;
+
+      const mockResponse = {
+        clearCookie: jest.fn(),
+        json: jest.fn(),
+        status: jest.fn().mockReturnThis(),
+      } as unknown as Response;
+
+      mockAuthService.logout.mockRejectedValue(
+        new BadRequestException('Keycloak URL is not configured'),
+      );
+
+      await controller.logout('refresh-token', mockRequest, mockResponse);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        message: 'Keycloak URL is not configured',
+        error: 'Keycloak URL is not configured',
+      });
+    });
+
+    it('should handle generic errors', async () => {
+      const mockRequest = {
+        cookies: {},
+      } as unknown as Request;
+
+      const mockResponse = {
+        clearCookie: jest.fn(),
+        json: jest.fn(),
+        status: jest.fn().mockReturnThis(),
+      } as unknown as Response;
+
+      mockAuthService.logout.mockRejectedValue(new Error('Network error'));
+
+      await controller.logout('refresh-token', mockRequest, mockResponse);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        message: 'Network error',
+        error: 'Network error',
+      });
     });
   });
 

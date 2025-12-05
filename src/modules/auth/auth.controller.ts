@@ -9,6 +9,7 @@ import {
   HttpStatus,
   Body,
   BadRequestException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -236,8 +237,9 @@ export class AuthController {
   @Public()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Refrescar token',
-    description: 'Obtiene un nuevo access token usando un refresh token',
+    summary: 'Refrescar access token',
+    description:
+      'Obtiene un nuevo access token y refresh token usando un refresh token válido. El refresh token puede enviarse en el body o en una cookie.',
   })
   @ApiBody({
     schema: {
@@ -245,11 +247,12 @@ export class AuthController {
       properties: {
         refreshToken: {
           type: 'string',
-          description: 'Refresh token para obtener nuevo access token',
+          description:
+            'Refresh token para obtener nuevo access token (opcional si se envía en cookie)',
         },
       },
-      required: ['refreshToken'],
     },
+    required: false,
   })
   @ApiResponse({
     status: 200,
@@ -257,35 +260,103 @@ export class AuthController {
     schema: {
       type: 'object',
       properties: {
-        accessToken: { type: 'string' },
-        refreshToken: { type: 'string' },
+        accessToken: { type: 'string', description: 'Nuevo access token' },
+        refreshToken: {
+          type: 'string',
+          description: 'Nuevo refresh token (si Keycloak lo proporciona)',
+        },
+        expiresIn: {
+          type: 'number',
+          description: 'Tiempo de expiración del access token en segundos',
+        },
+        tokenType: { type: 'string', description: 'Tipo de token (Bearer)' },
       },
     },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Refresh token faltante o inválido',
   })
   @ApiResponse({
     status: 401,
     description: 'Refresh token inválido o expirado',
   })
-  async refresh(@Body('refreshToken') refreshToken: string): Promise<{
-    accessToken: string;
-    refreshToken: string;
-  }> {
-    // TODO: Implement in Tarea 10
+  async refresh(
+    @Body('refreshToken') refreshTokenFromBody: string | undefined,
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    // Try to get refresh token from body first, then from cookie
+    const refreshToken = refreshTokenFromBody || req.cookies?.refresh_token;
+
     if (!refreshToken) {
-      throw new Error('Refresh token is required');
+      res.status(HttpStatus.BAD_REQUEST).json({
+        message: 'Refresh token is required. Provide it in the request body or as a cookie.',
+      });
+      return;
     }
-    return await this.authService.refreshToken(refreshToken);
+
+    try {
+      const tokens = await this.authService.refreshToken(refreshToken);
+
+      // Set secure HTTP-only cookies for new tokens
+      const isProduction = process.env.NODE_ENV === 'production';
+
+      // Access token cookie
+      res.cookie('access_token', tokens.accessToken, {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: 'lax',
+        maxAge: tokens.expiresIn * 1000,
+        path: '/',
+      });
+
+      // Refresh token cookie (update if new one is provided)
+      if (tokens.refreshToken && tokens.refreshToken !== refreshToken) {
+        res.cookie('refresh_token', tokens.refreshToken, {
+          httpOnly: true,
+          secure: isProduction,
+          sameSite: 'lax',
+          maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+          path: '/',
+        });
+      }
+
+      // Return tokens in response body as well (for clients that don't use cookies)
+      res.json({
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        expiresIn: tokens.expiresIn,
+        tokenType: tokens.tokenType,
+      });
+    } catch (error) {
+      this.logger.error({ error }, 'Failed to refresh token');
+
+      const statusCode =
+        error instanceof UnauthorizedException || error instanceof BadRequestException
+          ? error instanceof UnauthorizedException
+            ? HttpStatus.UNAUTHORIZED
+            : HttpStatus.BAD_REQUEST
+          : HttpStatus.INTERNAL_SERVER_ERROR;
+
+      res.status(statusCode).json({
+        message: error instanceof Error ? error.message : 'Failed to refresh token',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
   }
 
   /**
    * Logout endpoint - Logs out the user and revokes tokens
+   * This endpoint revokes tokens in Keycloak and clears local session cookies.
    */
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Cerrar sesión',
-    description: 'Cierra la sesión del usuario y revoca los tokens',
+    description:
+      'Cierra la sesión del usuario, revoca los tokens en Keycloak y limpia las cookies locales. El refresh token puede enviarse en el body o en una cookie.',
   })
   @ApiBody({
     schema: {
@@ -293,29 +364,84 @@ export class AuthController {
       properties: {
         refreshToken: {
           type: 'string',
-          description: 'Refresh token a revocar',
+          description: 'Refresh token a revocar (opcional si se envía en cookie)',
         },
       },
-      required: ['refreshToken'],
     },
+    required: false,
   })
   @ApiResponse({
     status: 200,
     description: 'Sesión cerrada exitosamente',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', description: 'Mensaje de confirmación' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Refresh token faltante o inválido',
   })
   @ApiResponse({
     status: 401,
     description: 'No autenticado',
   })
-  async logout(@Body('refreshToken') refreshToken: string): Promise<{
-    message: string;
-  }> {
-    // TODO: Implement in Tarea 11
+  async logout(
+    @Body('refreshToken') refreshTokenFromBody: string | undefined,
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    // Try to get refresh token from body first, then from cookie
+    const refreshToken = refreshTokenFromBody || req.cookies?.refresh_token;
+
     if (!refreshToken) {
-      throw new Error('Refresh token is required');
+      res.status(HttpStatus.BAD_REQUEST).json({
+        message: 'Refresh token is required. Provide it in the request body or as a cookie.',
+      });
+      return;
     }
-    await this.authService.logout(refreshToken);
-    return { message: 'Logged out successfully' };
+
+    try {
+      // Revoke tokens in Keycloak
+      await this.authService.logout(refreshToken);
+
+      // Clear local cookies
+      const isProduction = process.env.NODE_ENV === 'production';
+
+      res.clearCookie('access_token', {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: 'lax',
+        path: '/',
+      });
+
+      res.clearCookie('refresh_token', {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: 'lax',
+        path: '/',
+      });
+
+      this.logger.debug('User logged out successfully');
+
+      res.json({
+        message: 'Logged out successfully',
+      });
+    } catch (error) {
+      this.logger.error({ error }, 'Failed to logout');
+
+      const statusCode =
+        error instanceof BadRequestException
+          ? HttpStatus.BAD_REQUEST
+          : HttpStatus.INTERNAL_SERVER_ERROR;
+
+      res.status(statusCode).json({
+        message: error instanceof Error ? error.message : 'Failed to logout',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
   }
 
   /**
