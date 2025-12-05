@@ -27,9 +27,9 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "typeorm": "typeorm-ts-node-commonjs",
-    "migration:generate": "typeorm-ts-node-commonjs migration:generate -d src/config/database.config.ts",
-    "migration:run": "typeorm-ts-node-commonjs migration:run -d src/config/database.config.ts",
-    "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/config/database.config.ts",
+    "migration:generate": "typeorm-ts-node-commonjs migration:generate -d src/config/data-source.ts",
+    "migration:run": "typeorm-ts-node-commonjs migration:run -d src/config/data-source.ts",
+    "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/config/data-source.ts",
     "prepare": "husky install",
     "github:create-tasks-phase1": "node scripts/create-github-tasks-phase1.js",
     "github:create-tasks-phase1:dry-run": "node scripts/create-github-tasks-phase1.js --dry-run",
@@ -38,7 +38,8 @@
     "docker:logs": "make docker-logs",
     "docker:keycloak:logs": "docker-compose logs -f keycloak",
     "docker:keycloak:restart": "docker-compose restart keycloak",
-    "docker:keycloak:shell": "docker-compose exec keycloak /bin/bash"
+    "docker:keycloak:shell": "docker-compose exec keycloak /bin/bash",
+    "encryption:verify": "ts-node scripts/verify-encryption.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.20",

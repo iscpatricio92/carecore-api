@@ -92,6 +92,7 @@ FHIR_BASE_URL=http://localhost:3000/api/fhir
 
 # Security
 BCRYPT_ROUNDS=10
+ENCRYPTION_KEY=
 
 # CORS
 CORS_ORIGIN=http://localhost:3000
@@ -149,6 +150,11 @@ KEYCLOAK_HTTP_ENABLED=true
 
 ### Security
 - `BCRYPT_ROUNDS`: Number of rounds for password hashing (default: 10)
+- `ENCRYPTION_KEY`: Encryption key for pgcrypto (at least 32 characters) (**required for encryption**)
+  - Used to encrypt sensitive data at rest in the database
+  - Generate a secure random key for production
+  - Store securely (environment variable, KMS, etc.)
+  - **DO NOT** commit this value to the repository
 
 ### CORS
 - `CORS_ORIGIN`: Allowed origin for CORS (use `*` in development, specific in production)

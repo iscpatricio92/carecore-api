@@ -9,6 +9,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { FhirModule } from './modules/fhir/fhir.module';
 import { PatientsModule } from './modules/patients/patients.module';
+import { CommonModule } from './common/common.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
@@ -71,6 +72,9 @@ import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
       imports: [ConfigModule],
       useClass: DatabaseConfig,
     }),
+
+    // Common module (shared services)
+    CommonModule,
 
     // Feature modules
     FhirModule,
