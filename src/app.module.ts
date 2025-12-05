@@ -13,6 +13,7 @@ import { PractitionersModule } from './modules/practitioners/practitioners.modul
 import { EncountersModule } from './modules/encounters/encounters.module';
 import { ConsentsModule } from './modules/consents/consents.module';
 import { DocumentsModule } from './modules/documents/documents.module';
+import { AuthModule } from './modules/auth/auth.module';
 import { CommonModule } from './common/common.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
@@ -81,6 +82,7 @@ import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
     CommonModule,
 
     // Feature modules
+    AuthModule,
     FhirModule,
     PatientsModule,
     PractitionersModule,

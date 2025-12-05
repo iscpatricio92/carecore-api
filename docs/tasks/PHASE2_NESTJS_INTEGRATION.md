@@ -162,15 +162,15 @@ src/
 Crear la estructura base del módulo de autenticación en NestJS con la estructura de carpetas necesaria.
 
 ## Tareas
-- [ ] Crear carpeta `src/modules/auth/`
-- [ ] Crear `auth.module.ts` con configuración básica
-- [ ] Crear subcarpetas:
-  - [ ] `strategies/` - Para estrategias de Passport
-  - [ ] `guards/` - Para guards de autenticación
-  - [ ] `decorators/` - Para decoradores personalizados
-  - [ ] `dto/` - Para DTOs de autenticación
-- [ ] Integrar `AuthModule` en `AppModule`
-- [ ] Configurar imports necesarios (ConfigModule, PassportModule, JwtModule)
+- [x] Crear carpeta `src/modules/auth/`
+- [x] Crear `auth.module.ts` con configuración básica
+- [x] Crear subcarpetas:
+  - [x] `strategies/` - Para estrategias de Passport
+  - [x] `guards/` - Para guards de autenticación
+  - [x] `decorators/` - Para decoradores personalizados
+  - [x] `dto/` - Para DTOs de autenticación
+- [x] Integrar `AuthModule` en `AppModule`
+- [x] Configurar imports necesarios (ConfigModule, PassportModule, JwtModule)
 
 ## Estructura Esperada
 ```
@@ -190,9 +190,9 @@ src/modules/auth/
 ```
 
 ## Criterios de Aceptación
-- [ ] Módulo auth creado y estructurado
-- [ ] Módulo integrado en AppModule
-- [ ] Estructura de carpetas lista para implementación
+- [x] Módulo auth creado y estructurado
+- [x] Módulo integrado en AppModule
+- [x] Estructura de carpetas lista para implementación
 
 ## Referencias
 - [NestJS Modules](https://docs.nestjs.com/modules)
@@ -213,15 +213,15 @@ src/modules/auth/
 Instalar y configurar todas las dependencias necesarias para implementar autenticación JWT con Passport.
 
 ## Tareas
-- [ ] Verificar dependencias ya instaladas:
-  - [ ] `@nestjs/passport` ✅ (ya instalado)
-  - [ ] `passport` ✅ (ya instalado)
-  - [ ] `passport-jwt` ✅ (ya instalado)
-  - [ ] `@types/passport-jwt` ✅ (ya instalado)
-  - [ ] `@nestjs/jwt` ✅ (ya instalado)
-- [ ] Verificar que todas las dependencias estén en `package.json`
-- [ ] Ejecutar `npm install` si es necesario
-- [ ] Documentar dependencias en README
+- [x] Verificar dependencias ya instaladas:
+  - [x] `@nestjs/passport` ✅ (ya instalado - v10.0.3)
+  - [x] `passport` ✅ (ya instalado - v0.7.0)
+  - [x] `passport-jwt` ✅ (ya instalado - v4.0.1)
+  - [x] `@types/passport-jwt` ✅ (ya instalado - v4.0.1)
+  - [x] `@nestjs/jwt` ✅ (ya instalado - v10.2.0)
+- [x] Verificar que todas las dependencias estén en `package.json`
+- [x] Ejecutar `npm install` si es necesario (no necesario, ya instaladas)
+- [x] Documentar dependencias en README
 
 ## Dependencias Requeridas
 ```json
@@ -235,9 +235,9 @@ Instalar y configurar todas las dependencias necesarias para implementar autenti
 ```
 
 ## Criterios de Aceptación
-- [ ] Todas las dependencias instaladas
-- [ ] Versiones compatibles verificadas
-- [ ] Dependencias documentadas
+- [x] Todas las dependencias instaladas
+- [x] Versiones compatibles verificadas
+- [x] Dependencias documentadas
 
 ## Notas
 - Las dependencias ya están instaladas según package.json
