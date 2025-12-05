@@ -134,6 +134,25 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          echo "⏳ Esperando a que PostgreSQL esté completamente listo..."
+          # Install PostgreSQL client to use pg_isready
+          sudo apt-get update && sudo apt-get install -y postgresql-client || true
+          # Wait for PostgreSQL to be ready (max 30 seconds)
+          for i in {1..15}; do
+            if pg_isready -h localhost -p 5432 -U test_user 2>/dev/null; then
+              echo "✅ PostgreSQL está listo"
+              break
+            fi
+            echo "PostgreSQL no está listo aún, esperando... ($i/15)"
+            sleep 2
+          done
+          # Verify connection one more time
+          if ! pg_isready -h localhost -p 5432 -U test_user 2>/dev/null; then
+            echo "⚠️  PostgreSQL puede no estar completamente listo, pero continuando..."
+          fi
+
       - name: Run unit tests
         env:
           NODE_ENV: test
@@ -148,11 +167,23 @@ jobs:
       - name: Run E2E tests
         env:
           NODE_ENV: test
+          DB_TYPE: postgres
           DB_HOST: localhost
           DB_PORT: 5432
           DB_USER: test_user
           DB_PASSWORD: test_password
           DB_NAME: test_db
+          DB_SYNCHRONIZE: 'true'
+          # ⚠️ SECURITY NOTE: All values below are TEST-ONLY credentials and secrets.
+          # These are NOT production values and should NEVER be used in production.
+          # They match the default test values in test/helpers/test-module.factory.ts
+          # Keycloak variables (tests use MockJwtStrategy but AppModule may need these)
+          KEYCLOAK_URL: http://localhost:8080
+          KEYCLOAK_REALM: carecore
+          KEYCLOAK_CLIENT_ID: carecore-api
+          KEYCLOAK_CLIENT_SECRET: test-secret
+          # Encryption key for tests (32+ characters) - TEST ONLY, NOT for production
+          ENCRYPTION_KEY: test-encryption-key-32-chars-long-for-e2e-tests
         run: npm run test:e2e
 
       - name: Generate coverage report
