@@ -5,6 +5,7 @@ import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { LoggerModule } from 'nestjs-pino';
 
 import { DatabaseConfig } from './config/database.config';
+import { MigrationRunnerModule } from './config/migration-runner.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { FhirModule } from './modules/fhir/fhir.module';
@@ -78,6 +79,9 @@ import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
       imports: [ConfigModule],
       useClass: DatabaseConfig,
     }),
+
+    // Migration Runner Module (optional - controlled by RUN_MIGRATIONS_ON_STARTUP)
+    MigrationRunnerModule,
 
     // Common module (shared services)
     CommonModule,
