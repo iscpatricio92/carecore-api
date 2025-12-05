@@ -843,13 +843,13 @@ const config = new DocumentBuilder()
 Crear un guard que valide que el usuario tenga los roles necesarios para acceder a un endpoint.
 
 ## Tareas
-- [ ] Crear `src/modules/auth/guards/roles.guard.ts`
-- [ ] Implementar `CanActivate` interface
-- [ ] Extraer roles requeridos del metadata (decorador `@Roles()`)
-- [ ] Extraer roles del usuario del request
-- [ ] Validar que el usuario tenga al menos uno de los roles requeridos
-- [ ] Lanzar `ForbiddenException` si no tiene permisos
-- [ ] Agregar tests
+- [x] Crear `src/modules/auth/guards/roles.guard.ts`
+- [x] Implementar `CanActivate` interface
+- [x] Extraer roles requeridos del metadata (decorador `@Roles()`)
+- [x] Extraer roles del usuario del request
+- [x] Validar que el usuario tenga al menos uno de los roles requeridos
+- [x] Lanzar `ForbiddenException` si no tiene permisos
+- [x] Agregar tests
 
 ## Implementación Esperada
 ```typescript
@@ -874,10 +874,10 @@ export class RolesGuard implements CanActivate {
 ```
 
 ## Criterios de Aceptación
-- [ ] Guard valida roles correctamente
-- [ ] Retorna 403 Forbidden si no tiene permisos
-- [ ] Permite acceso si tiene rol requerido
-- [ ] Tests pasando
+- [x] Guard valida roles correctamente
+- [x] Retorna 403 Forbidden si no tiene permisos
+- [x] Permite acceso si tiene rol requerido
+- [x] Tests pasando
 
 ## Referencias
 - [NestJS Guards](https://docs.nestjs.com/guards)
@@ -897,11 +897,11 @@ export class RolesGuard implements CanActivate {
 Crear un decorador que defina qué roles pueden acceder a un endpoint.
 
 ## Tareas
-- [ ] Crear `src/modules/auth/decorators/roles.decorator.ts`
-- [ ] Usar `SetMetadata` para almacenar roles requeridos
-- [ ] Aplicar decorador junto con `RolesGuard`
-- [ ] Documentar uso
-- [ ] Agregar tests
+- [x] Crear `src/modules/auth/decorators/roles.decorator.ts`
+- [x] Usar `SetMetadata` para almacenar roles requeridos
+- [x] Aplicar decorador junto con `RolesGuard`
+- [x] Documentar uso
+- [x] Agregar tests (incluidos en RolesGuard tests)
 
 ## Implementación Esperada
 ```typescript
@@ -927,9 +927,9 @@ async practitionerEndpoint() {
 ```
 
 ## Criterios de Aceptación
-- [ ] Decorador define roles requeridos
-- [ ] Funciona con `RolesGuard`
-- [ ] Tests pasando
+- [x] Decorador define roles requeridos
+- [x] Funciona con `RolesGuard`
+- [x] Tests pasando
 
 ## Referencias
 - [NestJS Custom Decorators](https://docs.nestjs.com/custom-decorators)
@@ -949,7 +949,7 @@ async practitionerEndpoint() {
 Asegurar que los roles definidos en Keycloak se mapeen correctamente a la aplicación y estén disponibles en el token JWT.
 
 ## Tareas
-- [ ] Verificar que roles de Keycloak estén en el token JWT:
+- [x] Verificar que roles de Keycloak estén en el token JWT:
   - `patient`
   - `practitioner`
   - `viewer`
@@ -958,13 +958,13 @@ Asegurar que los roles definidos en Keycloak se mapeen correctamente a la aplica
   - `system`
   - `admin`
   - `audit`
-- [ ] Configurar mapeo en `JwtStrategy.validate()`:
+- [x] Configurar mapeo en `JwtStrategy.validate()`:
   - Extraer roles de `payload.realm_access.roles`
   - Mapear a objeto de usuario
-- [ ] Crear constantes de roles en la aplicación:
+- [x] Crear constantes de roles en la aplicación:
   - `src/common/constants/roles.ts`
-- [ ] Documentar mapeo de roles
-- [ ] Agregar tests
+- [x] Documentar mapeo de roles
+- [x] Agregar tests (incluidos en jwt.strategy.spec.ts)
 
 ## Implementación Esperada
 ```typescript
@@ -992,11 +992,11 @@ async validate(payload: any) {
 ```
 
 ## Criterios de Aceptación
-- [ ] Roles extraídos correctamente del token
-- [ ] Roles disponibles en `@CurrentUser()`
-- [ ] Constantes de roles definidas
-- [ ] Documentación completa
-- [ ] Tests pasando
+- [x] Roles extraídos correctamente del token
+- [x] Roles disponibles en `@CurrentUser()`
+- [x] Constantes de roles definidas
+- [x] Documentación completa
+- [x] Tests pasando
 
 ## Referencias
 - [Keycloak Token Claims](https://www.keycloak.org/docs/latest/securing_apps/#_token_claims)
