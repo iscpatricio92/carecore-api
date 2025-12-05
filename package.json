@@ -33,6 +33,8 @@
     "prepare": "husky install",
     "github:create-tasks-phase1": "node scripts/create-github-tasks-phase1.js",
     "github:create-tasks-phase1:dry-run": "node scripts/create-github-tasks-phase1.js --dry-run",
+    "github:create-tasks-phase2": "node scripts/create-github-tasks-phase2.js",
+    "github:create-tasks-phase2:dry-run": "node scripts/create-github-tasks-phase2.js --dry-run",
     "docker:up": "make docker-up",
     "docker:down": "make docker-down",
     "docker:logs": "make docker-logs",
