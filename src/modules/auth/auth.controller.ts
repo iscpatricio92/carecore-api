@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Query, Res, HttpCode, HttpStatus, Body } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Query,
+  Res,
+  Req,
+  HttpCode,
+  HttpStatus,
+  Body,
+  BadRequestException,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -7,7 +18,8 @@ import {
   ApiQuery,
   ApiBody,
 } from '@nestjs/swagger';
-import { Response } from 'express';
+import { Request, Response } from 'express';
+import { PinoLogger } from 'nestjs-pino';
 
 import { AuthService } from './auth.service';
 import { Public } from './decorators/public.decorator';
@@ -23,7 +35,12 @@ import { User } from './interfaces/user.interface';
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly logger: PinoLogger,
+  ) {
+    this.logger.setContext(AuthController.name);
+  }
 
   /**
    * Login endpoint - Redirects to Keycloak for authentication
@@ -31,28 +48,59 @@ export class AuthController {
    */
   @Post('login')
   @Public()
-  @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Iniciar sesión',
-    description: 'Redirige al usuario a Keycloak para autenticación OAuth2/OIDC',
+    summary: 'Iniciar sesión (redirige a Keycloak)',
+    description:
+      'Inicia el flujo OAuth2 Authorization Code redirigiendo al usuario a Keycloak para autenticación.',
   })
   @ApiResponse({
-    status: 200,
-    description: 'Redirección a Keycloak (en implementación)',
+    status: 302,
+    description: 'Redirección a Keycloak para autenticación',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Error en la configuración de autenticación',
   })
   @ApiResponse({
     status: 500,
     description: 'Error al generar URL de autorización',
   })
-  async login(@Res() res: Response): Promise<void> {
-    // TODO: Implement in Tarea 8
-    const authUrl = this.authService.getAuthorizationUrl();
-    if (authUrl) {
-      res.redirect(authUrl);
-    } else {
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-        message: 'Authentication service not configured',
+  async login(@Req() req: Request, @Res() res: Response): Promise<void> {
+    try {
+      // Generate CSRF state token
+      const stateToken = this.authService.generateStateToken();
+
+      // Build redirect URI (callback URL)
+      const protocol = req.protocol || 'http';
+      const host = req.get('host') || 'localhost:3000';
+      const redirectUri = `${protocol}://${host}/api/auth/callback`;
+
+      // Get authorization URL from Keycloak
+      const authUrl = this.authService.getAuthorizationUrl(stateToken, redirectUri);
+
+      // Store state token in HTTP-only cookie for validation in callback
+      // Cookie expires in 10 minutes (same as typical OAuth2 state token lifetime)
+      res.cookie('oauth_state', stateToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production', // Only send over HTTPS in production
+        sameSite: 'lax', // CSRF protection
+        maxAge: 10 * 60 * 1000, // 10 minutes
+        path: '/api/auth',
       });
+
+      // Redirect to Keycloak
+      res.redirect(authUrl);
+    } catch (error) {
+      this.logger.error({ error }, 'Failed to generate authorization URL');
+      res
+        .status(
+          error instanceof BadRequestException
+            ? HttpStatus.BAD_REQUEST
+            : HttpStatus.INTERNAL_SERVER_ERROR,
+        )
+        .json({
+          message: error instanceof Error ? error.message : 'Failed to generate authorization URL',
+        });
     }
   }
 

@@ -538,18 +538,18 @@ export class AuthController {
 Implementar el endpoint de login que inicia el flujo OAuth2 redirigiendo al usuario a Keycloak.
 
 ## Tareas
-- [ ] Implementar método `login()` en `AuthController`
-- [ ] Construir URL de autorización de Keycloak:
+- [x] Implementar método `login()` en `AuthController`
+- [x] Construir URL de autorización de Keycloak:
   - `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/auth`
-- [ ] Configurar parámetros OAuth2:
+- [x] Configurar parámetros OAuth2:
   - `client_id`: `KEYCLOAK_CLIENT_ID` (carecore-api)
   - `response_type`: `code`
   - `scope`: `openid profile email`
   - `redirect_uri`: `${API_URL}/api/auth/callback`
   - `state`: (generar token CSRF)
-- [ ] Redirigir al usuario a Keycloak
-- [ ] Manejar errores
-- [ ] Agregar tests
+- [x] Redirigir al usuario a Keycloak
+- [x] Manejar errores
+- [x] Agregar tests
 
 ## Implementación Esperada
 ```typescript
@@ -563,10 +563,10 @@ async login(@Res() res: Response) {
 ```
 
 ## Criterios de Aceptación
-- [ ] Endpoint redirige a Keycloak correctamente
-- [ ] Parámetros OAuth2 configurados correctamente
-- [ ] State token generado para CSRF protection
-- [ ] Tests pasando
+- [x] Endpoint redirige a Keycloak correctamente
+- [x] Parámetros OAuth2 configurados correctamente
+- [x] State token generado para CSRF protection
+- [x] Tests pasando
 
 ## Referencias
 - [OAuth2 Authorization Code Flow](https://oauth.net/2/grant-types/authorization-code/)
