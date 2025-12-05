@@ -434,6 +434,81 @@ function addIssueToProject(issueNumber) {
   }
 }
 
+// Verificar si un label existe
+function labelExists(labelName) {
+  try {
+    const result = execSync(
+      `gh label list --repo "${OWNER}/${REPO}" --json name --jq ".[] | select(.name == \\"${labelName}\\") | .name"`,
+      { encoding: 'utf-8', stdio: 'pipe' },
+    );
+    return result.trim() === labelName;
+  } catch (error) {
+    return false;
+  }
+}
+
+// Crear un label si no existe
+function ensureLabel(labelName, color = '0E8A16', description = '') {
+  if (labelExists(labelName)) {
+    return true;
+  }
+
+  try {
+    const command = [
+      'gh label create',
+      `"${labelName}"`,
+      `--color "${color}"`,
+      description ? `--description "${description.replace(/"/g, '\\"')}"` : '',
+      `--repo "${OWNER}/${REPO}"`,
+      '--yes', // Required for non-interactive mode
+    ]
+      .filter(Boolean)
+      .join(' ');
+
+    execSync(command, { encoding: 'utf-8', stdio: 'pipe' });
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+// Asegurar que todos los labels necesarios existan
+function ensureRequiredLabels() {
+  log('🏷️  Verificando y creando labels necesarios...', 'blue');
+
+  const requiredLabels = [
+    { name: 'enhancement', color: 'a2eeef', description: 'New feature or request' },
+    { name: 'auth', color: 'd73a4a', description: 'Authentication and authorization related' },
+    { name: 'phase-3', color: '7057ff', description: 'Fase 3: Seguridad Avanzada y Verificación' },
+    { name: 'security', color: 'b60205', description: 'Security related' },
+    { name: 'user-story', color: '0E8A16', description: 'User story or epic' },
+    { name: 'database', color: 'c5def5', description: 'Database related' },
+    { name: 'admin', color: 'fbca04', description: 'Admin functionality' },
+    { name: 'integration', color: '0052cc', description: 'Integration with external services' },
+    { name: 'keycloak', color: '1d76db', description: 'Keycloak related' },
+    { name: 'fhir', color: '5319e7', description: 'FHIR resource related' },
+  ];
+
+  let created = 0;
+  let existing = 0;
+
+  for (const label of requiredLabels) {
+    if (labelExists(label.name)) {
+      existing++;
+      log(`   ✓ "${label.name}" ya existe`, 'green');
+    } else {
+      if (ensureLabel(label.name, label.color, label.description)) {
+        created++;
+        log(`   ✓ "${label.name}" creado`, 'green');
+      } else {
+        log(`   ⚠️  No se pudo crear "${label.name}"`, 'yellow');
+      }
+    }
+  }
+
+  log(`\n   📊 Labels: ${existing} existentes, ${created} creados\n`, 'cyan');
+}
+
 // Verificar que gh CLI está instalado y autenticado
 function checkGitHubCLI() {
   try {
@@ -506,6 +581,11 @@ async function main() {
 
   // Verificar GitHub CLI
   checkGitHubCLI();
+
+  // Asegurar que todos los labels necesarios existan
+  if (!DRY_RUN) {
+    ensureRequiredLabels();
+  }
 
   // Verificar scope 'project' para agregar issues al proyecto
   if (!DRY_RUN) {
