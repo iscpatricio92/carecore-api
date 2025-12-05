@@ -5,6 +5,8 @@ import { JwtModule } from '@nestjs/jwt';
 
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
 
 /**
  * Auth Module
@@ -26,8 +28,8 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
     // Token validation is handled by passport-jwt with Keycloak's public keys
     JwtModule.register({}),
   ],
-  controllers: [],
-  providers: [JwtStrategy, JwtAuthGuard],
-  exports: [PassportModule, JwtModule, JwtAuthGuard],
+  controllers: [AuthController],
+  providers: [JwtStrategy, JwtAuthGuard, AuthService],
+  exports: [PassportModule, JwtModule, JwtAuthGuard, AuthService],
 })
 export class AuthModule {}

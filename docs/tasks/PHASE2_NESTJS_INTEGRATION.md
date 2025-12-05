@@ -465,12 +465,12 @@ getProfile(@CurrentUser() user: any) {
 Crear el controlador de autenticación con la estructura base para los endpoints de auth.
 
 ## Tareas
-- [ ] Crear `src/modules/auth/auth.controller.ts`
-- [ ] Crear `src/modules/auth/auth.service.ts`
-- [ ] Configurar rutas base `/auth`
-- [ ] Agregar decoradores de Swagger
-- [ ] Implementar estructura básica de métodos (sin lógica aún)
-- [ ] Agregar tests básicos
+- [x] Crear `src/modules/auth/auth.controller.ts`
+- [x] Crear `src/modules/auth/auth.service.ts`
+- [x] Configurar rutas base `/auth`
+- [x] Agregar decoradores de Swagger
+- [x] Implementar estructura básica de métodos (sin lógica aún)
+- [x] Agregar tests básicos
 
 ## Estructura Esperada
 ```typescript
@@ -511,10 +511,10 @@ export class AuthController {
 ```
 
 ## Criterios de Aceptación
-- [ ] Controller creado con estructura base
-- [ ] Rutas configuradas correctamente
-- [ ] Swagger documentado
-- [ ] Tests básicos pasando
+- [x] Controller creado con estructura base
+- [x] Rutas configuradas correctamente
+- [x] Swagger documentado
+- [x] Tests básicos pasando
 
 ## Referencias
 - [NestJS Controllers](https://docs.nestjs.com/controllers)
