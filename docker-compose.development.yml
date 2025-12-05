@@ -59,6 +59,8 @@ services:
       # Variables de Keycloak (deben estar en .env.local)
       KEYCLOAK_URL: ${KEYCLOAK_URL}
       KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
     # En desarrollo, no necesitamos healthcheck estricto
     # Usa PORT o API_INTERNAL_PORT desde process.env (ambas están disponibles en el contenedor)
     # PORT se establece desde API_INTERNAL_PORT en línea 50, y es lo que usa NestJS

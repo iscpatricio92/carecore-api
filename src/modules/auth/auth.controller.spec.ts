@@ -72,6 +72,7 @@ describe('AuthController', () => {
       const mockRequest = {
         protocol: 'http',
         get: jest.fn().mockReturnValue('localhost:3000'),
+        query: {},
       } as unknown as Request;
 
       const mockResponse = {
@@ -85,7 +86,7 @@ describe('AuthController', () => {
       mockAuthService.generateStateToken.mockReturnValue(mockStateToken);
       mockAuthService.getAuthorizationUrl.mockReturnValue('http://keycloak/auth');
 
-      await controller.login(mockRequest, mockResponse);
+      await controller.login(mockRequest, mockResponse, undefined);
 
       expect(mockAuthService.generateStateToken).toHaveBeenCalled();
       expect(mockAuthService.getAuthorizationUrl).toHaveBeenCalledWith(
@@ -104,6 +105,37 @@ describe('AuthController', () => {
         }),
       );
       expect(mockResponse.redirect).toHaveBeenCalledWith('http://keycloak/auth');
+    });
+
+    it('should return JSON when returnUrl=true', async () => {
+      const mockRequest = {
+        protocol: 'http',
+        get: jest.fn().mockReturnValue('localhost:3000'),
+        query: { returnUrl: 'true' },
+      } as unknown as Request;
+
+      const mockResponse = {
+        redirect: jest.fn(),
+        cookie: jest.fn(),
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      } as unknown as Response;
+
+      const mockStateToken = 'state-token-123';
+      mockAuthService.generateStateToken.mockReturnValue(mockStateToken);
+      mockAuthService.getAuthorizationUrl.mockReturnValue('http://keycloak/auth');
+
+      await controller.login(mockRequest, mockResponse, 'true');
+
+      expect(mockAuthService.generateStateToken).toHaveBeenCalled();
+      expect(mockResponse.cookie).toHaveBeenCalled();
+      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.OK);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        authorizationUrl: 'http://keycloak/auth',
+        state: mockStateToken,
+        message: expect.stringContaining('Visita esta URL'),
+      });
+      expect(mockResponse.redirect).not.toHaveBeenCalled();
     });
 
     it('should handle BadRequestException from getAuthorizationUrl', async () => {

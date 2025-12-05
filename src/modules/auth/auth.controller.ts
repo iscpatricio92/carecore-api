@@ -48,17 +48,49 @@ export class AuthController {
   /**
    * Login endpoint - Redirects to Keycloak for authentication
    * This endpoint initiates the OAuth2 Authorization Code flow.
+   *
+   * By default, it redirects (302) to Keycloak. If `returnUrl=true` query parameter is provided,
+   * it returns the authorization URL in JSON format instead (useful for Swagger/testing).
    */
   @Post('login')
   @Public()
   @ApiOperation({
     summary: 'Iniciar sesión (redirige a Keycloak)',
     description:
-      'Inicia el flujo OAuth2 Authorization Code redirigiendo al usuario a Keycloak para autenticación.',
+      'Inicia el flujo OAuth2 Authorization Code redirigiendo al usuario a Keycloak para autenticación. ' +
+      'Agrega `?returnUrl=true` como query parameter para obtener la URL en JSON en lugar de redirigir (útil para Swagger).',
+  })
+  @ApiQuery({
+    name: 'returnUrl',
+    required: false,
+    type: Boolean,
+    description:
+      'Si es true, retorna la URL de autorización en JSON en lugar de redirigir (útil para Swagger)',
   })
   @ApiResponse({
     status: 302,
-    description: 'Redirección a Keycloak para autenticación',
+    description: 'Redirección a Keycloak para autenticación (comportamiento por defecto)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'URL de autorización retornada en JSON (cuando returnUrl=true)',
+    schema: {
+      type: 'object',
+      properties: {
+        authorizationUrl: {
+          type: 'string',
+          description: 'URL de Keycloak para iniciar sesión',
+        },
+        state: {
+          type: 'string',
+          description: 'Token CSRF para validación',
+        },
+        message: {
+          type: 'string',
+          description: 'Mensaje informativo',
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 400,
@@ -68,7 +100,11 @@ export class AuthController {
     status: 500,
     description: 'Error al generar URL de autorización',
   })
-  async login(@Req() req: Request, @Res() res: Response): Promise<void> {
+  async login(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Query('returnUrl') returnUrl?: string,
+  ): Promise<void> {
     try {
       // Generate CSRF state token
       const stateToken = this.authService.generateStateToken();
@@ -91,7 +127,18 @@ export class AuthController {
         path: '/api/auth',
       });
 
-      // Redirect to Keycloak
+      // If returnUrl=true, return JSON instead of redirecting (useful for Swagger/testing)
+      if (returnUrl === 'true') {
+        res.status(HttpStatus.OK).json({
+          authorizationUrl: authUrl,
+          state: stateToken,
+          message:
+            'Visita esta URL en tu navegador para iniciar sesión. Para uso en producción, omite el parámetro returnUrl para redirección automática.',
+        });
+        return;
+      }
+
+      // Default behavior: redirect to Keycloak
       res.redirect(authUrl);
     } catch (error) {
       this.logger.error({ error }, 'Failed to generate authorization URL');
