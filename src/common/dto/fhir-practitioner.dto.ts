@@ -10,7 +10,17 @@ import { PatientContactPointDto } from './fhir-patient.dto';
 import { PatientAddressDto } from './fhir-patient.dto';
 
 export class PractitionerQualificationDto {
-  @ApiPropertyOptional({ description: 'Qualification identifiers' })
+  @ApiPropertyOptional({
+    description: 'Identifiers for this qualification (license number, certificate ID, etc.)',
+    type: [PatientIdentifierDto],
+    example: [
+      {
+        use: 'official',
+        system: 'http://example.com/medical-licenses',
+        value: 'MD-12345',
+      },
+    ],
+  })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
@@ -18,7 +28,7 @@ export class PractitionerQualificationDto {
   identifier?: PatientIdentifierDto[];
 
   @ApiProperty({
-    description: 'Qualification code',
+    description: 'Coded representation of the qualification',
     example: {
       coding: [
         {
@@ -41,14 +51,26 @@ export class PractitionerQualificationDto {
     text?: string;
   };
 
-  @ApiPropertyOptional({ description: 'Period of qualification validity' })
+  @ApiPropertyOptional({
+    description: 'Period during which the qualification is valid',
+    example: {
+      start: '2020-01-01',
+      end: '2025-12-31',
+    },
+  })
   @IsOptional()
   period?: {
     start?: string;
     end?: string;
   };
 
-  @ApiPropertyOptional({ description: 'Organization that issued the qualification' })
+  @ApiPropertyOptional({
+    description: 'Organization that issued the qualification',
+    example: {
+      reference: 'Organization/456',
+      display: 'State Medical Board',
+    },
+  })
   @IsOptional()
   issuer?: {
     reference?: string;
@@ -59,39 +81,120 @@ export class PractitionerQualificationDto {
 /**
  * DTO for creating a FHIR Practitioner
  * MVP: Essential fields only (name, identifier, contact)
+ *
+ * @example
+ * {
+ *   "identifier": [{
+ *     "use": "official",
+ *     "system": "http://example.com/medical-licenses",
+ *     "value": "MD-12345"
+ *   }],
+ *   "name": [{
+ *     "use": "official",
+ *     "prefix": ["Dr."],
+ *     "family": "Smith",
+ *     "given": ["Jane"]
+ *   }],
+ *   "active": true,
+ *   "telecom": [{
+ *     "system": "email",
+ *     "value": "jane.smith@example.com",
+ *     "use": "work"
+ *   }],
+ *   "qualification": [{
+ *     "code": {
+ *       "coding": [{
+ *         "system": "http://terminology.hl7.org/CodeSystem/v2-0360",
+ *         "code": "MD",
+ *         "display": "Doctor of Medicine"
+ *       }]
+ *     },
+ *     "period": {
+ *       "start": "2020-01-01",
+ *       "end": "2025-12-31"
+ *     }
+ *   }]
+ * }
  */
 export class CreatePractitionerDto implements Partial<Practitioner> {
   @ApiProperty({
-    description: 'Practitioner identifiers (license, professional ID)',
+    description: 'Practitioner identifiers (license number, professional ID, etc.)',
     type: [PatientIdentifierDto],
+    example: [
+      {
+        use: 'official',
+        system: 'http://example.com/medical-licenses',
+        value: 'MD-12345',
+      },
+    ],
   })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => PatientIdentifierDto)
   identifier: PatientIdentifierDto[];
 
-  @ApiPropertyOptional({ description: 'Whether the practitioner is active', default: true })
+  @ApiPropertyOptional({
+    description: 'Whether this practitioner record is in active use',
+    default: true,
+    example: true,
+  })
   @IsOptional()
   @IsBoolean()
   active?: boolean;
 
   @ApiProperty({
-    description: 'Practitioner names',
+    description: 'Practitioner names (at least one name is required)',
     type: [PatientNameDto],
+    example: [
+      {
+        use: 'official',
+        prefix: ['Dr.'],
+        family: 'Smith',
+        given: ['Jane'],
+      },
+    ],
   })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => PatientNameDto)
   name: PatientNameDto[];
 
-  @ApiPropertyOptional({ description: 'Contact information (email, phone)' })
+  @ApiPropertyOptional({
+    description: 'Contact information (email, phone, etc.)',
+    type: [PatientContactPointDto],
+    example: [
+      {
+        system: 'email',
+        value: 'jane.smith@example.com',
+        use: 'work',
+      },
+      {
+        system: 'phone',
+        value: '+1-555-987-6543',
+        use: 'work',
+      },
+    ],
+  })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => PatientContactPointDto)
   telecom?: PatientContactPointDto[];
 
-  @ApiPropertyOptional({ description: 'Practitioner addresses' })
+  @ApiPropertyOptional({
+    description: 'Practitioner addresses (office, home, etc.)',
+    type: [PatientAddressDto],
+    example: [
+      {
+        use: 'work',
+        line: ['456 Medical Center Drive'],
+        city: 'Anytown',
+        state: 'CA',
+        postalCode: '12345',
+        country: 'US',
+      },
+    ],
+  })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
@@ -99,21 +202,46 @@ export class CreatePractitionerDto implements Partial<Practitioner> {
   address?: PatientAddressDto[];
 
   @ApiPropertyOptional({
-    description: 'Practitioner gender',
+    description: 'Administrative gender of the practitioner',
     enum: ['male', 'female', 'other', 'unknown'],
+    example: 'female',
   })
   @IsOptional()
   @IsEnum(['male', 'female', 'other', 'unknown'])
   gender?: 'male' | 'female' | 'other' | 'unknown';
 
-  @ApiPropertyOptional({ description: 'Date of birth (YYYY-MM-DD)' })
+  @ApiPropertyOptional({
+    description: 'Date of birth (YYYY-MM-DD format)',
+    example: '1985-05-20',
+  })
   @IsOptional()
   @IsString()
   birthDate?: string;
 
   @ApiPropertyOptional({
-    description: 'Professional qualifications',
+    description: 'Professional qualifications (licenses, certifications, etc.)',
     type: [PractitionerQualificationDto],
+    example: [
+      {
+        code: {
+          coding: [
+            {
+              system: 'http://terminology.hl7.org/CodeSystem/v2-0360',
+              code: 'MD',
+              display: 'Doctor of Medicine',
+            },
+          ],
+        },
+        period: {
+          start: '2020-01-01',
+          end: '2025-12-31',
+        },
+        issuer: {
+          reference: 'Organization/456',
+          display: 'State Medical Board',
+        },
+      },
+    ],
   })
   @IsOptional()
   @IsArray()

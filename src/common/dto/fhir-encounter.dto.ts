@@ -5,16 +5,19 @@ import { Encounter } from '../interfaces/fhir.interface';
 
 export class EncounterParticipantDto {
   @ApiPropertyOptional({
-    description: 'Role of participant',
-    example: {
-      coding: [
-        {
-          system: 'http://terminology.hl7.org/CodeSystem/v3-ParticipationType',
-          code: 'ATND',
-          display: 'attending',
-        },
-      ],
-    },
+    description: 'Role of the participant in the encounter',
+    example: [
+      {
+        coding: [
+          {
+            system: 'http://terminology.hl7.org/CodeSystem/v3-ParticipationType',
+            code: 'ATND',
+            display: 'attending',
+          },
+        ],
+        text: 'Attending Physician',
+      },
+    ],
   })
   @IsOptional()
   @IsArray()
@@ -29,7 +32,11 @@ export class EncounterParticipantDto {
   }>;
 
   @ApiPropertyOptional({
-    description: 'Period of participation',
+    description: 'Period during which the participant was involved in the encounter',
+    example: {
+      start: '2024-01-15T10:00:00Z',
+      end: '2024-01-15T10:30:00Z',
+    },
   })
   @IsOptional()
   period?: {
@@ -38,10 +45,10 @@ export class EncounterParticipantDto {
   };
 
   @ApiProperty({
-    description: 'Reference to Practitioner or other participant',
+    description: 'Reference to Practitioner, Patient, or other participant',
     example: {
       reference: 'Practitioner/123',
-      display: 'Dr. Smith',
+      display: 'Dr. Jane Smith',
     },
   })
   @IsObject()
@@ -54,9 +61,48 @@ export class EncounterParticipantDto {
 /**
  * DTO for creating a FHIR Encounter
  * MVP: Essential fields only (status, class, subject, participant, period)
+ *
+ * @example
+ * {
+ *   "status": "finished",
+ *   "class": {
+ *     "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+ *     "code": "AMB",
+ *     "display": "ambulatory"
+ *   },
+ *   "subject": {
+ *     "reference": "Patient/123",
+ *     "display": "John Doe"
+ *   },
+ *   "period": {
+ *     "start": "2024-01-15T10:00:00Z",
+ *     "end": "2024-01-15T10:30:00Z"
+ *   },
+ *   "participant": [{
+ *     "type": [{
+ *       "coding": [{
+ *         "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+ *         "code": "ATND",
+ *         "display": "attending"
+ *       }]
+ *     }],
+ *     "individual": {
+ *       "reference": "Practitioner/456",
+ *       "display": "Dr. Jane Smith"
+ *     }
+ *   }]
+ * }
  */
 export class CreateEncounterDto implements Partial<Encounter> {
-  @ApiPropertyOptional({ description: 'Encounter identifiers' })
+  @ApiPropertyOptional({
+    description: 'Business identifiers for this encounter',
+    example: [
+      {
+        system: 'http://example.com/encounter-ids',
+        value: 'ENC-2024-001',
+      },
+    ],
+  })
   @IsOptional()
   @IsArray()
   identifier?: Array<{
@@ -117,7 +163,19 @@ export class CreateEncounterDto implements Partial<Encounter> {
   };
 
   @ApiPropertyOptional({
-    description: 'Type of encounter (e.g., consultation, follow-up)',
+    description: 'Specific type of encounter (e.g., consultation, follow-up, emergency)',
+    example: [
+      {
+        coding: [
+          {
+            system: 'http://terminology.hl7.org/CodeSystem/v3-ActCode',
+            code: 'AMB',
+            display: 'ambulatory',
+          },
+        ],
+        text: 'Outpatient Consultation',
+      },
+    ],
   })
   @IsOptional()
   @IsArray()
@@ -144,8 +202,27 @@ export class CreateEncounterDto implements Partial<Encounter> {
   };
 
   @ApiPropertyOptional({
-    description: 'Participants in the encounter',
+    description: 'List of participants involved in the encounter',
     type: [EncounterParticipantDto],
+    example: [
+      {
+        type: [
+          {
+            coding: [
+              {
+                system: 'http://terminology.hl7.org/CodeSystem/v3-ParticipationType',
+                code: 'ATND',
+                display: 'attending',
+              },
+            ],
+          },
+        ],
+        individual: {
+          reference: 'Practitioner/456',
+          display: 'Dr. Jane Smith',
+        },
+      },
+    ],
   })
   @IsOptional()
   @IsArray()
@@ -154,7 +231,7 @@ export class CreateEncounterDto implements Partial<Encounter> {
   participant?: EncounterParticipantDto[];
 
   @ApiProperty({
-    description: 'Period of the encounter',
+    description: 'The start and end time of the encounter',
     example: {
       start: '2024-01-15T10:00:00Z',
       end: '2024-01-15T10:30:00Z',
@@ -167,7 +244,19 @@ export class CreateEncounterDto implements Partial<Encounter> {
   };
 
   @ApiPropertyOptional({
-    description: 'Reason for encounter',
+    description: 'Coded reason why the encounter takes place',
+    example: [
+      {
+        coding: [
+          {
+            system: 'http://snomed.info/sct',
+            code: '185349003',
+            display: 'Consultation',
+          },
+        ],
+        text: 'Routine Consultation',
+      },
+    ],
   })
   @IsOptional()
   @IsArray()
@@ -181,7 +270,17 @@ export class CreateEncounterDto implements Partial<Encounter> {
   }>;
 
   @ApiPropertyOptional({
-    description: 'Priority of the encounter',
+    description: 'Indicates the urgency of the encounter',
+    example: {
+      coding: [
+        {
+          system: 'http://terminology.hl7.org/CodeSystem/v3-ActPriority',
+          code: 'R',
+          display: 'routine',
+        },
+      ],
+      text: 'Routine',
+    },
   })
   @IsOptional()
   priority?: {

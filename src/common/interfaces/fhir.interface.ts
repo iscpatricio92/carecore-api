@@ -105,7 +105,34 @@ export interface FhirExtension {
   extension?: FhirExtension[];
 }
 
-// Patient Resource
+/**
+ * Patient Resource
+ * A person receiving or registered to receive healthcare services
+ *
+ * @description
+ * Demographics and other administrative information about a person
+ * receiving care or other health-related services.
+ *
+ * @see https://www.hl7.org/fhir/patient.html
+ * @example
+ * {
+ *   "resourceType": "Patient",
+ *   "id": "patient-123",
+ *   "identifier": [{
+ *     "use": "official",
+ *     "system": "http://hl7.org/fhir/sid/us-ssn",
+ *     "value": "123-45-6789"
+ *   }],
+ *   "active": true,
+ *   "name": [{
+ *     "use": "official",
+ *     "family": "Doe",
+ *     "given": ["John", "Michael"]
+ *   }],
+ *   "gender": "male",
+ *   "birthDate": "1990-01-15"
+ * }
+ */
 export interface Patient extends FhirResource {
   resourceType: 'Patient';
   identifier?: FhirIdentifier[];
@@ -158,7 +185,33 @@ export interface FhirAttachment {
   creation?: string;
 }
 
-// Practitioner Resource
+/**
+ * Practitioner Resource
+ * A person who is directly or indirectly involved in the provisioning of healthcare
+ *
+ * @description
+ * A person who is directly or indirectly involved in the provisioning of healthcare.
+ * This includes physicians, nurses, therapists, technicians, etc.
+ *
+ * @see https://www.hl7.org/fhir/practitioner.html
+ * @example
+ * {
+ *   "resourceType": "Practitioner",
+ *   "id": "practitioner-456",
+ *   "identifier": [{
+ *     "use": "official",
+ *     "system": "http://example.com/medical-licenses",
+ *     "value": "MD-12345"
+ *   }],
+ *   "active": true,
+ *   "name": [{
+ *     "use": "official",
+ *     "prefix": ["Dr."],
+ *     "family": "Smith",
+ *     "given": ["Jane"]
+ *   }]
+ * }
+ */
 export interface Practitioner extends FhirResource {
   resourceType: 'Practitioner';
   identifier?: FhirIdentifier[];
@@ -180,7 +233,35 @@ export interface PractitionerQualification {
   issuer?: FhirReference;
 }
 
-// Encounter Resource
+/**
+ * Encounter Resource
+ * An interaction between a patient and healthcare provider(s) for the purpose of providing healthcare service(s)
+ *
+ * @description
+ * An interaction between a patient and healthcare provider(s) for the purpose of providing
+ * healthcare service(s) or assessing the health status of a patient.
+ *
+ * @see https://www.hl7.org/fhir/encounter.html
+ * @example
+ * {
+ *   "resourceType": "Encounter",
+ *   "id": "encounter-789",
+ *   "status": "finished",
+ *   "class": {
+ *     "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+ *     "code": "AMB",
+ *     "display": "ambulatory"
+ *   },
+ *   "subject": {
+ *     "reference": "Patient/123",
+ *     "display": "John Doe"
+ *   },
+ *   "period": {
+ *     "start": "2024-01-15T10:00:00Z",
+ *     "end": "2024-01-15T10:30:00Z"
+ *   }
+ * }
+ */
 export interface Encounter extends FhirResource {
   resourceType: 'Encounter';
   identifier?: FhirIdentifier[];
@@ -256,6 +337,170 @@ export interface EncounterLocation {
   status?: 'planned' | 'active' | 'reserved' | 'completed';
   physicalType?: FhirCodeableConcept;
   period?: FhirPeriod;
+}
+
+/**
+ * Consent Resource
+ * A record of a healthcare consumer's choices or choices made on their behalf
+ *
+ * @description
+ * A record of a healthcare consumer's choices, which permits or denies identified
+ * recipient(s) or recipient role(s) to perform one or more actions within a given
+ * policy context, for specific purposes and periods of time.
+ *
+ * @see https://www.hl7.org/fhir/consent.html
+ * @example
+ * {
+ *   "resourceType": "Consent",
+ *   "id": "consent-101",
+ *   "status": "active",
+ *   "scope": {
+ *     "coding": [{
+ *       "system": "http://terminology.hl7.org/CodeSystem/consentscope",
+ *       "code": "patient-privacy",
+ *       "display": "Privacy Consent"
+ *     }]
+ *   },
+ *   "category": [{
+ *     "coding": [{
+ *       "system": "http://terminology.hl7.org/CodeSystem/consentcategorycodes",
+ *       "code": "59284-0",
+ *       "display": "Patient Consent"
+ *     }]
+ *   }],
+ *   "patient": {
+ *     "reference": "Patient/123"
+ *   }
+ * }
+ */
+export interface Consent extends FhirResource {
+  resourceType: 'Consent';
+  identifier?: FhirIdentifier[];
+  status: 'draft' | 'proposed' | 'active' | 'rejected' | 'inactive' | 'entered-in-error';
+  scope: FhirCodeableConcept;
+  category: FhirCodeableConcept[];
+  patient?: FhirReference;
+  dateTime?: string;
+  performer?: FhirReference[];
+  organization?: FhirReference[];
+  sourceAttachment?: FhirAttachment;
+  sourceReference?: FhirReference;
+  policy?: ConsentPolicy[];
+  policyRule?: FhirCodeableConcept;
+  verification?: ConsentVerification[];
+  provision?: ConsentProvision;
+}
+
+export interface ConsentPolicy {
+  authority?: string;
+  uri?: string;
+}
+
+export interface ConsentVerification {
+  verified: boolean;
+  verificationType?: FhirCodeableConcept;
+  verifiedBy?: FhirReference;
+  verifiedWith?: FhirReference;
+  verificationDate?: string;
+}
+
+export interface ConsentProvision {
+  type?: 'deny' | 'permit';
+  period?: FhirPeriod;
+  actor?: ConsentProvisionActor[];
+  action?: FhirCodeableConcept[];
+  securityLabel?: FhirCoding[];
+  purpose?: FhirCoding[];
+  class?: FhirCoding[];
+  code?: FhirCodeableConcept[];
+  dataPeriod?: FhirPeriod;
+  data?: ConsentProvisionData[];
+  provision?: ConsentProvision[];
+}
+
+export interface ConsentProvisionActor {
+  role?: FhirCodeableConcept;
+  reference?: FhirReference;
+}
+
+export interface ConsentProvisionData {
+  meaning: 'instance' | 'related' | 'dependents' | 'authoredby';
+  reference: FhirReference;
+}
+
+/**
+ * DocumentReference Resource
+ * A reference to a document
+ *
+ * @description
+ * A reference to a document of any kind for any purpose. Provides metadata about
+ * the document so that the document can be discovered and managed. The scope of
+ * a document is any seralized object with a mime-type, so includes formal patient
+ * centric documents (CDA documents, etc.), clinical notes, scanned paper, and
+ * non-patient specific documents like policy documents.
+ *
+ * @see https://www.hl7.org/fhir/documentreference.html
+ * @example
+ * {
+ *   "resourceType": "DocumentReference",
+ *   "id": "doc-202",
+ *   "status": "current",
+ *   "type": {
+ *     "coding": [{
+ *       "system": "http://loinc.org",
+ *       "code": "34133-9",
+ *       "display": "Summary of episode note"
+ *     }]
+ *   },
+ *   "subject": {
+ *     "reference": "Patient/123"
+ *   },
+ *   "content": [{
+ *     "attachment": {
+ *       "contentType": "application/pdf",
+ *       "url": "https://example.com/documents/report.pdf"
+ *     }
+ *   }]
+ * }
+ */
+export interface DocumentReference extends FhirResource {
+  resourceType: 'DocumentReference';
+  masterIdentifier?: FhirIdentifier;
+  identifier?: FhirIdentifier[];
+  status: 'current' | 'superseded' | 'entered-in-error';
+  docStatus?: 'preliminary' | 'final' | 'amended' | 'entered-in-error' | 'deprecated';
+  type?: FhirCodeableConcept;
+  category?: FhirCodeableConcept[];
+  subject?: FhirReference;
+  date?: string;
+  author?: FhirReference[];
+  authenticator?: FhirReference;
+  custodian?: FhirReference;
+  relatesTo?: DocumentReferenceRelatesTo[];
+  description?: string;
+  securityLabel?: FhirCoding[];
+  content: DocumentReferenceContent[];
+  context?: DocumentReferenceContext;
+}
+
+export interface DocumentReferenceRelatesTo {
+  code: 'replaces' | 'transforms' | 'signs' | 'appends';
+  target: FhirReference;
+}
+
+export interface DocumentReferenceContent {
+  attachment: FhirAttachment;
+  format?: FhirCoding;
+}
+
+export interface DocumentReferenceContext {
+  encounter?: FhirReference[];
+  event?: FhirCodeableConcept[];
+  period?: FhirPeriod;
+  facilityType?: FhirCodeableConcept;
+  practiceSetting?: FhirCodeableConcept;
+  sourcePatientInfo?: FhirReference;
+  related?: FhirReference[];
 }
 
 // OperationOutcome Resource
