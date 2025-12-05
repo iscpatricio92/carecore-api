@@ -150,6 +150,7 @@ Creamos una plataforma móvil y web que centraliza el perfil médico del pacient
 ```
 /src
   /modules
+    /auth          ✅ Implementado (estructura base, autenticación en progreso)
     /fhir          ✅ Implementado (FHIR endpoints y metadata)
     /patients      ✅ Implementado (CRUD completo)
     /practitioners ✅ Implementado (CRUD completo)
@@ -518,7 +519,12 @@ Keycloak está configurado y funcionando. Para más información, ver:
 - ✅ **Helmet** - HTTP security headers
 - ✅ **express-rate-limit** - Rate limiting
 - ✅ **bcryptjs** - Password hashing
-- [ ] **JWT** - Token-based authentication (mencionado, pendiente implementación completa)
+- ✅ **JWT** - Token-based authentication (Passport + JWT)
+  - `@nestjs/passport` (v10.0.3) - Passport integration for NestJS
+  - `@nestjs/jwt` (v10.2.0) - JWT module for NestJS
+  - `passport` (v0.7.0) - Authentication middleware
+  - `passport-jwt` (v4.0.1) - JWT strategy for Passport
+  - `@types/passport-jwt` (v4.0.1) - TypeScript types
 
 ---
 

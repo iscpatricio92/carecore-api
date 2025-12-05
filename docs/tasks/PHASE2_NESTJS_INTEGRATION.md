@@ -162,15 +162,15 @@ src/
 Crear la estructura base del módulo de autenticación en NestJS con la estructura de carpetas necesaria.
 
 ## Tareas
-- [ ] Crear carpeta `src/modules/auth/`
-- [ ] Crear `auth.module.ts` con configuración básica
-- [ ] Crear subcarpetas:
-  - [ ] `strategies/` - Para estrategias de Passport
-  - [ ] `guards/` - Para guards de autenticación
-  - [ ] `decorators/` - Para decoradores personalizados
-  - [ ] `dto/` - Para DTOs de autenticación
-- [ ] Integrar `AuthModule` en `AppModule`
-- [ ] Configurar imports necesarios (ConfigModule, PassportModule, JwtModule)
+- [x] Crear carpeta `src/modules/auth/`
+- [x] Crear `auth.module.ts` con configuración básica
+- [x] Crear subcarpetas:
+  - [x] `strategies/` - Para estrategias de Passport
+  - [x] `guards/` - Para guards de autenticación
+  - [x] `decorators/` - Para decoradores personalizados
+  - [x] `dto/` - Para DTOs de autenticación
+- [x] Integrar `AuthModule` en `AppModule`
+- [x] Configurar imports necesarios (ConfigModule, PassportModule, JwtModule)
 
 ## Estructura Esperada
 ```
@@ -190,9 +190,9 @@ src/modules/auth/
 ```
 
 ## Criterios de Aceptación
-- [ ] Módulo auth creado y estructurado
-- [ ] Módulo integrado en AppModule
-- [ ] Estructura de carpetas lista para implementación
+- [x] Módulo auth creado y estructurado
+- [x] Módulo integrado en AppModule
+- [x] Estructura de carpetas lista para implementación
 
 ## Referencias
 - [NestJS Modules](https://docs.nestjs.com/modules)
@@ -213,15 +213,15 @@ src/modules/auth/
 Instalar y configurar todas las dependencias necesarias para implementar autenticación JWT con Passport.
 
 ## Tareas
-- [ ] Verificar dependencias ya instaladas:
-  - [ ] `@nestjs/passport` ✅ (ya instalado)
-  - [ ] `passport` ✅ (ya instalado)
-  - [ ] `passport-jwt` ✅ (ya instalado)
-  - [ ] `@types/passport-jwt` ✅ (ya instalado)
-  - [ ] `@nestjs/jwt` ✅ (ya instalado)
-- [ ] Verificar que todas las dependencias estén en `package.json`
-- [ ] Ejecutar `npm install` si es necesario
-- [ ] Documentar dependencias en README
+- [x] Verificar dependencias ya instaladas:
+  - [x] `@nestjs/passport` ✅ (ya instalado - v10.0.3)
+  - [x] `passport` ✅ (ya instalado - v0.7.0)
+  - [x] `passport-jwt` ✅ (ya instalado - v4.0.1)
+  - [x] `@types/passport-jwt` ✅ (ya instalado - v4.0.1)
+  - [x] `@nestjs/jwt` ✅ (ya instalado - v10.2.0)
+- [x] Verificar que todas las dependencias estén en `package.json`
+- [x] Ejecutar `npm install` si es necesario (no necesario, ya instaladas)
+- [x] Documentar dependencias en README
 
 ## Dependencias Requeridas
 ```json
@@ -235,9 +235,9 @@ Instalar y configurar todas las dependencias necesarias para implementar autenti
 ```
 
 ## Criterios de Aceptación
-- [ ] Todas las dependencias instaladas
-- [ ] Versiones compatibles verificadas
-- [ ] Dependencias documentadas
+- [x] Todas las dependencias instaladas
+- [x] Versiones compatibles verificadas
+- [x] Dependencias documentadas
 
 ## Notas
 - Las dependencias ya están instaladas según package.json
@@ -258,16 +258,16 @@ Instalar y configurar todas las dependencias necesarias para implementar autenti
 Implementar la estrategia JWT de Passport para validar tokens emitidos por Keycloak.
 
 ## Tareas
-- [ ] Crear `src/modules/auth/strategies/jwt.strategy.ts`
-- [ ] Configurar extracción del token desde header `Authorization: Bearer <token>`
-- [ ] Configurar validación del token usando la clave pública de Keycloak
-- [ ] Obtener URL de Keycloak desde variables de entorno:
+- [x] Crear `src/modules/auth/strategies/jwt.strategy.ts`
+- [x] Configurar extracción del token desde header `Authorization: Bearer <token>`
+- [x] Configurar validación del token usando la clave pública de Keycloak
+- [x] Obtener URL de Keycloak desde variables de entorno:
   - `KEYCLOAK_URL`
   - `KEYCLOAK_REALM`
-- [ ] Implementar método `validate()` que extrae información del usuario del token
-- [ ] Mapear claims del token JWT a objeto de usuario
-- [ ] Manejar errores de token inválido/expirado
-- [ ] Agregar tests unitarios
+- [x] Implementar método `validate()` que extrae información del usuario del token
+- [x] Mapear claims del token JWT a objeto de usuario
+- [x] Manejar errores de token inválido/expirado
+- [x] Agregar tests unitarios
 
 ## Configuración Esperada
 ```typescript
@@ -297,10 +297,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 ```
 
 ## Criterios de Aceptación
-- [ ] Strategy valida tokens de Keycloak correctamente
-- [ ] Extrae información del usuario del token
-- [ ] Maneja errores de token inválido
-- [ ] Tests unitarios pasando
+- [x] Strategy valida tokens de Keycloak correctamente
+- [x] Extrae información del usuario del token
+- [x] Maneja errores de token inválido
+- [x] Tests unitarios pasando
 
 ## Referencias
 - [Passport JWT Strategy](http://www.passportjs.org/packages/passport-jwt/)
@@ -321,11 +321,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 Crear un guard de autenticación que proteja endpoints usando la estrategia JWT.
 
 ## Tareas
-- [ ] Crear `src/modules/auth/guards/jwt-auth.guard.ts`
-- [ ] Extender `AuthGuard('jwt')` de `@nestjs/passport`
-- [ ] Configurar como guard global opcional (puede ser sobrescrito con `@Public()`)
-- [ ] Manejar errores de autenticación (401 Unauthorized)
-- [ ] Agregar tests unitarios
+- [x] Crear `src/modules/auth/guards/jwt-auth.guard.ts`
+- [x] Extender `AuthGuard('jwt')` de `@nestjs/passport`
+- [x] Configurar como guard global opcional (puede ser sobrescrito con `@Public()`)
+- [x] Manejar errores de autenticación (401 Unauthorized)
+- [x] Agregar tests unitarios
 
 ## Implementación Esperada
 ```typescript
@@ -345,10 +345,10 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 ```
 
 ## Criterios de Aceptación
-- [ ] Guard protege endpoints correctamente
-- [ ] Retorna 401 para tokens inválidos
-- [ ] Permite acceso con token válido
-- [ ] Tests unitarios pasando
+- [x] Guard protege endpoints correctamente
+- [x] Retorna 401 para tokens inválidos
+- [x] Permite acceso con token válido
+- [x] Tests unitarios pasando
 
 ## Referencias
 - [NestJS Guards](https://docs.nestjs.com/guards)
@@ -368,11 +368,11 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 Crear un decorador que marque endpoints como públicos, excluyéndolos de la autenticación.
 
 ## Tareas
-- [ ] Crear `src/modules/auth/decorators/public.decorator.ts`
-- [ ] Usar `SetMetadata` para marcar endpoints como públicos
-- [ ] Actualizar `JwtAuthGuard` para verificar el metadata y permitir acceso público
-- [ ] Aplicar decorador a endpoints públicos (health, metadata, etc.)
-- [ ] Agregar tests
+- [x] Crear `src/modules/auth/decorators/public.decorator.ts`
+- [x] Usar `SetMetadata` para marcar endpoints como públicos
+- [x] Actualizar `JwtAuthGuard` para verificar el metadata y permitir acceso público
+- [ ] Aplicar decorador a endpoints públicos (health, metadata, etc.) - Pendiente para cuando se configure guard global
+- [ ] Agregar tests - Pendiente (el decorador se prueba indirectamente en JwtAuthGuard tests)
 
 ## Implementación Esperada
 ```typescript
@@ -415,11 +415,11 @@ getHealth() {
 Crear un decorador que extraiga el usuario autenticado del request de forma limpia.
 
 ## Tareas
-- [ ] Crear `src/modules/auth/decorators/current-user.decorator.ts`
-- [ ] Usar `createParamDecorator` para extraer usuario del request
-- [ ] Retornar objeto de usuario con información del token JWT
-- [ ] Manejar caso cuando no hay usuario (retornar null o lanzar error)
-- [ ] Agregar tests
+- [x] Crear `src/modules/auth/decorators/current-user.decorator.ts`
+- [x] Usar `createParamDecorator` para extraer usuario del request
+- [x] Retornar objeto de usuario con información del token JWT
+- [x] Manejar caso cuando no hay usuario (lanzar UnauthorizedException)
+- [ ] Agregar tests - Pendiente (el decorador se prueba indirectamente cuando se use en controllers)
 
 ## Implementación Esperada
 ```typescript
@@ -442,9 +442,10 @@ getProfile(@CurrentUser() user: any) {
 ```
 
 ## Criterios de Aceptación
-- [ ] Decorador extrae usuario del request
-- [ ] Funciona correctamente en endpoints protegidos
-- [ ] Tests pasando
+- [x] Decorador extrae usuario del request
+- [x] Funciona correctamente en endpoints protegidos
+- [x] Soporte para extraer propiedades específicas del usuario
+- [ ] Tests pasando - Pendiente (se probará indirectamente en controllers)
 
 ## Referencias
 - [NestJS Custom Decorators](https://docs.nestjs.com/custom-decorators)
@@ -464,12 +465,12 @@ getProfile(@CurrentUser() user: any) {
 Crear el controlador de autenticación con la estructura base para los endpoints de auth.
 
 ## Tareas
-- [ ] Crear `src/modules/auth/auth.controller.ts`
-- [ ] Crear `src/modules/auth/auth.service.ts`
-- [ ] Configurar rutas base `/auth`
-- [ ] Agregar decoradores de Swagger
-- [ ] Implementar estructura básica de métodos (sin lógica aún)
-- [ ] Agregar tests básicos
+- [x] Crear `src/modules/auth/auth.controller.ts`
+- [x] Crear `src/modules/auth/auth.service.ts`
+- [x] Configurar rutas base `/auth`
+- [x] Agregar decoradores de Swagger
+- [x] Implementar estructura básica de métodos (sin lógica aún)
+- [x] Agregar tests básicos
 
 ## Estructura Esperada
 ```typescript
@@ -510,10 +511,10 @@ export class AuthController {
 ```
 
 ## Criterios de Aceptación
-- [ ] Controller creado con estructura base
-- [ ] Rutas configuradas correctamente
-- [ ] Swagger documentado
-- [ ] Tests básicos pasando
+- [x] Controller creado con estructura base
+- [x] Rutas configuradas correctamente
+- [x] Swagger documentado
+- [x] Tests básicos pasando
 
 ## Referencias
 - [NestJS Controllers](https://docs.nestjs.com/controllers)
