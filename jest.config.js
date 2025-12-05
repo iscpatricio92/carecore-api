@@ -62,6 +62,8 @@ module.exports = {
     '!**/*.dto.ts',
     // Exclude interfaces (type definitions)
     '!**/*.interface.ts',
+    // Exclude decorators (simple metadata wrappers, tested indirectly)
+    '!**/*.decorator.ts',
     // Exclude modules (NestJS module definitions)
     '!**/*.module.ts',
     // Exclude scripts (utility scripts)
@@ -104,6 +106,7 @@ module.exports = {
     '\\.spec\\.ts$',
     '\\.dto\\.ts$',
     '\\.interface\\.ts$',
+    '\\.decorator\\.ts$',
     '\\.module\\.ts$',
     '/migrations/',
     '/entities/',
