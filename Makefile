@@ -140,11 +140,23 @@ lint: ## Ejecutar linter
 format: ## Formatear código con Prettier
 	npm run format
 
-test: ## Ejecutar tests
+test: ## Ejecutar tests unitarios
 	npm run test
 
-test-cov: ## Ejecutar tests con cobertura
+test-cov: ## Ejecutar tests unitarios con cobertura
 	npm run test:cov
+
+test-e2e: ## Ejecutar tests E2E
+	npm run test:e2e
+
+test-e2e-cov: ## Ejecutar tests E2E con cobertura
+	npm run test:e2e:cov
+
+test-all: ## Ejecutar todos los tests (unitarios + E2E)
+	npm run test:all
+
+test-all-cov: ## Ejecutar todos los tests con cobertura
+	npm run test:all:cov
 
 setup: install docker-up ## Configuración inicial completa
 	@echo "✅ Configuración completada!"

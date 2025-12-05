@@ -134,7 +134,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests
+      - name: Run unit tests
         env:
           NODE_ENV: test
           DB_HOST: localhost
@@ -144,6 +144,16 @@ jobs:
           DB_NAME: test_db
           DB_SYNCHRONIZE: 'true'
         run: npm test
+
+      - name: Run E2E tests
+        env:
+          NODE_ENV: test
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: test_user
+          DB_PASSWORD: test_password
+          DB_NAME: test_db
+        run: npm run test:e2e
 
       - name: Generate coverage report
         if: always()
