@@ -1,11 +1,14 @@
-import { Body, Controller, Get, Header, Param, Post } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { Body, Controller, Get, Header, Param, Post, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 
 import { EncountersService } from './encounters.service';
 import { Encounter } from '@/common/interfaces/fhir.interface';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('Encounters')
 @Controller('encounters')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth('JWT-auth')
 export class EncountersController {
   constructor(private readonly encountersService: EncountersService) {}
 

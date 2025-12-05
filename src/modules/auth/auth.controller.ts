@@ -55,50 +55,50 @@ export class AuthController {
   @Post('login')
   @Public()
   @ApiOperation({
-    summary: 'Iniciar sesión (redirige a Keycloak)',
+    summary: 'Login (redirects to Keycloak)',
     description:
-      'Inicia el flujo OAuth2 Authorization Code redirigiendo al usuario a Keycloak para autenticación. ' +
-      'Agrega `?returnUrl=true` como query parameter para obtener la URL en JSON en lugar de redirigir (útil para Swagger).',
+      'Initiates the OAuth2 Authorization Code flow by redirecting the user to Keycloak for authentication. ' +
+      'Add `?returnUrl=true` as a query parameter to get the authorization URL in JSON format instead of redirecting (useful for Swagger).',
   })
   @ApiQuery({
     name: 'returnUrl',
     required: false,
     type: Boolean,
     description:
-      'Si es true, retorna la URL de autorización en JSON en lugar de redirigir (útil para Swagger)',
+      'If true, returns the authorization URL in JSON format instead of redirecting (useful for Swagger)',
   })
   @ApiResponse({
     status: 302,
-    description: 'Redirección a Keycloak para autenticación (comportamiento por defecto)',
+    description: 'Redirect to Keycloak for authentication (default behavior)',
   })
   @ApiResponse({
     status: 200,
-    description: 'URL de autorización retornada en JSON (cuando returnUrl=true)',
+    description: 'Authorization URL returned in JSON format (when returnUrl=true)',
     schema: {
       type: 'object',
       properties: {
         authorizationUrl: {
           type: 'string',
-          description: 'URL de Keycloak para iniciar sesión',
+          description: 'Keycloak URL to initiate login',
         },
         state: {
           type: 'string',
-          description: 'Token CSRF para validación',
+          description: 'CSRF token for validation',
         },
         message: {
           type: 'string',
-          description: 'Mensaje informativo',
+          description: 'Informative message',
         },
       },
     },
   })
   @ApiResponse({
     status: 400,
-    description: 'Error en la configuración de autenticación',
+    description: 'Authentication configuration error',
   })
   @ApiResponse({
     status: 500,
-    description: 'Error al generar URL de autorización',
+    description: 'Error generating authorization URL',
   })
   async login(
     @Req() req: Request,
@@ -133,7 +133,7 @@ export class AuthController {
           authorizationUrl: authUrl,
           state: stateToken,
           message:
-            'Visita esta URL en tu navegador para iniciar sesión. Para uso en producción, omite el parámetro returnUrl para redirección automática.',
+            'Visit this URL in your browser to log in. For production use, omit the returnUrl parameter for automatic redirect.',
         });
         return;
       }
@@ -161,37 +161,37 @@ export class AuthController {
   @Get('callback')
   @Public()
   @ApiOperation({
-    summary: 'Callback de Keycloak OAuth2',
+    summary: 'Keycloak OAuth2 Callback',
     description:
-      'Endpoint que recibe el código de autorización de Keycloak y lo intercambia por tokens.',
+      'Endpoint that receives the authorization code from Keycloak and exchanges it for tokens.',
   })
   @ApiQuery({
     name: 'code',
     required: true,
     type: String,
-    description: 'Código de autorización de Keycloak',
+    description: 'Authorization code from Keycloak',
   })
   @ApiQuery({
     name: 'state',
     required: true,
     type: String,
-    description: 'Token CSRF para protección de estado',
+    description: 'CSRF token for state protection',
   })
   @ApiResponse({
     status: 302,
-    description: 'Redirección al frontend con tokens en cookies',
+    description: 'Redirect to frontend with tokens in cookies',
   })
   @ApiResponse({
     status: 400,
-    description: 'Código o estado inválido',
+    description: 'Invalid code or state',
   })
   @ApiResponse({
     status: 401,
-    description: 'State token inválido o código de autorización inválido',
+    description: 'Invalid state token or authorization code',
   })
   @ApiResponse({
     status: 500,
-    description: 'Error al procesar el callback',
+    description: 'Error processing callback',
   })
   async callback(
     @Query('code') code: string,
@@ -284,9 +284,9 @@ export class AuthController {
   @Public()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Refrescar access token',
+    summary: 'Refresh access token',
     description:
-      'Obtiene un nuevo access token y refresh token usando un refresh token válido. El refresh token puede enviarse en el body o en una cookie.',
+      'Obtains a new access token and refresh token using a valid refresh token. The refresh token can be sent in the request body or in a cookie.',
   })
   @ApiBody({
     schema: {
@@ -294,8 +294,7 @@ export class AuthController {
       properties: {
         refreshToken: {
           type: 'string',
-          description:
-            'Refresh token para obtener nuevo access token (opcional si se envía en cookie)',
+          description: 'Refresh token to obtain a new access token (optional if sent in cookie)',
         },
       },
     },
@@ -303,30 +302,30 @@ export class AuthController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Nuevo access token generado exitosamente',
+    description: 'New access token generated successfully',
     schema: {
       type: 'object',
       properties: {
-        accessToken: { type: 'string', description: 'Nuevo access token' },
+        accessToken: { type: 'string', description: 'New access token' },
         refreshToken: {
           type: 'string',
-          description: 'Nuevo refresh token (si Keycloak lo proporciona)',
+          description: 'New refresh token (if provided by Keycloak)',
         },
         expiresIn: {
           type: 'number',
-          description: 'Tiempo de expiración del access token en segundos',
+          description: 'Access token expiration time in seconds',
         },
-        tokenType: { type: 'string', description: 'Tipo de token (Bearer)' },
+        tokenType: { type: 'string', description: 'Token type (Bearer)' },
       },
     },
   })
   @ApiResponse({
     status: 400,
-    description: 'Refresh token faltante o inválido',
+    description: 'Missing or invalid refresh token',
   })
   @ApiResponse({
     status: 401,
-    description: 'Refresh token inválido o expirado',
+    description: 'Invalid or expired refresh token',
   })
   async refresh(
     @Body('refreshToken') refreshTokenFromBody: string | undefined,
@@ -401,9 +400,9 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
-    summary: 'Cerrar sesión',
+    summary: 'Logout',
     description:
-      'Cierra la sesión del usuario, revoca los tokens en Keycloak y limpia las cookies locales. El refresh token puede enviarse en el body o en una cookie.',
+      'Logs out the user, revokes tokens in Keycloak, and clears local cookies. The refresh token can be sent in the request body or in a cookie.',
   })
   @ApiBody({
     schema: {
@@ -411,7 +410,7 @@ export class AuthController {
       properties: {
         refreshToken: {
           type: 'string',
-          description: 'Refresh token a revocar (opcional si se envía en cookie)',
+          description: 'Refresh token to revoke (optional if sent in cookie)',
         },
       },
     },
@@ -419,21 +418,21 @@ export class AuthController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Sesión cerrada exitosamente',
+    description: 'Session closed successfully',
     schema: {
       type: 'object',
       properties: {
-        message: { type: 'string', description: 'Mensaje de confirmación' },
+        message: { type: 'string', description: 'Confirmation message' },
       },
     },
   })
   @ApiResponse({
     status: 400,
-    description: 'Refresh token faltante o inválido',
+    description: 'Missing or invalid refresh token',
   })
   @ApiResponse({
     status: 401,
-    description: 'No autenticado',
+    description: 'Unauthorized',
   })
   async logout(
     @Body('refreshToken') refreshTokenFromBody: string | undefined,
@@ -497,12 +496,12 @@ export class AuthController {
   @Get('user')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
-    summary: 'Obtener información del usuario actual',
-    description: 'Retorna la información del usuario autenticado desde el token JWT',
+    summary: 'Get current user information',
+    description: 'Returns the authenticated user information from the JWT token',
   })
   @ApiResponse({
     status: 200,
-    description: 'Información del usuario',
+    description: 'User information',
     schema: {
       type: 'object',
       properties: {
@@ -515,7 +514,7 @@ export class AuthController {
   })
   @ApiResponse({
     status: 401,
-    description: 'No autenticado',
+    description: 'Unauthorized',
   })
   async getUser(@CurrentUser() user: User): Promise<User> {
     // TODO: Implement in Tarea 12

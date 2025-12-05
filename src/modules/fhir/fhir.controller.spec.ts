@@ -7,10 +7,18 @@ import {
   UpdatePractitionerDto,
 } from '../../common/dto/fhir-practitioner.dto';
 import { CreateEncounterDto, UpdateEncounterDto } from '../../common/dto/fhir-encounter.dto';
+import { User } from '../auth/interfaces/user.interface';
 
 describe('FhirController', () => {
   let controller: FhirController;
   let service: FhirService;
+
+  const mockUser: User = {
+    id: 'user-123',
+    username: 'testuser',
+    email: 'test@example.com',
+    roles: ['patient'],
+  };
 
   const mockFhirService = {
     getCapabilityStatement: jest.fn(),
@@ -80,10 +88,10 @@ describe('FhirController', () => {
 
       mockFhirService.createPatient.mockResolvedValue(expectedResult);
 
-      const result = await controller.createPatient(createDto);
+      const result = await controller.createPatient(createDto, mockUser);
 
       expect(result).toEqual(expectedResult);
-      expect(service.createPatient).toHaveBeenCalledWith(createDto);
+      expect(service.createPatient).toHaveBeenCalledWith(createDto, mockUser);
     });
   });
 
@@ -98,10 +106,10 @@ describe('FhirController', () => {
 
       mockFhirService.getPatient.mockResolvedValue(expectedResult);
 
-      const result = await controller.getPatient(patientId);
+      const result = await controller.getPatient(patientId, mockUser);
 
       expect(result).toEqual(expectedResult);
-      expect(service.getPatient).toHaveBeenCalledWith(patientId);
+      expect(service.getPatient).toHaveBeenCalledWith(patientId, mockUser);
     });
   });
 
@@ -115,10 +123,10 @@ describe('FhirController', () => {
 
       mockFhirService.searchPatients.mockResolvedValue(expectedResult);
 
-      const result = await controller.searchPatients(pagination);
+      const result = await controller.searchPatients(pagination, undefined, undefined, mockUser);
 
       expect(result).toEqual(expectedResult);
-      expect(service.searchPatients).toHaveBeenCalledWith(pagination);
+      expect(service.searchPatients).toHaveBeenCalledWith(pagination, mockUser);
     });
 
     it('should search patients with filters', async () => {
@@ -139,14 +147,17 @@ describe('FhirController', () => {
 
       mockFhirService.searchPatients.mockResolvedValue(expectedResult);
 
-      const result = await controller.searchPatients(pagination, name, identifier);
+      const result = await controller.searchPatients(pagination, name, identifier, mockUser);
 
       expect(result).toEqual(expectedResult);
-      expect(service.searchPatients).toHaveBeenCalledWith({
-        ...pagination,
-        name,
-        identifier,
-      });
+      expect(service.searchPatients).toHaveBeenCalledWith(
+        {
+          ...pagination,
+          name,
+          identifier,
+        },
+        mockUser,
+      );
     });
   });
 
@@ -166,10 +177,10 @@ describe('FhirController', () => {
 
       mockFhirService.updatePatient.mockResolvedValue(expectedResult);
 
-      const result = await controller.updatePatient(patientId, updateDto);
+      const result = await controller.updatePatient(patientId, updateDto, mockUser);
 
       expect(result).toEqual(expectedResult);
-      expect(service.updatePatient).toHaveBeenCalledWith(patientId, updateDto);
+      expect(service.updatePatient).toHaveBeenCalledWith(patientId, updateDto, mockUser);
     });
   });
 
@@ -179,9 +190,9 @@ describe('FhirController', () => {
 
       mockFhirService.deletePatient.mockResolvedValue(undefined);
 
-      await controller.deletePatient(patientId);
+      await controller.deletePatient(patientId, mockUser);
 
-      expect(service.deletePatient).toHaveBeenCalledWith(patientId);
+      expect(service.deletePatient).toHaveBeenCalledWith(patientId, mockUser);
     });
   });
 

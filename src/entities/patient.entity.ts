@@ -73,6 +73,15 @@ export class PatientEntity {
   patientId: string;
 
   /**
+   * Keycloak user ID that owns this patient record
+   * Links the Patient resource to the Keycloak user account
+   * Used for authorization: patients can only access their own records
+   * Nullable to support patients created before user linking
+   */
+  @Column({ type: 'varchar', length: 255, nullable: true, name: 'keycloak_user_id' })
+  keycloakUserId: string | null;
+
+  /**
    * Record creation timestamp
    * Automatically set when the record is first created
    */

@@ -9,6 +9,7 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -21,6 +22,9 @@ import {
 
 import { FhirService } from './fhir.service';
 import { Public } from '../auth/decorators/public.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { User } from '../auth/interfaces/user.interface';
 import { CreatePatientDto, UpdatePatientDto } from '../../common/dto/fhir-patient.dto';
 import {
   CreatePractitionerDto,
@@ -32,6 +36,7 @@ import { Patient, Practitioner, Encounter } from '../../common/interfaces/fhir.i
 
 @ApiTags('FHIR')
 @Controller('fhir')
+@UseGuards(JwtAuthGuard) // Protect all FHIR endpoints by default
 export class FhirController {
   constructor(private readonly fhirService: FhirService) {}
 
@@ -51,8 +56,11 @@ export class FhirController {
   @ApiResponse({ status: 201, description: 'Patient created successfully' })
   @ApiResponse({ status: 400, description: 'Invalid data' })
   @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
-  createPatient(@Body() createPatientDto: CreatePatientDto): Promise<Patient> {
-    return this.fhirService.createPatient(createPatientDto);
+  createPatient(
+    @Body() createPatientDto: CreatePatientDto,
+    @CurrentUser() user: User,
+  ): Promise<Patient> {
+    return this.fhirService.createPatient(createPatientDto, user);
   }
 
   @Get('Patient/:id')
@@ -61,9 +69,10 @@ export class FhirController {
   @ApiParam({ name: 'id', description: 'Patient ID' })
   @ApiResponse({ status: 200, description: 'Patient found' })
   @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' })
   @ApiResponse({ status: 404, description: 'Patient not found' })
-  getPatient(@Param('id') id: string): Promise<Patient> {
-    return this.fhirService.getPatient(id);
+  getPatient(@Param('id') id: string, @CurrentUser() user: User): Promise<Patient> {
+    return this.fhirService.getPatient(id, user);
   }
 
   @Get('Patient')
@@ -77,8 +86,9 @@ export class FhirController {
     @Query() pagination: PaginationDto,
     @Query('name') name?: string,
     @Query('identifier') identifier?: string,
+    @CurrentUser() user?: User,
   ): Promise<{ total: number; entries: Patient[] }> {
-    return this.fhirService.searchPatients({ ...pagination, name, identifier });
+    return this.fhirService.searchPatients({ ...pagination, name, identifier }, user);
   }
 
   @Put('Patient/:id')
@@ -87,12 +97,14 @@ export class FhirController {
   @ApiParam({ name: 'id', description: 'Patient ID' })
   @ApiResponse({ status: 200, description: 'Patient updated successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' })
   @ApiResponse({ status: 404, description: 'Patient not found' })
   updatePatient(
     @Param('id') id: string,
     @Body() updatePatientDto: UpdatePatientDto,
+    @CurrentUser() user: User,
   ): Promise<Patient> {
-    return this.fhirService.updatePatient(id, updatePatientDto);
+    return this.fhirService.updatePatient(id, updatePatientDto, user);
   }
 
   @Delete('Patient/:id')
@@ -102,9 +114,10 @@ export class FhirController {
   @ApiParam({ name: 'id', description: 'Patient ID' })
   @ApiResponse({ status: 204, description: 'Patient deleted successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' })
   @ApiResponse({ status: 404, description: 'Patient not found' })
-  deletePatient(@Param('id') id: string): Promise<void> {
-    return this.fhirService.deletePatient(id);
+  deletePatient(@Param('id') id: string, @CurrentUser() user: User): Promise<void> {
+    return this.fhirService.deletePatient(id, user);
   }
 
   // Practitioner endpoints

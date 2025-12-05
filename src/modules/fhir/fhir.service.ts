@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull } from 'typeorm';
+import { Repository, IsNull, SelectQueryBuilder } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { PinoLogger } from 'nestjs-pino';
 
@@ -16,6 +16,8 @@ import { FhirErrorService } from '../../common/services/fhir-error.service';
 import { PatientEntity } from '../../entities/patient.entity';
 import { PractitionerEntity } from '../../entities/practitioner.entity';
 import { EncounterEntity } from '../../entities/encounter.entity';
+import { User } from '../auth/interfaces/user.interface';
+import { ROLES } from '../../common/constants/roles';
 
 /**
  * FHIR service for managing FHIR R4 resources
@@ -178,12 +180,77 @@ export class FhirService {
     return entity;
   }
 
+  // ========== Authorization Helper Methods ==========
+
+  /**
+   * Checks if user has permission to access a patient resource
+   * @param user - Current authenticated user
+   * @param patientEntity - Patient entity to check access for
+   * @returns true if user has access, false otherwise
+   */
+  private canAccessPatient(user: User, patientEntity: PatientEntity): boolean {
+    // Admin can access all patients
+    if (user.roles.includes(ROLES.ADMIN)) {
+      return true;
+    }
+
+    // Patient can only access their own records
+    if (user.roles.includes(ROLES.PATIENT)) {
+      return patientEntity.keycloakUserId === user.id;
+    }
+
+    // Practitioners can access all active patients (for now)
+    // TODO: In the future, filter by assigned patients or consent
+    if (user.roles.includes(ROLES.PRACTITIONER)) {
+      return patientEntity.active === true;
+    }
+
+    // Other roles (viewer, lab, insurer) need explicit consent
+    // For now, deny access (will be implemented with Consent resource)
+    return false;
+  }
+
+  /**
+   * Applies role-based filtering to patient query builder
+   * @param queryBuilder - TypeORM query builder
+   * @param user - Current authenticated user
+   */
+  private applyPatientAccessFilter(
+    queryBuilder: SelectQueryBuilder<PatientEntity>,
+    user: User,
+  ): void {
+    // Admin can see all patients
+    if (user.roles.includes(ROLES.ADMIN)) {
+      return; // No filter needed
+    }
+
+    // Patient can only see their own records
+    if (user.roles.includes(ROLES.PATIENT)) {
+      queryBuilder.andWhere('patient.keycloakUserId = :keycloakUserId', {
+        keycloakUserId: user.id,
+      });
+      return;
+    }
+
+    // Practitioners can see all active patients (for now)
+    // TODO: In the future, filter by assigned patients or consent
+    if (user.roles.includes(ROLES.PRACTITIONER)) {
+      queryBuilder.andWhere('patientEntity.active = :active', { active: true });
+      return;
+    }
+
+    // Other roles (viewer, lab, insurer) need explicit consent
+    // For now, return empty results (will be implemented with Consent resource)
+    queryBuilder.andWhere('patientEntity.id = :id', { id: '0' }); // Always false condition
+  }
+
   // ========== Patient Methods ==========
 
   /**
    * Creates a new Patient
+   * If user has 'patient' role, automatically links the patient to the user
    */
-  async createPatient(createPatientDto: CreatePatientDto): Promise<Patient> {
+  async createPatient(createPatientDto: CreatePatientDto, user?: User): Promise<Patient> {
     const patientId = uuidv4();
     const now = new Date().toISOString();
 
@@ -198,6 +265,13 @@ export class FhirService {
     };
 
     const entity = this.patientToEntity(patient);
+
+    // If user has 'patient' role, link the patient to the user
+    if (user && user.roles.includes(ROLES.PATIENT)) {
+      entity.keycloakUserId = user.id;
+      this.logger.debug({ patientId, userId: user.id }, 'Patient linked to Keycloak user');
+    }
+
     const savedEntity = await this.patientRepository.save(entity);
     this.logger.info({ patientId }, 'Patient created');
 
@@ -206,8 +280,9 @@ export class FhirService {
 
   /**
    * Gets a Patient by ID (FHIR resource ID, not database UUID)
+   * Applies role-based access control
    */
-  async getPatient(id: string): Promise<Patient> {
+  async getPatient(id: string, user?: User): Promise<Patient> {
     const entity = await this.patientRepository.findOne({
       where: { patientId: id, deletedAt: IsNull() },
     });
@@ -216,22 +291,40 @@ export class FhirService {
       throw new NotFoundException(FhirErrorService.createNotFoundError('Patient', id));
     }
 
+    // Check access permissions
+    if (user && !this.canAccessPatient(user, entity)) {
+      this.logger.warn(
+        { patientId: id, userId: user.id, roles: user.roles },
+        'Access denied to patient',
+      );
+      throw new ForbiddenException('You do not have permission to access this patient');
+    }
+
     return this.entityToPatient(entity);
   }
 
   /**
    * Searches Patients with optional filters
+   * Applies role-based access control
    */
-  async searchPatients(params: {
-    page?: number;
-    limit?: number;
-    name?: string;
-    identifier?: string;
-  }): Promise<{ total: number; entries: Patient[] }> {
+  async searchPatients(
+    params: {
+      page?: number;
+      limit?: number;
+      name?: string;
+      identifier?: string;
+    },
+    user?: User,
+  ): Promise<{ total: number; entries: Patient[] }> {
     const { page = 1, limit = 10, name, identifier } = params;
     const queryBuilder = this.patientRepository
       .createQueryBuilder('patient')
       .where('patient.deletedAt IS NULL');
+
+    // Apply role-based access filtering
+    if (user) {
+      this.applyPatientAccessFilter(queryBuilder, user);
+    }
 
     // Filter by name (search in JSONB)
     if (name) {
@@ -260,21 +353,38 @@ export class FhirService {
 
     const entries = entities.map((entity) => this.entityToPatient(entity));
 
-    this.logger.debug({ total, page, limit }, 'Patients searched');
+    this.logger.debug(
+      { total, page, limit, userId: user?.id, roles: user?.roles },
+      'Patients searched',
+    );
 
     return { total, entries };
   }
 
   /**
    * Updates an existing Patient
+   * Applies role-based access control
    */
-  async updatePatient(id: string, updatePatientDto: UpdatePatientDto): Promise<Patient> {
+  async updatePatient(
+    id: string,
+    updatePatientDto: UpdatePatientDto,
+    user?: User,
+  ): Promise<Patient> {
     const entity = await this.patientRepository.findOne({
       where: { patientId: id, deletedAt: IsNull() },
     });
 
     if (!entity) {
       throw new NotFoundException(FhirErrorService.createNotFoundError('Patient', id));
+    }
+
+    // Check access permissions
+    if (user && !this.canAccessPatient(user, entity)) {
+      this.logger.warn(
+        { patientId: id, userId: user.id, roles: user.roles },
+        'Access denied to update patient',
+      );
+      throw new ForbiddenException('You do not have permission to update this patient');
     }
 
     const existingPatient = this.entityToPatient(entity);
@@ -303,15 +413,25 @@ export class FhirService {
   }
 
   /**
-   * Deletes a Patient (soft delete)
+   * Deletes (soft delete) a Patient
+   * Applies role-based access control
    */
-  async deletePatient(id: string): Promise<void> {
+  async deletePatient(id: string, user?: User): Promise<void> {
     const entity = await this.patientRepository.findOne({
       where: { patientId: id, deletedAt: IsNull() },
     });
 
     if (!entity) {
       throw new NotFoundException(FhirErrorService.createNotFoundError('Patient', id));
+    }
+
+    // Check access permissions
+    if (user && !this.canAccessPatient(user, entity)) {
+      this.logger.warn(
+        { patientId: id, userId: user.id, roles: user.roles },
+        'Access denied to delete patient',
+      );
+      throw new ForbiddenException('You do not have permission to delete this patient');
     }
 
     entity.deletedAt = new Date();

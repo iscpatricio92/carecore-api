@@ -1,11 +1,14 @@
-import { Body, Controller, Get, Header, Param, Post } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { Body, Controller, Get, Header, Param, Post, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 
 import { ConsentsService } from './consents.service';
 import { Consent } from '@/common/interfaces/fhir.interface';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('Consents')
 @Controller('consents')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth('JWT-auth')
 export class ConsentsController {
   constructor(private readonly consentsService: ConsentsService) {}
 
