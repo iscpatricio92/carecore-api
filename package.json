@@ -42,6 +42,8 @@
     "github:create-tasks-phase1:dry-run": "node scripts/create-github-tasks-phase1.js --dry-run",
     "github:create-tasks-phase2": "node scripts/create-github-tasks-phase2.js",
     "github:create-tasks-phase2:dry-run": "node scripts/create-github-tasks-phase2.js --dry-run",
+    "github:create-tasks-phase3": "node scripts/create-github-tasks-phase3.js",
+    "github:create-tasks-phase3:dry-run": "node scripts/create-github-tasks-phase3.js --dry-run",
     "docker:up": "make docker-up",
     "docker:down": "make docker-down",
     "docker:logs": "make docker-logs",
@@ -51,6 +53,7 @@
     "encryption:verify": "ts-node scripts/verify-encryption.ts"
   },
   "dependencies": {
+    "@keycloak/keycloak-admin-client": "^26.4.7",
     "@nestjs/common": "^10.4.20",
     "@nestjs/config": "^3.3.0",
     "@nestjs/core": "^10.4.20",
@@ -94,6 +97,7 @@
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^4.17.25",
     "@types/jest": "^29.5.14",
+    "@types/multer": "^2.0.0",
     "@types/node": "^20.19.25",
     "@types/passport-jwt": "^4.0.0",
     "@types/passport-local": "^1.0.38",

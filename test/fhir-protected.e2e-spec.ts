@@ -12,7 +12,9 @@ describe('FHIR Protected Endpoints E2E', () => {
   });
 
   afterAll(async () => {
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   describe('Patient endpoints', () => {

@@ -22,7 +22,9 @@ describe('Documents E2E', () => {
   });
 
   afterAll(async () => {
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   describe('POST /api/documents', () => {

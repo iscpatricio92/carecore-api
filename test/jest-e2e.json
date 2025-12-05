@@ -29,7 +29,7 @@
     "^@/modules/(.*)$": "<rootDir>/src/modules/$1"
   },
   "moduleDirectories": ["node_modules", "<rootDir>/src"],
-  "transformIgnorePatterns": ["node_modules/(?!(uuid|@nestjs-pino)/)"],
+  "transformIgnorePatterns": ["node_modules/(?!(uuid|@nestjs-pino|@keycloak)/)"],
   "testTimeout": 30000,
   "verbose": true,
   "collectCoverage": false,

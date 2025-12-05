@@ -101,6 +101,10 @@ CORS_ORIGIN=http://localhost:3000
 RATE_LIMIT_TTL=60
 RATE_LIMIT_MAX=100
 
+# Practitioner Verification Documents Storage
+VERIFICATION_DOCUMENTS_PATH=storage/verifications
+MAX_DOCUMENT_SIZE=10485760
+
 # PgAdmin (Optional)
 PGADMIN_EMAIL=
 PGADMIN_PASSWORD=
@@ -113,6 +117,8 @@ KEYCLOAK_URL=http://localhost:8080
 KEYCLOAK_REALM=
 KEYCLOAK_CLIENT_ID=
 KEYCLOAK_CLIENT_SECRET=
+KEYCLOAK_ADMIN_CLIENT_ID=
+KEYCLOAK_ADMIN_CLIENT_SECRET=
 KEYCLOAK_PORT=8080
 KEYCLOAK_DB_TYPE=postgres
 KEYCLOAK_DB_HOST=postgres
@@ -165,6 +171,15 @@ KEYCLOAK_HTTP_ENABLED=true
 - `RATE_LIMIT_TTL`: Time window in seconds for rate limiting
 - `RATE_LIMIT_MAX`: Maximum number of requests per window
 
+### Practitioner Verification Documents Storage
+- `VERIFICATION_DOCUMENTS_PATH`: Path where verification documents (cedula/licencia) are stored (default: `storage/verifications`)
+  - Documents are stored temporarily on local disk (not committed to git)
+  - TODO: Migrate to cloud storage (S3/MinIO) in the future for production
+  - Can be absolute or relative to project root
+- `MAX_DOCUMENT_SIZE`: Maximum file size in bytes for verification documents (default: `10485760` = 10MB)
+  - Used to validate uploaded documents before storage
+  - Documents exceeding this size will be rejected
+
 ### PgAdmin (Optional)
 - `PGADMIN_EMAIL`: Email to access PgAdmin
 - `PGADMIN_PASSWORD`: Password for PgAdmin
@@ -178,6 +193,13 @@ KEYCLOAK_HTTP_ENABLED=true
   - Production: `https://keycloak.yourdomain.com`
   - Docker internal: `http://keycloak:8080` (when API runs in Docker)
 - `KEYCLOAK_REALM`: Name of the Keycloak realm (**required**)
+- `KEYCLOAK_CLIENT_ID`: Client ID for OAuth2 authentication (**required**)
+- `KEYCLOAK_CLIENT_SECRET`: Client secret for OAuth2 authentication (**required**)
+- `KEYCLOAK_ADMIN_CLIENT_ID`: Client ID for Keycloak Admin API access (**required for practitioner verification**)
+  - This should be a service account client with admin permissions
+  - Used to update user roles when practitioners are verified
+- `KEYCLOAK_ADMIN_CLIENT_SECRET`: Client secret for Keycloak Admin API access (**required for practitioner verification**)
+  - Secret for the service account client
 - `KEYCLOAK_PORT`: Port where Keycloak runs externally (**required**)
 - `KEYCLOAK_DB_TYPE`: Database type for Keycloak (default: `postgres`) (**required**)
 - `KEYCLOAK_DB_HOST`: Database host for Keycloak (**required**)
@@ -209,6 +231,8 @@ KEYCLOAK_HTTP_ENABLED=true
 - Consider using environment-specific realms (e.g., `carecore-dev`, `carecore-prod`)
 - All Keycloak database variables (`KEYCLOAK_DB_*`) must match your PostgreSQL configuration
 - The `KEYCLOAK_DB_NAME` database will be created automatically by the `init-keycloak-db.sh` script
+- `KEYCLOAK_ADMIN_CLIENT_SECRET` is **SENSITIVE** - store only in `.env.local` and never commit to repository
+- The Admin Client must be configured as a service account with appropriate admin permissions in Keycloak
 
 ## Loading Priority
 

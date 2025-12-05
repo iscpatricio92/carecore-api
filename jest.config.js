@@ -49,7 +49,7 @@ module.exports = {
   moduleDirectories: ['node_modules', '<rootDir>'],
 
   // Patrones a ignorar en transformación
-  transformIgnorePatterns: ['node_modules/(?!(uuid|@nestjs-pino)/)'],
+  transformIgnorePatterns: ['node_modules/(?!(uuid|@nestjs-pino|@keycloak)/)'],
 
   // Configuración de cobertura
   collectCoverage: false, // Solo cuando se solicite explícitamente

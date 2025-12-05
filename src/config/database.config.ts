@@ -6,6 +6,7 @@ import { PractitionerEntity } from '../entities/practitioner.entity';
 import { EncounterEntity } from '../entities/encounter.entity';
 import { ConsentEntity } from '../entities/consent.entity';
 import { DocumentReferenceEntity } from '../entities/document-reference.entity';
+import { PractitionerVerificationEntity } from '../entities/practitioner-verification.entity';
 
 @Injectable()
 export class DatabaseConfig implements TypeOrmOptionsFactory {
@@ -36,6 +37,7 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
       EncounterEntity,
       ConsentEntity,
       DocumentReferenceEntity,
+      PractitionerVerificationEntity,
     ];
 
     const baseConfig = {
