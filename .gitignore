@@ -9,6 +9,8 @@ coverage-e2e/
 .nyc_output/
 .jest-cache/
 .jest-e2e-cache/
+storage/
+.jest-e2e-cache/
 
 # Production
 dist/

@@ -1,7 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
+
 import { DocumentsController } from './documents.controller';
 import { DocumentsService } from './documents.service';
-import { DocumentReference } from '../../common/interfaces/fhir.interface';
+import {
+  CreateDocumentReferenceDto,
+  UpdateDocumentReferenceDto,
+} from '../../common/dto/fhir-document-reference.dto';
 
 describe('DocumentsController', () => {
   let controller: DocumentsController;
@@ -11,6 +15,8 @@ describe('DocumentsController', () => {
     create: jest.fn(),
     findAll: jest.fn(),
     findOne: jest.fn(),
+    update: jest.fn(),
+    remove: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -34,10 +40,11 @@ describe('DocumentsController', () => {
   });
 
   describe('create', () => {
-    it('should create a new document', () => {
-      const documentData: DocumentReference = {
-        resourceType: 'DocumentReference',
+    it('should create a new document', async () => {
+      const documentData: CreateDocumentReferenceDto = {
         status: 'current',
+        type: { coding: [{ system: 'http://loinc.org', code: '34133-9' }] },
+        subject: { reference: 'Patient/123' },
         content: [
           {
             attachment: {
@@ -48,18 +55,19 @@ describe('DocumentsController', () => {
         ],
       };
 
-      const expectedResult: DocumentReference = {
+      const expectedResult = {
         ...documentData,
         id: 'test-document-id',
+        resourceType: 'DocumentReference',
         meta: {
           versionId: '1',
           lastUpdated: new Date().toISOString(),
         },
       };
 
-      mockDocumentsService.create.mockReturnValue(expectedResult);
+      mockDocumentsService.create.mockResolvedValue(expectedResult);
 
-      const result = controller.create(documentData);
+      const result = await controller.create(documentData);
 
       expect(result).toEqual(expectedResult);
       expect(service.create).toHaveBeenCalledWith(documentData);
@@ -67,7 +75,7 @@ describe('DocumentsController', () => {
   });
 
   describe('findAll', () => {
-    it('should return all documents', () => {
+    it('should return all documents', async () => {
       const expectedResult = {
         resourceType: 'Bundle',
         type: 'searchset',
@@ -75,9 +83,9 @@ describe('DocumentsController', () => {
         entry: [],
       };
 
-      mockDocumentsService.findAll.mockReturnValue(expectedResult);
+      mockDocumentsService.findAll.mockResolvedValue(expectedResult);
 
-      const result = controller.findAll();
+      const result = await controller.findAll();
 
       expect(result).toEqual(expectedResult);
       expect(service.findAll).toHaveBeenCalled();
@@ -85,9 +93,9 @@ describe('DocumentsController', () => {
   });
 
   describe('findOne', () => {
-    it('should return a document by id', () => {
+    it('should return a document by id', async () => {
       const documentId = 'test-document-id';
-      const expectedResult: DocumentReference = {
+      const expectedResult = {
         resourceType: 'DocumentReference',
         id: documentId,
         status: 'current',
@@ -101,12 +109,44 @@ describe('DocumentsController', () => {
         ],
       };
 
-      mockDocumentsService.findOne.mockReturnValue(expectedResult);
+      mockDocumentsService.findOne.mockResolvedValue(expectedResult);
 
-      const result = controller.findOne(documentId);
+      const result = await controller.findOne(documentId);
 
       expect(result).toEqual(expectedResult);
       expect(service.findOne).toHaveBeenCalledWith(documentId);
+    });
+  });
+
+  describe('update', () => {
+    it('should update a document', async () => {
+      const documentId = 'doc-1';
+      const updateDto: UpdateDocumentReferenceDto = {
+        status: 'superseded',
+      };
+      const expectedResult = {
+        resourceType: 'DocumentReference',
+        id: documentId,
+        status: 'superseded',
+        content: [],
+      };
+
+      mockDocumentsService.update.mockResolvedValue(expectedResult);
+
+      const result = await controller.update(documentId, updateDto);
+
+      expect(result).toEqual(expectedResult);
+      expect(service.update).toHaveBeenCalledWith(documentId, updateDto);
+    });
+  });
+
+  describe('remove', () => {
+    it('should delete a document', async () => {
+      mockDocumentsService.remove.mockResolvedValue(undefined);
+
+      await controller.remove('doc-1');
+
+      expect(service.remove).toHaveBeenCalledWith('doc-1');
     });
   });
 });

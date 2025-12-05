@@ -4,8 +4,12 @@ import { Repository, IsNull } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { PinoLogger } from 'nestjs-pino';
 
-import { Consent } from '../../common/interfaces/fhir.interface';
-import { CreateConsentDto, UpdateConsentDto } from '../../common/dto/fhir-consent.dto';
+import { Consent, ConsentProvision } from '../../common/interfaces/fhir.interface';
+import {
+  CreateConsentDto,
+  UpdateConsentDto,
+  ShareConsentWithPractitionerDto,
+} from '../../common/dto/fhir-consent.dto';
 import { ConsentEntity } from '../../entities/consent.entity';
 import { PatientEntity } from '../../entities/patient.entity';
 import { User } from '../auth/interfaces/user.interface';
@@ -230,7 +234,13 @@ export class ConsentsService {
     }
 
     const entities = await queryBuilder.getMany();
-    const entries = entities.map((entity) => this.entityToConsent(entity));
+
+    // Validate and update expired consents
+    await this.validateExpiredConsents(entities);
+
+    // Re-fetch entities after potential updates
+    const updatedEntities = await queryBuilder.getMany();
+    const entries = updatedEntities.map((entity) => this.entityToConsent(entity));
 
     this.logger.debug(
       { total: entries.length, userId: user?.id, roles: user?.roles },
@@ -265,7 +275,19 @@ export class ConsentsService {
       throw new ForbiddenException('You do not have permission to access this consent');
     }
 
-    return this.entityToConsent(entity);
+    // Validate and update if expired
+    await this.validateAndUpdateExpiredConsent(entity);
+
+    // Re-fetch entity after potential update
+    const updatedEntity = await this.consentRepository.findOne({
+      where: { consentId: id, deletedAt: IsNull() },
+    });
+
+    if (!updatedEntity) {
+      throw new NotFoundException(`Consent with ID ${id} not found`);
+    }
+
+    return this.entityToConsent(updatedEntity);
   }
 
   /**
@@ -344,5 +366,156 @@ export class ConsentsService {
     entity.deletedAt = new Date();
     await this.consentRepository.save(entity);
     this.logger.info({ consentId: id, userId: user?.id }, 'Consent deleted');
+  }
+
+  /**
+   * Shares a consent with a practitioner for a specific number of days
+   * Creates or updates the consent with a provision that includes the practitioner
+   * and sets an expiration date based on the number of days
+   */
+  async shareWithPractitioner(
+    id: string,
+    shareDto: ShareConsentWithPractitionerDto,
+    user?: User,
+  ): Promise<Consent> {
+    const entity = await this.consentRepository.findOne({
+      where: { consentId: id, deletedAt: IsNull() },
+    });
+
+    if (!entity) {
+      throw new NotFoundException(`Consent with ID ${id} not found`);
+    }
+
+    // Check access permissions - only patient or admin can share
+    if (user && !(await this.canAccessConsent(user, entity))) {
+      this.logger.warn(
+        { consentId: id, userId: user.id, roles: user.roles },
+        'Access denied to share consent',
+      );
+      throw new ForbiddenException('You do not have permission to share this consent');
+    }
+
+    const existingConsent = this.entityToConsent(entity);
+    const now = new Date();
+    const expirationDate = new Date(now);
+    expirationDate.setDate(expirationDate.getDate() + shareDto.days);
+
+    // Create or update provision with practitioner
+    const provision: ConsentProvision = {
+      type: 'permit',
+      period: {
+        start: existingConsent.dateTime || now.toISOString(),
+        end: expirationDate.toISOString(),
+      },
+      actor: [
+        {
+          role: {
+            coding: [
+              {
+                system: 'http://terminology.hl7.org/CodeSystem/v3-ParticipationType',
+                code: 'PRCP',
+                display: 'Primary Care Provider',
+              },
+            ],
+            text: 'Practitioner',
+          },
+          reference: {
+            reference: shareDto.practitionerReference,
+            display: shareDto.practitionerDisplay,
+          },
+        },
+      ],
+    };
+
+    // Merge with existing provision if it exists
+    const updatedConsent: Consent = {
+      ...existingConsent,
+      provision: existingConsent.provision
+        ? {
+            ...existingConsent.provision,
+            ...provision,
+            // Merge actors if they exist
+            actor: [...(existingConsent.provision.actor || []), ...(provision.actor || [])],
+          }
+        : provision,
+      meta: {
+        ...existingConsent.meta,
+        versionId: String(parseInt(existingConsent.meta?.versionId || '1', 10) + 1),
+        lastUpdated: now.toISOString(),
+      },
+    };
+
+    entity.fhirResource = updatedConsent;
+    entity.status = 'active'; // Ensure status is active when sharing
+    entity.patientReference = updatedConsent.patient?.reference || entity.patientReference;
+
+    const savedEntity = await this.consentRepository.save(entity);
+    this.logger.info(
+      {
+        consentId: id,
+        userId: user?.id,
+        practitionerReference: shareDto.practitionerReference,
+        days: shareDto.days,
+        expirationDate: expirationDate.toISOString(),
+      },
+      'Consent shared with practitioner',
+    );
+
+    return this.entityToConsent(savedEntity);
+  }
+
+  /**
+   * Checks if a consent has expired based on its provision period
+   * Returns true if expired, false otherwise
+   */
+  private isConsentExpired(consent: Consent): boolean {
+    if (!consent.provision?.period?.end) {
+      return false; // No expiration date set
+    }
+
+    const expirationDate = new Date(consent.provision.period.end);
+    const now = new Date();
+    return now > expirationDate;
+  }
+
+  /**
+   * Validates and updates expired consents
+   * Sets status to 'inactive' if the consent has expired
+   */
+  private async validateAndUpdateExpiredConsent(entity: ConsentEntity): Promise<void> {
+    const consent = this.entityToConsent(entity);
+
+    if (this.isConsentExpired(consent) && consent.status === 'active') {
+      const now = new Date().toISOString();
+      const updatedConsent: Consent = {
+        ...consent,
+        status: 'inactive',
+        meta: {
+          ...consent.meta,
+          versionId: String(parseInt(consent.meta?.versionId || '1', 10) + 1),
+          lastUpdated: now,
+        },
+      };
+
+      entity.fhirResource = updatedConsent;
+      entity.status = 'inactive';
+      await this.consentRepository.save(entity);
+
+      this.logger.info(
+        { consentId: entity.consentId, expirationDate: consent.provision?.period?.end },
+        'Consent expired and set to inactive',
+      );
+    }
+  }
+
+  /**
+   * Validates expiration for all consents in a list
+   * Used in findAll to ensure expired consents are marked as inactive
+   */
+  private async validateExpiredConsents(entities: ConsentEntity[]): Promise<void> {
+    const validationPromises = entities.map((entity) =>
+      this.validateAndUpdateExpiredConsent(entity),
+    );
+    await Promise.all(validationPromises);
   }
 }

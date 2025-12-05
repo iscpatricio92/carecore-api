@@ -13,7 +13,11 @@ import {
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiParam } from '@nestjs/swagger';
 
 import { ConsentsService } from './consents.service';
-import { CreateConsentDto, UpdateConsentDto } from '../../common/dto/fhir-consent.dto';
+import {
+  CreateConsentDto,
+  UpdateConsentDto,
+  ShareConsentWithPractitionerDto,
+} from '../../common/dto/fhir-consent.dto';
 import { Consent } from '../../common/interfaces/fhir.interface';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -102,5 +106,32 @@ export class ConsentsController {
   @ApiResponse({ status: 404, description: 'Consent not found' })
   remove(@Param('id') id: string, @CurrentUser() user: User): Promise<void> {
     return this.consentsService.remove(id, user);
+  }
+
+  @Post(':id/share')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(RolesGuard)
+  @Roles(ROLES.PATIENT, ROLES.ADMIN)
+  @ApiOperation({
+    summary: 'Share consent with a practitioner',
+    description:
+      'Shares a consent with a practitioner for a specific number of days. Creates a provision that expires after the specified number of days.',
+  })
+  @ApiParam({ name: 'id', description: 'Consent ID' })
+  @ApiResponse({ status: 200, description: 'Consent shared successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({
+    status: 403,
+    description:
+      'Forbidden - Patient or Admin role required. Patients can only share their own consents.',
+  })
+  @ApiResponse({ status: 404, description: 'Consent not found' })
+  shareWithPractitioner(
+    @Param('id') id: string,
+    @Body() shareDto: ShareConsentWithPractitionerDto,
+    @CurrentUser() user: User,
+  ): Promise<Consent> {
+    return this.consentsService.shareWithPractitioner(id, shareDto, user);
   }
 }

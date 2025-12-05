@@ -7,6 +7,9 @@ import {
   IsBoolean,
   IsDateString,
   IsObject,
+  IsNumber,
+  Min,
+  Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -568,4 +571,42 @@ export class UpdateConsentDto implements Partial<Consent> {
   @ValidateNested()
   @Type(() => ConsentProvisionDto)
   provision?: ConsentProvisionDto;
+}
+
+/**
+ * DTO for sharing consent with a practitioner for a specific number of days
+ *
+ * @example
+ * {
+ *   "practitionerReference": "Practitioner/123",
+ *   "days": 30,
+ *   "practitionerDisplay": "Dr. Jane Smith"
+ * }
+ */
+export class ShareConsentWithPractitionerDto {
+  @ApiProperty({
+    description: 'Reference to the practitioner (format: Practitioner/{id})',
+    example: 'Practitioner/123',
+  })
+  @IsString()
+  practitionerReference: string;
+
+  @ApiPropertyOptional({
+    description: 'Display name of the practitioner',
+    example: 'Dr. Jane Smith',
+  })
+  @IsOptional()
+  @IsString()
+  practitionerDisplay?: string;
+
+  @ApiProperty({
+    description: 'Number of days the consent will be valid (1-365)',
+    example: 30,
+    minimum: 1,
+    maximum: 365,
+  })
+  @IsNumber()
+  @Min(1)
+  @Max(365)
+  days: number;
 }

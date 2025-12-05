@@ -1,19 +1,69 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { IsNull } from 'typeorm';
+import * as fs from 'node:fs';
+import * as path from 'path';
+
 import { DocumentsService } from './documents.service';
-import { DocumentReference } from '../../common/interfaces/fhir.interface';
+import { DocumentReferenceEntity } from '../../entities/document-reference.entity';
+import {
+  CreateDocumentReferenceDto,
+  UpdateDocumentReferenceDto,
+} from '../../common/dto/fhir-document-reference.dto';
+
+// Mock fs module
+jest.mock('node:fs', () => ({
+  promises: {
+    mkdir: jest.fn(),
+    writeFile: jest.fn(),
+  },
+}));
 
 describe('DocumentsService', () => {
   let service: DocumentsService;
+  let repo: {
+    create: jest.Mock;
+    save: jest.Mock;
+    find: jest.Mock;
+    findOne: jest.Mock;
+    update: jest.Mock;
+  };
+
+  const mockMkdir = fs.promises.mkdir as jest.Mock;
+  const mockWriteFile = fs.promises.writeFile as jest.Mock;
 
   beforeEach(async () => {
+    repo = {
+      create: jest.fn((data) => data),
+      save: jest.fn(async (data) => ({ ...data, id: 'db-uuid', createdAt: new Date() })),
+      find: jest.fn(async () => []),
+      findOne: jest.fn(async () => null),
+      update: jest.fn(async () => ({ affected: 1 })),
+    };
+
+    mockMkdir.mockResolvedValue(undefined);
+    mockWriteFile.mockResolvedValue(undefined);
+
+    // Set test storage path
+    process.env.DOCUMENTS_STORAGE_PATH = path.join(__dirname, '../../../../test-storage');
+
     const module: TestingModule = await Test.createTestingModule({
-      providers: [DocumentsService],
+      providers: [
+        DocumentsService,
+        {
+          provide: getRepositoryToken(DocumentReferenceEntity),
+          useValue: repo,
+        },
+      ],
     }).compile();
 
     service = module.get<DocumentsService>(DocumentsService);
-    // Clear documents array before each test
-    (service as unknown as { documents: DocumentReference[] }).documents = [];
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+    delete process.env.DOCUMENTS_STORAGE_PATH;
   });
 
   it('should be defined', () => {
@@ -21,9 +71,8 @@ describe('DocumentsService', () => {
   });
 
   describe('create', () => {
-    it('should create a new document with generated ID', () => {
-      const documentData: DocumentReference = {
-        resourceType: 'DocumentReference',
+    it('should create a new document with generated ID', async () => {
+      const documentData: CreateDocumentReferenceDto = {
         status: 'current',
         content: [
           {
@@ -33,190 +82,316 @@ describe('DocumentsService', () => {
             },
           },
         ],
+        subject: { reference: 'Patient/123' },
+        type: { coding: [{ system: 'http://loinc.org', code: '34133-9' }] },
       };
 
-      const result = service.create(documentData);
+      const savedEntity = {
+        id: 'db-uuid',
+        resourceType: 'DocumentReference',
+        fhirResource: {
+          ...documentData,
+          id: 'generated-id',
+          resourceType: 'DocumentReference',
+          meta: { versionId: '1', lastUpdated: expect.any(String) },
+        },
+        status: 'current',
+        documentReferenceId: 'generated-id',
+        subjectReference: 'Patient/123',
+        createdAt: new Date(),
+      };
 
-      expect(result).toBeDefined();
+      repo.save.mockResolvedValue(savedEntity);
+
+      const result = await service.create(documentData);
+
+      expect(repo.create).toHaveBeenCalled();
+      expect(repo.save).toHaveBeenCalled();
       expect(result.resourceType).toBe('DocumentReference');
       expect(result.id).toBeDefined();
       expect(result.status).toBe('current');
-      expect(result.content).toEqual(documentData.content);
       expect(result.meta?.versionId).toBe('1');
       expect(result.meta?.lastUpdated).toBeDefined();
     });
 
-    it('should create a document with provided ID', () => {
-      const documentData: DocumentReference = {
-        resourceType: 'DocumentReference',
-        id: 'custom-document-id',
+    it('should store base64 attachment to disk', async () => {
+      const base64Data = Buffer.from('test content').toString('base64');
+      const documentData: CreateDocumentReferenceDto = {
         status: 'current',
         content: [
           {
             attachment: {
               contentType: 'application/pdf',
-              url: 'https://example.com/document.pdf',
+              data: base64Data,
             },
           },
         ],
+        subject: { reference: 'Patient/123' },
+        type: { coding: [{ system: 'http://loinc.org', code: '34133-9' }] },
       };
 
-      const result = service.create(documentData);
-
-      expect(result.id).toBe('custom-document-id');
-    });
-
-    it('should preserve existing meta data', () => {
-      const documentData: DocumentReference = {
+      const savedEntity = {
+        id: 'db-uuid',
         resourceType: 'DocumentReference',
-        id: 'test-id',
-        status: 'current',
-        meta: {
-          versionId: '2',
-          lastUpdated: '2024-01-01T00:00:00Z',
+        fhirResource: {
+          ...documentData,
+          id: 'generated-id',
+          resourceType: 'DocumentReference',
+          meta: { versionId: '1', lastUpdated: expect.any(String) },
+          content: [
+            {
+              attachment: {
+                contentType: 'application/pdf',
+                url: expect.stringContaining('file://'),
+                size: expect.any(Number),
+                hash: expect.stringContaining('sha256:'),
+                data: undefined,
+              },
+            },
+          ],
         },
-        content: [
-          {
-            attachment: {
-              contentType: 'application/pdf',
-              url: 'https://example.com/document.pdf',
-            },
-          },
-        ],
+        status: 'current',
+        documentReferenceId: 'generated-id',
+        subjectReference: 'Patient/123',
+        createdAt: new Date(),
       };
 
-      const result = service.create(documentData);
+      repo.save.mockResolvedValue(savedEntity);
 
-      expect(result.meta?.versionId).toBe('1'); // Should be overridden
-      expect(result.meta?.lastUpdated).toBeDefined(); // Should be updated
+      const result = await service.create(documentData);
+
+      expect(mockMkdir).toHaveBeenCalled();
+      expect(mockWriteFile).toHaveBeenCalled();
+      expect(result.content?.[0].attachment?.data).toBeUndefined();
+      expect(result.content?.[0].attachment?.url).toBeDefined();
+      expect(result.content?.[0].attachment?.size).toBeDefined();
+      expect(result.content?.[0].attachment?.hash).toBeDefined();
     });
 
-    it('should add document to internal array', () => {
-      const documentData: DocumentReference = {
-        resourceType: 'DocumentReference',
+    it('should handle document with empty content array', async () => {
+      const documentData: CreateDocumentReferenceDto = {
         status: 'current',
-        content: [
-          {
-            attachment: {
-              contentType: 'application/pdf',
-              url: 'https://example.com/document.pdf',
-            },
-          },
-        ],
+        content: [],
+        subject: { reference: 'Patient/123' },
+        type: { coding: [{ system: 'http://loinc.org', code: '34133-9' }] },
       };
 
-      service.create(documentData);
-      const findAllResult = service.findAll();
+      const savedEntity = {
+        id: 'db-uuid',
+        resourceType: 'DocumentReference',
+        fhirResource: {
+          ...documentData,
+          id: 'generated-id',
+          resourceType: 'DocumentReference',
+          meta: { versionId: '1', lastUpdated: expect.any(String) },
+        },
+        status: 'current',
+        documentReferenceId: 'generated-id',
+        subjectReference: 'Patient/123',
+        createdAt: new Date(),
+      };
 
-      expect(findAllResult.total).toBe(1);
-      expect(findAllResult.entry.length).toBe(1);
+      repo.save.mockResolvedValue(savedEntity);
+
+      const result = await service.create(documentData);
+
+      expect(result).toBeDefined();
+      expect(result.resourceType).toBe('DocumentReference');
     });
   });
 
   describe('findAll', () => {
-    it('should return an empty bundle', () => {
-      const result = service.findAll();
+    it('should return an empty bundle', async () => {
+      repo.find.mockResolvedValueOnce([]);
 
-      expect(result).toBeDefined();
+      const result = await service.findAll();
+
       expect(result.resourceType).toBe('Bundle');
       expect(result.type).toBe('searchset');
       expect(result.total).toBe(0);
       expect(result.entry).toEqual([]);
     });
 
-    it('should return bundle with documents', () => {
-      const document1: DocumentReference = {
-        resourceType: 'DocumentReference',
-        id: 'document-1',
-        status: 'current',
-        content: [
-          {
-            attachment: {
-              contentType: 'application/pdf',
-              url: 'https://example.com/document1.pdf',
-            },
+    it('should return bundle with documents', async () => {
+      repo.find.mockResolvedValueOnce([
+        {
+          fhirResource: {
+            resourceType: 'DocumentReference',
+            id: 'doc-1',
+            status: 'current',
+            content: [],
           },
-        ],
-      };
-      const document2: DocumentReference = {
-        resourceType: 'DocumentReference',
-        id: 'document-2',
-        status: 'superseded',
-        content: [
-          {
-            attachment: {
-              contentType: 'application/pdf',
-              url: 'https://example.com/document2.pdf',
-            },
-          },
-        ],
-      };
+          documentReferenceId: 'doc-1',
+        },
+      ]);
 
-      service.create(document1);
-      service.create(document2);
+      const result = await service.findAll();
 
-      const result = service.findAll();
-
-      expect(result.total).toBe(2);
-      expect(result.entry.length).toBe(2);
-      expect(result.entry[0].fullUrl).toBe('urn:uuid:document-1');
-      expect(result.entry[0].resource).toEqual(expect.objectContaining({ id: 'document-1' }));
-      expect(result.entry[1].fullUrl).toBe('urn:uuid:document-2');
-      expect(result.entry[1].resource).toEqual(expect.objectContaining({ id: 'document-2' }));
+      expect(result.total).toBe(1);
+      expect(result.entry[0].fullUrl).toBe('DocumentReference/doc-1');
+      expect(result.entry[0].resource.id).toBe('doc-1');
     });
   });
 
   describe('findOne', () => {
-    it('should return a document by id', () => {
-      const documentData: DocumentReference = {
-        resourceType: 'DocumentReference',
-        id: 'test-document-id',
-        status: 'current',
-        content: [
-          {
-            attachment: {
-              contentType: 'application/pdf',
-              url: 'https://example.com/document.pdf',
-            },
-          },
-        ],
-      };
+    it('should return a document by id', async () => {
+      repo.findOne.mockResolvedValueOnce({
+        fhirResource: {
+          resourceType: 'DocumentReference',
+          id: 'doc-1',
+          status: 'current',
+          content: [],
+        },
+        documentReferenceId: 'doc-1',
+      });
 
-      service.create(documentData);
-      const result = service.findOne('test-document-id');
+      const result = await service.findOne('doc-1');
 
-      expect(result).toBeDefined();
-      expect(result.id).toBe('test-document-id');
+      expect(repo.findOne).toHaveBeenCalledWith({
+        where: { documentReferenceId: 'doc-1', deletedAt: IsNull() },
+      });
+      expect(result.id).toBe('doc-1');
       expect(result.status).toBe('current');
-      expect(result.content).toEqual(documentData.content);
     });
 
-    it('should throw NotFoundException when document does not exist', () => {
-      expect(() => service.findOne('non-existent-id')).toThrow(NotFoundException);
-      expect(() => service.findOne('non-existent-id')).toThrow(
-        'DocumentReference with ID non-existent-id not found',
+    it('should throw NotFoundException when not found', async () => {
+      repo.findOne.mockResolvedValueOnce(null);
+
+      await expect(service.findOne('missing')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('missing')).rejects.toThrow(
+        'DocumentReference with ID missing not found',
+      );
+    });
+  });
+
+  describe('update', () => {
+    it('should update an existing document', async () => {
+      const existingEntity = {
+        id: 'db-uuid',
+        resourceType: 'DocumentReference',
+        fhirResource: {
+          resourceType: 'DocumentReference',
+          id: 'doc-1',
+          status: 'current',
+          meta: { versionId: '1', lastUpdated: '2024-01-01T00:00:00Z' },
+          content: [],
+        },
+        documentReferenceId: 'doc-1',
+        status: 'current',
+        subjectReference: 'Patient/123',
+      };
+
+      const updateDto: UpdateDocumentReferenceDto = {
+        status: 'superseded',
+      };
+
+      repo.findOne.mockResolvedValueOnce(existingEntity).mockResolvedValueOnce({
+        ...existingEntity,
+        fhirResource: {
+          ...existingEntity.fhirResource,
+          status: 'superseded',
+          meta: { versionId: '2', lastUpdated: expect.any(String) },
+        },
+        status: 'superseded',
+      });
+
+      repo.save.mockResolvedValue({
+        ...existingEntity,
+        fhirResource: {
+          ...existingEntity.fhirResource,
+          status: 'superseded',
+          meta: { versionId: '2', lastUpdated: expect.any(String) },
+        },
+        status: 'superseded',
+      });
+
+      const result = await service.update('doc-1', updateDto);
+
+      expect(repo.findOne).toHaveBeenCalledWith({
+        where: { documentReferenceId: 'doc-1', deletedAt: IsNull() },
+      });
+      expect(repo.save).toHaveBeenCalled();
+      expect(result.status).toBe('superseded');
+      expect(result.meta?.versionId).toBe('2');
+    });
+
+    it('should throw NotFoundException when document does not exist', async () => {
+      repo.findOne.mockResolvedValueOnce(null);
+
+      const updateDto: UpdateDocumentReferenceDto = {
+        status: 'superseded',
+      };
+
+      await expect(service.update('missing', updateDto)).rejects.toThrow(NotFoundException);
+    });
+
+    it('should increment versionId on update', async () => {
+      const existingEntity = {
+        id: 'db-uuid',
+        resourceType: 'DocumentReference',
+        fhirResource: {
+          resourceType: 'DocumentReference',
+          id: 'doc-1',
+          status: 'current',
+          meta: { versionId: '5', lastUpdated: '2024-01-01T00:00:00Z' },
+          content: [],
+        },
+        documentReferenceId: 'doc-1',
+        status: 'current',
+      };
+
+      repo.findOne.mockResolvedValueOnce(existingEntity);
+      repo.save.mockResolvedValue({
+        ...existingEntity,
+        fhirResource: {
+          ...existingEntity.fhirResource,
+          meta: { versionId: '6', lastUpdated: expect.any(String) },
+        },
+      });
+
+      const result = await service.update('doc-1', { status: 'superseded' });
+
+      expect(result.meta?.versionId).toBe('6');
+    });
+  });
+
+  describe('remove', () => {
+    it('should soft delete a document', async () => {
+      const existingEntity = {
+        id: 'db-uuid',
+        resourceType: 'DocumentReference',
+        fhirResource: {
+          resourceType: 'DocumentReference',
+          id: 'doc-1',
+          status: 'current',
+          content: [],
+        },
+        documentReferenceId: 'doc-1',
+        status: 'current',
+        deletedAt: null,
+      };
+
+      repo.findOne.mockResolvedValueOnce(existingEntity);
+      repo.update.mockResolvedValueOnce({ affected: 1 });
+
+      await service.remove('doc-1');
+
+      expect(repo.findOne).toHaveBeenCalledWith({
+        where: { documentReferenceId: 'doc-1', deletedAt: IsNull() },
+      });
+      expect(repo.update).toHaveBeenCalledWith(
+        { documentReferenceId: 'doc-1' },
+        { deletedAt: expect.any(Date) },
       );
     });
 
-    it('should find document created without explicit ID', () => {
-      const documentData: DocumentReference = {
-        resourceType: 'DocumentReference',
-        status: 'current',
-        content: [
-          {
-            attachment: {
-              contentType: 'application/pdf',
-              url: 'https://example.com/document.pdf',
-            },
-          },
-        ],
-      };
+    it('should throw NotFoundException when document does not exist', async () => {
+      repo.findOne.mockResolvedValueOnce(null);
 
-      const created = service.create(documentData);
-      const result = service.findOne(created.id!);
-
-      expect(result).toBeDefined();
-      expect(result.id).toBe(created.id);
+      await expect(service.remove('missing')).rejects.toThrow(NotFoundException);
+      await expect(service.remove('missing')).rejects.toThrow(
+        'DocumentReference with ID missing not found',
+      );
     });
   });
 });
