@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { Encounter } from '../common/interfaces/fhir.interface';
+import { FHIR_RESOURCE_TYPES } from '../common/constants/fhir-resource-types';
 
 /**
  * Encounter Entity
@@ -47,7 +48,7 @@ export class EncounterEntity {
    * Always 'Encounter' for this entity
    * Used for filtering and type checking
    */
-  @Column({ type: 'varchar', length: 50, default: 'Encounter' })
+  @Column({ type: 'varchar', length: 50, default: FHIR_RESOURCE_TYPES.ENCOUNTER })
   resourceType: string;
 
   /**

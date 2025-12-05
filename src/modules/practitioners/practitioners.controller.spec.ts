@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PractitionersController } from './practitioners.controller';
 import { PractitionersService } from './practitioners.service';
 import { Practitioner } from '../../common/interfaces/fhir.interface';
+import { FHIR_RESOURCE_TYPES } from '../../common/constants/fhir-resource-types';
 
 describe('PractitionersController', () => {
   let controller: PractitionersController;
@@ -36,7 +37,7 @@ describe('PractitionersController', () => {
   describe('create', () => {
     it('should create a new practitioner', () => {
       const practitionerData: Practitioner = {
-        resourceType: 'Practitioner',
+        resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
         identifier: [
           {
             system: 'http://example.com/license',
@@ -92,7 +93,7 @@ describe('PractitionersController', () => {
     it('should return a practitioner by id', () => {
       const practitionerId = 'test-practitioner-id';
       const expectedResult: Practitioner = {
-        resourceType: 'Practitioner',
+        resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
         id: practitionerId,
         identifier: [
           {

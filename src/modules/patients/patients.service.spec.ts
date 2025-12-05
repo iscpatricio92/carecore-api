@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { PatientsService } from './patients.service';
 import { Patient } from '../../common/interfaces/fhir.interface';
+import { FHIR_RESOURCE_TYPES } from '../../common/constants/fhir-resource-types';
 
 describe('PatientsService', () => {
   let service: PatientsService;
@@ -23,7 +24,7 @@ describe('PatientsService', () => {
   describe('create', () => {
     it('should create a new patient with generated ID', () => {
       const patientData: Patient = {
-        resourceType: 'Patient',
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
         name: [{ given: ['John'], family: 'Doe' }],
         gender: 'male',
       };
@@ -31,7 +32,7 @@ describe('PatientsService', () => {
       const result = service.create(patientData);
 
       expect(result).toBeDefined();
-      expect(result.resourceType).toBe('Patient');
+      expect(result.resourceType).toBe(FHIR_RESOURCE_TYPES.PATIENT);
       expect(result.id).toBeDefined();
       expect(result.name).toEqual(patientData.name);
       expect(result.gender).toBe('male');
@@ -41,7 +42,7 @@ describe('PatientsService', () => {
 
     it('should create a patient with provided ID', () => {
       const patientData: Patient = {
-        resourceType: 'Patient',
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
         id: 'custom-patient-id',
         name: [{ given: ['Jane'], family: 'Smith' }],
       };
@@ -53,7 +54,7 @@ describe('PatientsService', () => {
 
     it('should preserve existing meta data', () => {
       const patientData: Patient = {
-        resourceType: 'Patient',
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
         id: 'test-id',
         meta: {
           versionId: '2',
@@ -70,7 +71,7 @@ describe('PatientsService', () => {
 
     it('should add patient to internal array', () => {
       const patientData: Patient = {
-        resourceType: 'Patient',
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
         name: [{ given: ['John'], family: 'Doe' }],
       };
 
@@ -95,12 +96,12 @@ describe('PatientsService', () => {
 
     it('should return bundle with patients', () => {
       const patient1: Patient = {
-        resourceType: 'Patient',
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
         id: 'patient-1',
         name: [{ given: ['John'], family: 'Doe' }],
       };
       const patient2: Patient = {
-        resourceType: 'Patient',
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
         id: 'patient-2',
         name: [{ given: ['Jane'], family: 'Smith' }],
       };
@@ -122,7 +123,7 @@ describe('PatientsService', () => {
   describe('findOne', () => {
     it('should return a patient by id', () => {
       const patientData: Patient = {
-        resourceType: 'Patient',
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
         id: 'test-patient-id',
         name: [{ given: ['John'], family: 'Doe' }],
       };
@@ -144,7 +145,7 @@ describe('PatientsService', () => {
 
     it('should find patient created without explicit ID', () => {
       const patientData: Patient = {
-        resourceType: 'Patient',
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
         name: [{ given: ['John'], family: 'Doe' }],
       };
 

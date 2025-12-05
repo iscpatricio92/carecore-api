@@ -17,6 +17,8 @@ import { CreateEncounterDto, UpdateEncounterDto } from '../../common/dto/fhir-en
 import { Patient, Practitioner, Encounter } from '../../common/interfaces/fhir.interface';
 import { User } from '../auth/interfaces/user.interface';
 import { ROLES } from '../../common/constants/roles';
+import { FHIR_RESOURCE_TYPES } from '../../common/constants/fhir-resource-types';
+import { AuditService } from '../audit/audit.service';
 
 describe('FhirService', () => {
   let service: FhirService;
@@ -32,6 +34,14 @@ describe('FhirService', () => {
     debug: jest.fn(),
     warn: jest.fn(),
     error: jest.fn(),
+  };
+
+  const mockAuditService = {
+    logAccess: jest.fn().mockResolvedValue(undefined),
+    logCreate: jest.fn().mockResolvedValue(undefined),
+    logUpdate: jest.fn().mockResolvedValue(undefined),
+    logDelete: jest.fn().mockResolvedValue(undefined),
+    logAction: jest.fn().mockResolvedValue(undefined),
   };
 
   // Mock repositories
@@ -77,6 +87,10 @@ describe('FhirService', () => {
           provide: PinoLogger,
           useValue: mockLogger,
         },
+        {
+          provide: AuditService,
+          useValue: mockAuditService,
+        },
       ],
     }).compile();
 
@@ -84,6 +98,21 @@ describe('FhirService', () => {
     logger = module.get<PinoLogger>(PinoLogger);
 
     mockConfigService.get.mockReturnValue('http://localhost:3000/api/fhir');
+  });
+
+  beforeEach(() => {
+    // Reset audit service mocks before each test to ensure they return Promises
+    mockAuditService.logAccess.mockClear();
+    mockAuditService.logCreate.mockClear();
+    mockAuditService.logUpdate.mockClear();
+    mockAuditService.logDelete.mockClear();
+    mockAuditService.logAction.mockClear();
+
+    mockAuditService.logAccess.mockResolvedValue(undefined);
+    mockAuditService.logCreate.mockResolvedValue(undefined);
+    mockAuditService.logUpdate.mockResolvedValue(undefined);
+    mockAuditService.logDelete.mockResolvedValue(undefined);
+    mockAuditService.logAction.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -127,7 +156,7 @@ describe('FhirService', () => {
       };
 
       const mockPatient: Patient = {
-        resourceType: 'Patient',
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
         id: 'test-patient-id',
         meta: {
           versionId: '1',
@@ -147,7 +176,7 @@ describe('FhirService', () => {
       const result = await service.createPatient(createDto);
 
       expect(result).toBeDefined();
-      expect(result.resourceType).toBe('Patient');
+      expect(result.resourceType).toBe(FHIR_RESOURCE_TYPES.PATIENT);
       expect(result.id).toBeDefined();
       expect(result.name).toEqual(createDto.name);
       expect(result.meta?.versionId).toBe('1');
@@ -169,7 +198,7 @@ describe('FhirService', () => {
       };
 
       const mockPatient: Patient = {
-        resourceType: 'Patient',
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
         id: 'test-patient-id',
         meta: { versionId: '1', lastUpdated: new Date().toISOString() },
         ...createDto,
@@ -197,7 +226,7 @@ describe('FhirService', () => {
   describe('getPatient', () => {
     it('should return a patient by id', async () => {
       const mockPatient: Patient = {
-        resourceType: 'Patient',
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
         id: 'test-patient-id',
         name: [{ given: ['Jane'], family: 'Smith' }],
       };
@@ -231,7 +260,7 @@ describe('FhirService', () => {
 
       const mockEntity = new PatientEntity();
       mockEntity.fhirResource = {
-        resourceType: 'Patient',
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
         id: 'test-patient-id',
       } as Patient;
       mockEntity.patientId = 'test-patient-id';
@@ -253,7 +282,7 @@ describe('FhirService', () => {
 
       const mockEntity = new PatientEntity();
       mockEntity.fhirResource = {
-        resourceType: 'Patient',
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
         id: 'test-patient-id',
       } as Patient;
       mockEntity.patientId = 'test-patient-id';
@@ -275,7 +304,7 @@ describe('FhirService', () => {
 
       const mockEntity = new PatientEntity();
       mockEntity.fhirResource = {
-        resourceType: 'Patient',
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
         id: 'test-patient-id',
       } as Patient;
       mockEntity.patientId = 'test-patient-id';
@@ -297,7 +326,7 @@ describe('FhirService', () => {
 
       const mockEntity = new PatientEntity();
       mockEntity.fhirResource = {
-        resourceType: 'Patient',
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
         id: 'test-patient-id',
       } as Patient;
       mockEntity.patientId = 'test-patient-id';
@@ -333,14 +362,14 @@ describe('FhirService', () => {
         getMany: jest.fn().mockResolvedValue([
           {
             fhirResource: {
-              resourceType: 'Patient',
+              resourceType: FHIR_RESOURCE_TYPES.PATIENT,
               id: '1',
               name: [{ given: ['John'], family: 'Doe' }],
             },
           },
           {
             fhirResource: {
-              resourceType: 'Patient',
+              resourceType: FHIR_RESOURCE_TYPES.PATIENT,
               id: '2',
               name: [{ given: ['Jane'], family: 'Smith' }],
             },
@@ -427,7 +456,7 @@ describe('FhirService', () => {
 
       const mockEntity = new PatientEntity();
       mockEntity.fhirResource = {
-        resourceType: 'Patient',
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
         id: 'test-patient-id',
       } as Patient;
       mockEntity.patientId = 'test-patient-id';
@@ -449,7 +478,7 @@ describe('FhirService', () => {
 
       const mockEntity = new PatientEntity();
       mockEntity.fhirResource = {
-        resourceType: 'Patient',
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
         id: 'test-patient-id',
       } as Patient;
       mockEntity.patientId = 'test-patient-id';
@@ -470,7 +499,7 @@ describe('FhirService', () => {
         getMany: jest.fn().mockResolvedValue([
           {
             fhirResource: {
-              resourceType: 'Patient',
+              resourceType: FHIR_RESOURCE_TYPES.PATIENT,
               id: '1',
               name: [{ given: ['John'], family: 'Doe' }],
             },
@@ -496,7 +525,7 @@ describe('FhirService', () => {
         getMany: jest.fn().mockResolvedValue([
           {
             fhirResource: {
-              resourceType: 'Patient',
+              resourceType: FHIR_RESOURCE_TYPES.PATIENT,
               id: '1',
               identifier: [{ system: 'http://example.com/id', value: '123' }],
             },
@@ -522,7 +551,7 @@ describe('FhirService', () => {
         getMany: jest.fn().mockResolvedValue([
           {
             fhirResource: {
-              resourceType: 'Patient',
+              resourceType: FHIR_RESOURCE_TYPES.PATIENT,
               id: '1',
               name: [{ given: ['John'], family: 'Doe' }],
             },
@@ -544,7 +573,7 @@ describe('FhirService', () => {
   describe('updatePatient', () => {
     it('should update an existing patient', async () => {
       const existingPatient: Patient = {
-        resourceType: 'Patient',
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
         id: 'test-patient-id',
         name: [{ given: ['John'], family: 'Doe' }],
         gender: 'male',
@@ -599,7 +628,7 @@ describe('FhirService', () => {
 
       const mockEntity = new PatientEntity();
       mockEntity.fhirResource = {
-        resourceType: 'Patient',
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
         id: 'test-patient-id',
       } as Patient;
       mockEntity.patientId = 'test-patient-id';
@@ -621,7 +650,7 @@ describe('FhirService', () => {
   describe('deletePatient', () => {
     it('should delete a patient', async () => {
       const mockPatient: Patient = {
-        resourceType: 'Patient',
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
         id: 'test-patient-id',
         name: [{ given: ['John'], family: 'Doe' }],
       };
@@ -656,7 +685,7 @@ describe('FhirService', () => {
 
       const mockEntity = new PatientEntity();
       mockEntity.fhirResource = {
-        resourceType: 'Patient',
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
         id: 'test-patient-id',
       } as Patient;
       mockEntity.patientId = 'test-patient-id';
@@ -692,7 +721,7 @@ describe('FhirService', () => {
       };
 
       const mockPractitioner: Practitioner = {
-        resourceType: 'Practitioner',
+        resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
         id: 'test-practitioner-id',
         meta: {
           versionId: '1',
@@ -712,7 +741,7 @@ describe('FhirService', () => {
       const result = await service.createPractitioner(createDto);
 
       expect(result).toBeDefined();
-      expect(result.resourceType).toBe('Practitioner');
+      expect(result.resourceType).toBe(FHIR_RESOURCE_TYPES.PRACTITIONER);
       expect(result.id).toBeDefined();
       expect(result.name).toEqual(createDto.name);
       expect(result.meta?.versionId).toBe('1');
@@ -724,7 +753,7 @@ describe('FhirService', () => {
   describe('getPractitioner', () => {
     it('should return a practitioner by id', async () => {
       const mockPractitioner: Practitioner = {
-        resourceType: 'Practitioner',
+        resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
         id: 'test-practitioner-id',
         name: [{ given: ['Dr. John'], family: 'Doe' }],
       };
@@ -770,14 +799,14 @@ describe('FhirService', () => {
         getMany: jest.fn().mockResolvedValue([
           {
             fhirResource: {
-              resourceType: 'Practitioner',
+              resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
               id: '1',
               name: [{ given: ['Dr. John'], family: 'Doe' }],
             },
           },
           {
             fhirResource: {
-              resourceType: 'Practitioner',
+              resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
               id: '2',
               name: [{ given: ['Dr. Jane'], family: 'Smith' }],
             },
@@ -805,7 +834,7 @@ describe('FhirService', () => {
         getMany: jest.fn().mockResolvedValue([
           {
             fhirResource: {
-              resourceType: 'Practitioner',
+              resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
               id: '1',
               name: [{ given: ['Dr. John'], family: 'Doe' }],
             },
@@ -831,7 +860,7 @@ describe('FhirService', () => {
         getMany: jest.fn().mockResolvedValue([
           {
             fhirResource: {
-              resourceType: 'Practitioner',
+              resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
               id: '1',
               identifier: [{ system: 'http://example.com/license', value: 'MD-123' }],
             },
@@ -857,7 +886,7 @@ describe('FhirService', () => {
         getMany: jest.fn().mockResolvedValue([
           {
             fhirResource: {
-              resourceType: 'Practitioner',
+              resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
               id: '1',
               name: [{ given: ['Dr. John'], family: 'Doe' }],
             },
@@ -877,7 +906,7 @@ describe('FhirService', () => {
   describe('updatePractitioner', () => {
     it('should update an existing practitioner', async () => {
       const existingPractitioner: Practitioner = {
-        resourceType: 'Practitioner',
+        resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
         id: 'test-practitioner-id',
         identifier: [{ system: 'http://example.com/license', value: 'MD-123' }],
         name: [{ given: ['Dr. John'], family: 'Doe' }],
@@ -928,7 +957,7 @@ describe('FhirService', () => {
   describe('deletePractitioner', () => {
     it('should delete a practitioner', async () => {
       const mockPractitioner: Practitioner = {
-        resourceType: 'Practitioner',
+        resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
         id: 'test-practitioner-id',
         name: [{ given: ['Dr. John'], family: 'Doe' }],
       };
@@ -978,7 +1007,7 @@ describe('FhirService', () => {
       };
 
       const mockEncounter: Encounter = {
-        resourceType: 'Encounter',
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
         id: 'test-encounter-id',
         meta: {
           versionId: '1',
@@ -999,7 +1028,7 @@ describe('FhirService', () => {
       const result = await service.createEncounter(createDto);
 
       expect(result).toBeDefined();
-      expect(result.resourceType).toBe('Encounter');
+      expect(result.resourceType).toBe(FHIR_RESOURCE_TYPES.ENCOUNTER);
       expect(result.id).toBeDefined();
       expect(result.status).toBe('finished');
       expect(result.meta?.versionId).toBe('1');
@@ -1011,7 +1040,7 @@ describe('FhirService', () => {
   describe('getEncounter', () => {
     it('should return an encounter by id', async () => {
       const mockEncounter: Encounter = {
-        resourceType: 'Encounter',
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
         id: 'test-encounter-id',
         status: 'finished',
         class: {
@@ -1064,7 +1093,7 @@ describe('FhirService', () => {
         getMany: jest.fn().mockResolvedValue([
           {
             fhirResource: {
-              resourceType: 'Encounter',
+              resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
               id: '1',
               status: 'finished',
               subject: { reference: 'Patient/1' },
@@ -1072,7 +1101,7 @@ describe('FhirService', () => {
           },
           {
             fhirResource: {
-              resourceType: 'Encounter',
+              resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
               id: '2',
               status: 'planned',
               subject: { reference: 'Patient/1' },
@@ -1101,7 +1130,7 @@ describe('FhirService', () => {
         getMany: jest.fn().mockResolvedValue([
           {
             fhirResource: {
-              resourceType: 'Encounter',
+              resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
               id: '1',
               status: 'finished',
               subject: { reference: 'Patient/test-patient-id' },
@@ -1130,7 +1159,7 @@ describe('FhirService', () => {
         getMany: jest.fn().mockResolvedValue([
           {
             fhirResource: {
-              resourceType: 'Encounter',
+              resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
               id: '1',
               status: 'finished',
               subject: { reference: 'Patient/1' },
@@ -1157,7 +1186,7 @@ describe('FhirService', () => {
         getMany: jest.fn().mockResolvedValue([
           {
             fhirResource: {
-              resourceType: 'Encounter',
+              resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
               id: '1',
               status: 'finished',
               period: { start: '2024-01-15T10:00:00Z' },
@@ -1186,7 +1215,7 @@ describe('FhirService', () => {
         getMany: jest.fn().mockResolvedValue([
           {
             fhirResource: {
-              resourceType: 'Encounter',
+              resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
               id: '1',
               status: 'finished',
             },
@@ -1206,7 +1235,7 @@ describe('FhirService', () => {
   describe('updateEncounter', () => {
     it('should update an existing encounter', async () => {
       const existingEncounter: Encounter = {
-        resourceType: 'Encounter',
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
         id: 'test-encounter-id',
         status: 'in-progress',
         class: { code: 'AMB', display: 'ambulatory' },
@@ -1270,7 +1299,7 @@ describe('FhirService', () => {
   describe('deleteEncounter', () => {
     it('should delete an encounter', async () => {
       const mockEncounter: Encounter = {
-        resourceType: 'Encounter',
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
         id: 'test-encounter-id',
         status: 'finished',
         class: {

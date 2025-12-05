@@ -7,6 +7,7 @@ import * as path from 'path';
 
 import { DocumentReference, FhirAttachment } from '@/common/interfaces/fhir.interface';
 import { DocumentReferenceEntity } from '../../entities/document-reference.entity';
+import { FHIR_RESOURCE_TYPES } from '../../common/constants/fhir-resource-types';
 import {
   CreateDocumentReferenceDto,
   UpdateDocumentReferenceDto,
@@ -100,7 +101,7 @@ export class DocumentsService {
       ...(existing || {}),
       ...(resource as DocumentReference),
       id,
-      resourceType: 'DocumentReference',
+      resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
       meta: {
         ...(existing?.meta || {}),
         ...(resource as DocumentReference).meta,
@@ -139,7 +140,7 @@ export class DocumentsService {
    */
   private resourceToEntity(resource: DocumentReference): Partial<DocumentReferenceEntity> {
     return {
-      resourceType: 'DocumentReference',
+      resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
       fhirResource: resource,
       status: resource.status,
       documentReferenceId: resource.id,

@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { Consent } from '../common/interfaces/fhir.interface';
+import { FHIR_RESOURCE_TYPES } from '../common/constants/fhir-resource-types';
 
 /**
  * Consent Entity
@@ -47,7 +48,7 @@ export class ConsentEntity {
    * Always 'Consent' for this entity
    * Used for filtering and type checking
    */
-  @Column({ type: 'varchar', length: 50, default: 'Consent' })
+  @Column({ type: 'varchar', length: 50, default: FHIR_RESOURCE_TYPES.CONSENT })
   resourceType: string;
 
   /**

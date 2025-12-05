@@ -10,7 +10,9 @@ import { PatientEntity } from '../../entities/patient.entity';
 import { CreateConsentDto, UpdateConsentDto } from '../../common/dto/fhir-consent.dto';
 import { Consent } from '../../common/interfaces/fhir.interface';
 import { ROLES } from '../../common/constants/roles';
+import { FHIR_RESOURCE_TYPES } from '../../common/constants/fhir-resource-types';
 import { User } from '../auth/interfaces/user.interface';
+import { AuditService } from '../audit/audit.service';
 
 const mockLogger: Record<string, jest.Mock> = {
   setContext: jest.fn(),
@@ -24,6 +26,14 @@ describe('ConsentsService', () => {
   let service: ConsentsService;
   let consentRepository: jest.Mocked<Repository<ConsentEntity>>;
   let patientRepository: jest.Mocked<Repository<PatientEntity>>;
+
+  const mockAuditService = {
+    logAccess: jest.fn().mockResolvedValue(undefined),
+    logCreate: jest.fn().mockResolvedValue(undefined),
+    logUpdate: jest.fn().mockResolvedValue(undefined),
+    logDelete: jest.fn().mockResolvedValue(undefined),
+    logAction: jest.fn().mockResolvedValue(undefined),
+  };
 
   const adminUser: User = { id: 'admin-1', username: 'admin', roles: [ROLES.ADMIN], email: '' };
   const patientUser: User = {
@@ -40,7 +50,7 @@ describe('ConsentsService', () => {
   };
 
   const baseConsent: Consent = {
-    resourceType: 'Consent',
+    resourceType: FHIR_RESOURCE_TYPES.CONSENT,
     id: 'consent-1',
     status: 'active',
     patient: { reference: 'Patient/p1' },
@@ -51,7 +61,7 @@ describe('ConsentsService', () => {
     ({
       id: 1,
       consentId: baseConsent.id,
-      resourceType: 'Consent',
+      resourceType: FHIR_RESOURCE_TYPES.CONSENT,
       status: baseConsent.status,
       patientReference: baseConsent.patient?.reference || '',
       fhirResource: baseConsent,
@@ -78,10 +88,30 @@ describe('ConsentsService', () => {
         { provide: getRepositoryToken(ConsentEntity), useValue: consentRepository },
         { provide: getRepositoryToken(PatientEntity), useValue: patientRepository },
         { provide: PinoLogger, useValue: mockLogger },
+        { provide: AuditService, useValue: mockAuditService },
       ],
     }).compile();
 
     service = module.get<ConsentsService>(ConsentsService);
+  });
+
+  beforeEach(() => {
+    // Reset audit service mocks before each test to ensure they return Promises
+    mockAuditService.logAccess.mockClear();
+    mockAuditService.logCreate.mockClear();
+    mockAuditService.logUpdate.mockClear();
+    mockAuditService.logDelete.mockClear();
+    mockAuditService.logAction.mockClear();
+
+    mockAuditService.logAccess.mockResolvedValue(undefined);
+    mockAuditService.logCreate.mockResolvedValue(undefined);
+    mockAuditService.logUpdate.mockResolvedValue(undefined);
+    mockAuditService.logDelete.mockResolvedValue(undefined);
+    mockAuditService.logAction.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
   describe('create', () => {
@@ -93,7 +123,7 @@ describe('ConsentsService', () => {
     it('should create consent for admin', async () => {
       consentRepository.save.mockResolvedValue(consentEntityFactory());
       const result = await service.create(dto, adminUser);
-      expect(result.resourceType).toBe('Consent');
+      expect(result.resourceType).toBe(FHIR_RESOURCE_TYPES.CONSENT);
       expect(consentRepository.save).toHaveBeenCalled();
     });
 

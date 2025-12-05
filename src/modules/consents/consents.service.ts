@@ -14,6 +14,8 @@ import { ConsentEntity } from '../../entities/consent.entity';
 import { PatientEntity } from '../../entities/patient.entity';
 import { User } from '../auth/interfaces/user.interface';
 import { ROLES } from '../../common/constants/roles';
+import { FHIR_RESOURCE_TYPES } from '../../common/constants/fhir-resource-types';
+import { AuditService } from '../audit/audit.service';
 
 /**
  * Consents Service
@@ -28,6 +30,7 @@ export class ConsentsService {
     @InjectRepository(PatientEntity)
     private patientRepository: Repository<PatientEntity>,
     private readonly logger: PinoLogger,
+    private readonly auditService: AuditService,
   ) {
     this.logger.setContext(ConsentsService.name);
   }
@@ -50,7 +53,7 @@ export class ConsentsService {
   private consentToEntity(consent: Consent): ConsentEntity {
     const entity = new ConsentEntity();
     entity.fhirResource = consent;
-    entity.resourceType = 'Consent';
+    entity.resourceType = FHIR_RESOURCE_TYPES.CONSENT;
     entity.status = consent.status;
     entity.consentId = consent.id || '';
     entity.patientReference = consent.patient?.reference || '';
@@ -173,7 +176,7 @@ export class ConsentsService {
     const now = new Date().toISOString();
 
     const consent: Consent = {
-      resourceType: 'Consent',
+      resourceType: FHIR_RESOURCE_TYPES.CONSENT,
       id: consentId,
       meta: {
         versionId: '1',
@@ -185,6 +188,18 @@ export class ConsentsService {
     const entity = this.consentToEntity(consent);
     const savedEntity = await this.consentRepository.save(entity);
     this.logger.info({ consentId, userId: user?.id }, 'Consent created');
+
+    // Audit log
+    this.auditService
+      .logCreate({
+        resourceType: FHIR_RESOURCE_TYPES.CONSENT,
+        resourceId: consentId,
+        user: user || null,
+        changes: { resource: consent },
+      })
+      .catch((error) => {
+        this.logger.error({ error }, 'Failed to log audit for consent creation');
+      });
 
     return this.entityToConsent(savedEntity);
   }
@@ -338,6 +353,21 @@ export class ConsentsService {
     const savedEntity = await this.consentRepository.save(entity);
     this.logger.info({ consentId: id, userId: user?.id }, 'Consent updated');
 
+    // Audit log with changes
+    this.auditService
+      .logUpdate({
+        resourceType: FHIR_RESOURCE_TYPES.CONSENT,
+        resourceId: id,
+        user: user || null,
+        changes: {
+          before: existingConsent,
+          after: updatedConsent,
+        },
+      })
+      .catch((error) => {
+        this.logger.error({ error }, 'Failed to log audit for consent update');
+      });
+
     return this.entityToConsent(savedEntity);
   }
 
@@ -366,6 +396,17 @@ export class ConsentsService {
     entity.deletedAt = new Date();
     await this.consentRepository.save(entity);
     this.logger.info({ consentId: id, userId: user?.id }, 'Consent deleted');
+
+    // Audit log
+    this.auditService
+      .logDelete({
+        resourceType: FHIR_RESOURCE_TYPES.CONSENT,
+        resourceId: id,
+        user: user || null,
+      })
+      .catch((error) => {
+        this.logger.error({ error }, 'Failed to log audit for consent deletion');
+      });
   }
 
   /**

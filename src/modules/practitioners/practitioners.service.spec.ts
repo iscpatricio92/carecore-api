@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { PractitionersService } from './practitioners.service';
 import { Practitioner } from '../../common/interfaces/fhir.interface';
+import { FHIR_RESOURCE_TYPES } from '../../common/constants/fhir-resource-types';
 
 describe('PractitionersService', () => {
   let service: PractitionersService;
@@ -23,7 +24,7 @@ describe('PractitionersService', () => {
   describe('create', () => {
     it('should create a new practitioner with generated ID', () => {
       const practitionerData: Practitioner = {
-        resourceType: 'Practitioner',
+        resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
         identifier: [
           {
             system: 'http://example.com/license',
@@ -42,7 +43,7 @@ describe('PractitionersService', () => {
       const result = service.create(practitionerData);
 
       expect(result).toBeDefined();
-      expect(result.resourceType).toBe('Practitioner');
+      expect(result.resourceType).toBe(FHIR_RESOURCE_TYPES.PRACTITIONER);
       expect(result.id).toBeDefined();
       expect(result.identifier).toEqual(practitionerData.identifier);
       expect(result.name).toEqual(practitionerData.name);
@@ -53,7 +54,7 @@ describe('PractitionersService', () => {
 
     it('should create a practitioner with provided ID', () => {
       const practitionerData: Practitioner = {
-        resourceType: 'Practitioner',
+        resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
         id: 'custom-practitioner-id',
         identifier: [
           {
@@ -77,7 +78,7 @@ describe('PractitionersService', () => {
 
     it('should preserve existing meta data', () => {
       const practitionerData: Practitioner = {
-        resourceType: 'Practitioner',
+        resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
         id: 'test-id',
         identifier: [
           {
@@ -106,7 +107,7 @@ describe('PractitionersService', () => {
 
     it('should add practitioner to internal array', () => {
       const practitionerData: Practitioner = {
-        resourceType: 'Practitioner',
+        resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
         identifier: [
           {
             system: 'http://example.com/license',
@@ -143,7 +144,7 @@ describe('PractitionersService', () => {
 
     it('should return bundle with practitioners', () => {
       const practitioner1: Practitioner = {
-        resourceType: 'Practitioner',
+        resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
         id: 'practitioner-1',
         identifier: [
           {
@@ -160,7 +161,7 @@ describe('PractitionersService', () => {
         active: true,
       };
       const practitioner2: Practitioner = {
-        resourceType: 'Practitioner',
+        resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
         id: 'practitioner-2',
         identifier: [
           {
@@ -194,7 +195,7 @@ describe('PractitionersService', () => {
   describe('findOne', () => {
     it('should return a practitioner by id', () => {
       const practitionerData: Practitioner = {
-        resourceType: 'Practitioner',
+        resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
         id: 'test-practitioner-id',
         identifier: [
           {
@@ -229,7 +230,7 @@ describe('PractitionersService', () => {
 
     it('should find practitioner created without explicit ID', () => {
       const practitionerData: Practitioner = {
-        resourceType: 'Practitioner',
+        resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
         identifier: [
           {
             system: 'http://example.com/license',

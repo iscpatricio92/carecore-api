@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PatientsController } from './patients.controller';
 import { PatientsService } from './patients.service';
 import { Patient } from '../../common/interfaces/fhir.interface';
+import { FHIR_RESOURCE_TYPES } from '../../common/constants/fhir-resource-types';
 
 describe('PatientsController', () => {
   let controller: PatientsController;
@@ -36,7 +37,7 @@ describe('PatientsController', () => {
   describe('create', () => {
     it('should create a new patient', () => {
       const patientData: Patient = {
-        resourceType: 'Patient',
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
         name: [{ given: ['John'], family: 'Doe' }],
         gender: 'male',
       };
@@ -81,7 +82,7 @@ describe('PatientsController', () => {
     it('should return a patient by id', () => {
       const patientId = 'test-patient-id';
       const expectedResult: Patient = {
-        resourceType: 'Patient',
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
         id: patientId,
         name: [{ given: ['John'], family: 'Doe' }],
       };

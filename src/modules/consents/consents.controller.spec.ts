@@ -6,6 +6,7 @@ import { CreateConsentDto, UpdateConsentDto } from '../../common/dto/fhir-consen
 import { Consent } from '../../common/interfaces/fhir.interface';
 import { User } from '../auth/interfaces/user.interface';
 import { ROLES } from '../../common/constants/roles';
+import { FHIR_RESOURCE_TYPES } from '../../common/constants/fhir-resource-types';
 
 const mockUser: User = {
   id: 'user-1',
@@ -15,7 +16,7 @@ const mockUser: User = {
 };
 
 const mockConsent: Consent = {
-  resourceType: 'Consent',
+  resourceType: FHIR_RESOURCE_TYPES.CONSENT,
   id: 'consent-1',
   status: 'active',
   patient: { reference: 'Patient/p1' },

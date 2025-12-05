@@ -11,6 +11,7 @@ import {
   CreateDocumentReferenceDto,
   UpdateDocumentReferenceDto,
 } from '../../common/dto/fhir-document-reference.dto';
+import { FHIR_RESOURCE_TYPES } from '../../common/constants/fhir-resource-types';
 
 // Mock fs module
 jest.mock('node:fs', () => ({
@@ -88,11 +89,11 @@ describe('DocumentsService', () => {
 
       const savedEntity = {
         id: 'db-uuid',
-        resourceType: 'DocumentReference',
+        resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
         fhirResource: {
           ...documentData,
           id: 'generated-id',
-          resourceType: 'DocumentReference',
+          resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
           meta: { versionId: '1', lastUpdated: expect.any(String) },
         },
         status: 'current',
@@ -107,7 +108,7 @@ describe('DocumentsService', () => {
 
       expect(repo.create).toHaveBeenCalled();
       expect(repo.save).toHaveBeenCalled();
-      expect(result.resourceType).toBe('DocumentReference');
+      expect(result.resourceType).toBe(FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE);
       expect(result.id).toBeDefined();
       expect(result.status).toBe('current');
       expect(result.meta?.versionId).toBe('1');
@@ -132,11 +133,11 @@ describe('DocumentsService', () => {
 
       const savedEntity = {
         id: 'db-uuid',
-        resourceType: 'DocumentReference',
+        resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
         fhirResource: {
           ...documentData,
           id: 'generated-id',
-          resourceType: 'DocumentReference',
+          resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
           meta: { versionId: '1', lastUpdated: expect.any(String) },
           content: [
             {
@@ -178,11 +179,11 @@ describe('DocumentsService', () => {
 
       const savedEntity = {
         id: 'db-uuid',
-        resourceType: 'DocumentReference',
+        resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
         fhirResource: {
           ...documentData,
           id: 'generated-id',
-          resourceType: 'DocumentReference',
+          resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
           meta: { versionId: '1', lastUpdated: expect.any(String) },
         },
         status: 'current',
@@ -196,7 +197,7 @@ describe('DocumentsService', () => {
       const result = await service.create(documentData);
 
       expect(result).toBeDefined();
-      expect(result.resourceType).toBe('DocumentReference');
+      expect(result.resourceType).toBe(FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE);
     });
   });
 
@@ -216,7 +217,7 @@ describe('DocumentsService', () => {
       repo.find.mockResolvedValueOnce([
         {
           fhirResource: {
-            resourceType: 'DocumentReference',
+            resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
             id: 'doc-1',
             status: 'current',
             content: [],
@@ -237,7 +238,7 @@ describe('DocumentsService', () => {
     it('should return a document by id', async () => {
       repo.findOne.mockResolvedValueOnce({
         fhirResource: {
-          resourceType: 'DocumentReference',
+          resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
           id: 'doc-1',
           status: 'current',
           content: [],
@@ -268,9 +269,9 @@ describe('DocumentsService', () => {
     it('should update an existing document', async () => {
       const existingEntity = {
         id: 'db-uuid',
-        resourceType: 'DocumentReference',
+        resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
         fhirResource: {
-          resourceType: 'DocumentReference',
+          resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
           id: 'doc-1',
           status: 'current',
           meta: { versionId: '1', lastUpdated: '2024-01-01T00:00:00Z' },
@@ -328,9 +329,9 @@ describe('DocumentsService', () => {
     it('should increment versionId on update', async () => {
       const existingEntity = {
         id: 'db-uuid',
-        resourceType: 'DocumentReference',
+        resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
         fhirResource: {
-          resourceType: 'DocumentReference',
+          resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
           id: 'doc-1',
           status: 'current',
           meta: { versionId: '5', lastUpdated: '2024-01-01T00:00:00Z' },
@@ -359,9 +360,9 @@ describe('DocumentsService', () => {
     it('should soft delete a document', async () => {
       const existingEntity = {
         id: 'db-uuid',
-        resourceType: 'DocumentReference',
+        resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
         fhirResource: {
-          resourceType: 'DocumentReference',
+          resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
           id: 'doc-1',
           status: 'current',
           content: [],

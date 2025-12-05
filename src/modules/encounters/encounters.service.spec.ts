@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { EncountersService } from './encounters.service';
 import { Encounter } from '../../common/interfaces/fhir.interface';
+import { FHIR_RESOURCE_TYPES } from '../../common/constants/fhir-resource-types';
 
 describe('EncountersService', () => {
   let service: EncountersService;
@@ -23,7 +24,7 @@ describe('EncountersService', () => {
   describe('create', () => {
     it('should create a new encounter with generated ID', () => {
       const encounterData: Encounter = {
-        resourceType: 'Encounter',
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
         status: 'finished',
         class: {
           code: 'AMB',
@@ -37,7 +38,7 @@ describe('EncountersService', () => {
       const result = service.create(encounterData);
 
       expect(result).toBeDefined();
-      expect(result.resourceType).toBe('Encounter');
+      expect(result.resourceType).toBe(FHIR_RESOURCE_TYPES.ENCOUNTER);
       expect(result.id).toBeDefined();
       expect(result.status).toBe('finished');
       expect(result.class).toEqual(encounterData.class);
@@ -48,7 +49,7 @@ describe('EncountersService', () => {
 
     it('should create an encounter with provided ID', () => {
       const encounterData: Encounter = {
-        resourceType: 'Encounter',
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
         id: 'custom-encounter-id',
         status: 'in-progress',
         class: {
@@ -67,7 +68,7 @@ describe('EncountersService', () => {
 
     it('should preserve existing meta data', () => {
       const encounterData: Encounter = {
-        resourceType: 'Encounter',
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
         id: 'test-id',
         status: 'planned',
         class: {
@@ -91,7 +92,7 @@ describe('EncountersService', () => {
 
     it('should add encounter to internal array', () => {
       const encounterData: Encounter = {
-        resourceType: 'Encounter',
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
         status: 'finished',
         class: {
           code: 'AMB',
@@ -123,7 +124,7 @@ describe('EncountersService', () => {
 
     it('should return bundle with encounters', () => {
       const encounter1: Encounter = {
-        resourceType: 'Encounter',
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
         id: 'encounter-1',
         status: 'finished',
         class: {
@@ -135,7 +136,7 @@ describe('EncountersService', () => {
         },
       };
       const encounter2: Encounter = {
-        resourceType: 'Encounter',
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
         id: 'encounter-2',
         status: 'in-progress',
         class: {
@@ -164,7 +165,7 @@ describe('EncountersService', () => {
   describe('findOne', () => {
     it('should return an encounter by id', () => {
       const encounterData: Encounter = {
-        resourceType: 'Encounter',
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
         id: 'test-encounter-id',
         status: 'finished',
         class: {
@@ -194,7 +195,7 @@ describe('EncountersService', () => {
 
     it('should find encounter created without explicit ID', () => {
       const encounterData: Encounter = {
-        resourceType: 'Encounter',
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
         status: 'finished',
         class: {
           code: 'AMB',

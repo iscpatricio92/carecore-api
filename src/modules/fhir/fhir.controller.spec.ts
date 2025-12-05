@@ -8,6 +8,7 @@ import {
 } from '../../common/dto/fhir-practitioner.dto';
 import { CreateEncounterDto, UpdateEncounterDto } from '../../common/dto/fhir-encounter.dto';
 import { User } from '../auth/interfaces/user.interface';
+import { FHIR_RESOURCE_TYPES } from '../../common/constants/fhir-resource-types';
 
 describe('FhirController', () => {
   let controller: FhirController;
@@ -81,7 +82,7 @@ describe('FhirController', () => {
       };
 
       const expectedResult = {
-        resourceType: 'Patient',
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
         id: 'test-id',
         ...createDto,
       };
@@ -99,7 +100,7 @@ describe('FhirController', () => {
     it('should return a patient by id', async () => {
       const patientId = 'test-id';
       const expectedResult = {
-        resourceType: 'Patient',
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
         id: patientId,
         name: [{ given: ['John'], family: 'Doe' }],
       };
@@ -138,7 +139,7 @@ describe('FhirController', () => {
         total: 1,
         entries: [
           {
-            resourceType: 'Patient',
+            resourceType: FHIR_RESOURCE_TYPES.PATIENT,
             id: 'test-id',
             name: [{ given: ['John'], family: 'Doe' }],
           },
@@ -170,7 +171,7 @@ describe('FhirController', () => {
       };
 
       const expectedResult = {
-        resourceType: 'Patient',
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
         id: patientId,
         gender: 'female',
       };
@@ -206,7 +207,7 @@ describe('FhirController', () => {
       };
 
       const expectedResult = {
-        resourceType: 'Practitioner',
+        resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
         id: 'test-id',
         ...createDto,
       };
@@ -224,7 +225,7 @@ describe('FhirController', () => {
     it('should return a practitioner by id', async () => {
       const practitionerId = 'test-id';
       const expectedResult = {
-        resourceType: 'Practitioner',
+        resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
         id: practitionerId,
         name: [{ given: ['Dr. Jane'], family: 'Smith' }],
       };
@@ -248,7 +249,7 @@ describe('FhirController', () => {
         total: 1,
         entries: [
           {
-            resourceType: 'Practitioner',
+            resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
             id: 'test-id',
             name: [{ given: ['Dr. Jane'], family: 'Smith' }],
           },
@@ -278,7 +279,7 @@ describe('FhirController', () => {
       };
 
       const expectedResult = {
-        resourceType: 'Practitioner',
+        resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
         id: practitionerId,
         active: false,
       };
@@ -316,7 +317,7 @@ describe('FhirController', () => {
       };
 
       const expectedResult = {
-        resourceType: 'Encounter',
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
         id: 'test-id',
         ...createDto,
       };
@@ -334,7 +335,7 @@ describe('FhirController', () => {
     it('should return an encounter by id', async () => {
       const encounterId = 'test-id';
       const expectedResult = {
-        resourceType: 'Encounter',
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
         id: encounterId,
         status: 'finished',
       };
@@ -359,7 +360,7 @@ describe('FhirController', () => {
         total: 1,
         entries: [
           {
-            resourceType: 'Encounter',
+            resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
             id: 'test-id',
             status: 'finished',
             subject: { reference: 'Patient/123' },
@@ -392,7 +393,7 @@ describe('FhirController', () => {
       };
 
       const expectedResult = {
-        resourceType: 'Encounter',
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
         id: encounterId,
         status: 'finished',
       };

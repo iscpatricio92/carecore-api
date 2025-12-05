@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { EncountersController } from './encounters.controller';
 import { EncountersService } from './encounters.service';
 import { Encounter } from '../../common/interfaces/fhir.interface';
+import { FHIR_RESOURCE_TYPES } from '../../common/constants/fhir-resource-types';
 
 describe('EncountersController', () => {
   let controller: EncountersController;
@@ -36,7 +37,7 @@ describe('EncountersController', () => {
   describe('create', () => {
     it('should create a new encounter', () => {
       const encounterData: Encounter = {
-        resourceType: 'Encounter',
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
         status: 'finished',
         class: {
           code: 'AMB',
@@ -87,7 +88,7 @@ describe('EncountersController', () => {
     it('should return an encounter by id', () => {
       const encounterId = 'test-encounter-id';
       const expectedResult: Encounter = {
-        resourceType: 'Encounter',
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
         id: encounterId,
         status: 'finished',
         class: {

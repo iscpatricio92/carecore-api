@@ -6,6 +6,7 @@ import {
   CreateDocumentReferenceDto,
   UpdateDocumentReferenceDto,
 } from '../../common/dto/fhir-document-reference.dto';
+import { FHIR_RESOURCE_TYPES } from '../../common/constants/fhir-resource-types';
 
 describe('DocumentsController', () => {
   let controller: DocumentsController;
@@ -58,7 +59,7 @@ describe('DocumentsController', () => {
       const expectedResult = {
         ...documentData,
         id: 'test-document-id',
-        resourceType: 'DocumentReference',
+        resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
         meta: {
           versionId: '1',
           lastUpdated: new Date().toISOString(),
@@ -96,7 +97,7 @@ describe('DocumentsController', () => {
     it('should return a document by id', async () => {
       const documentId = 'test-document-id';
       const expectedResult = {
-        resourceType: 'DocumentReference',
+        resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
         id: documentId,
         status: 'current',
         content: [
@@ -125,7 +126,7 @@ describe('DocumentsController', () => {
         status: 'superseded',
       };
       const expectedResult = {
-        resourceType: 'DocumentReference',
+        resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
         id: documentId,
         status: 'superseded',
         content: [],
