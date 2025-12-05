@@ -133,7 +133,7 @@ describe('AuthController', () => {
       expect(mockResponse.json).toHaveBeenCalledWith({
         authorizationUrl: 'http://keycloak/auth',
         state: mockStateToken,
-        message: expect.stringContaining('Visita esta URL'),
+        message: expect.stringContaining('Visit this URL'),
       });
       expect(mockResponse.redirect).not.toHaveBeenCalled();
     });

@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull } from 'typeorm';
+import { Repository, IsNull, SelectQueryBuilder } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { PinoLogger } from 'nestjs-pino';
 
@@ -16,6 +16,10 @@ import { FhirErrorService } from '../../common/services/fhir-error.service';
 import { PatientEntity } from '../../entities/patient.entity';
 import { PractitionerEntity } from '../../entities/practitioner.entity';
 import { EncounterEntity } from '../../entities/encounter.entity';
+import { User } from '../auth/interfaces/user.interface';
+import { ROLES } from '../../common/constants/roles';
+import { FHIR_RESOURCE_TYPES } from '../../common/constants/fhir-resource-types';
+import { AuditService } from '../audit/audit.service';
 
 /**
  * FHIR service for managing FHIR R4 resources
@@ -32,6 +36,7 @@ export class FhirService {
     private encounterRepository: Repository<EncounterEntity>,
     private configService: ConfigService,
     private readonly logger: PinoLogger,
+    private readonly auditService: AuditService,
   ) {
     this.logger.setContext(FhirService.name);
   }
@@ -61,7 +66,7 @@ export class FhirService {
           mode: 'server',
           resource: [
             {
-              type: 'Patient',
+              type: FHIR_RESOURCE_TYPES.PATIENT,
               interaction: [
                 { code: 'read' },
                 { code: 'search-type' },
@@ -75,7 +80,7 @@ export class FhirService {
               ],
             },
             {
-              type: 'Practitioner',
+              type: FHIR_RESOURCE_TYPES.PRACTITIONER,
               interaction: [
                 { code: 'read' },
                 { code: 'search-type' },
@@ -89,7 +94,7 @@ export class FhirService {
               ],
             },
             {
-              type: 'Encounter',
+              type: FHIR_RESOURCE_TYPES.ENCOUNTER,
               interaction: [
                 { code: 'read' },
                 { code: 'search-type' },
@@ -127,7 +132,7 @@ export class FhirService {
   private patientToEntity(patient: Patient): PatientEntity {
     const entity = new PatientEntity();
     entity.fhirResource = patient;
-    entity.resourceType = 'Patient';
+    entity.resourceType = FHIR_RESOURCE_TYPES.PATIENT;
     entity.active = patient.active ?? true;
     entity.patientId = patient.id || '';
     return entity;
@@ -149,7 +154,7 @@ export class FhirService {
   private practitionerToEntity(practitioner: Practitioner): PractitionerEntity {
     const entity = new PractitionerEntity();
     entity.fhirResource = practitioner;
-    entity.resourceType = 'Practitioner';
+    entity.resourceType = FHIR_RESOURCE_TYPES.PRACTITIONER;
     entity.active = practitioner.active ?? true;
     entity.practitionerId = practitioner.id || '';
     return entity;
@@ -171,24 +176,89 @@ export class FhirService {
   private encounterToEntity(encounter: Encounter): EncounterEntity {
     const entity = new EncounterEntity();
     entity.fhirResource = encounter;
-    entity.resourceType = 'Encounter';
+    entity.resourceType = FHIR_RESOURCE_TYPES.ENCOUNTER;
     entity.status = encounter.status;
     entity.encounterId = encounter.id || '';
     entity.subjectReference = encounter.subject?.reference || '';
     return entity;
   }
 
+  // ========== Authorization Helper Methods ==========
+
+  /**
+   * Checks if user has permission to access a patient resource
+   * @param user - Current authenticated user
+   * @param patientEntity - Patient entity to check access for
+   * @returns true if user has access, false otherwise
+   */
+  private canAccessPatient(user: User, patientEntity: PatientEntity): boolean {
+    // Admin can access all patients
+    if (user.roles.includes(ROLES.ADMIN)) {
+      return true;
+    }
+
+    // Patient can only access their own records
+    if (user.roles.includes(ROLES.PATIENT)) {
+      return patientEntity.keycloakUserId === user.id;
+    }
+
+    // Practitioners can access all active patients (for now)
+    // TODO: In the future, filter by assigned patients or consent
+    if (user.roles.includes(ROLES.PRACTITIONER)) {
+      return patientEntity.active === true;
+    }
+
+    // Other roles (viewer, lab, insurer) need explicit consent
+    // For now, deny access (will be implemented with Consent resource)
+    return false;
+  }
+
+  /**
+   * Applies role-based filtering to patient query builder
+   * @param queryBuilder - TypeORM query builder
+   * @param user - Current authenticated user
+   */
+  private applyPatientAccessFilter(
+    queryBuilder: SelectQueryBuilder<PatientEntity>,
+    user: User,
+  ): void {
+    // Admin can see all patients
+    if (user.roles.includes(ROLES.ADMIN)) {
+      return; // No filter needed
+    }
+
+    // Patient can only see their own records
+    if (user.roles.includes(ROLES.PATIENT)) {
+      queryBuilder.andWhere('patient.keycloakUserId = :keycloakUserId', {
+        keycloakUserId: user.id,
+      });
+      return;
+    }
+
+    // Practitioners can see all active patients (for now)
+    // TODO: In the future, filter by assigned patients or consent
+    if (user.roles.includes(ROLES.PRACTITIONER)) {
+      queryBuilder.andWhere('patientEntity.active = :active', { active: true });
+      return;
+    }
+
+    // Other roles (viewer, lab, insurer) need explicit consent
+    // For now, return empty results (will be implemented with Consent resource)
+    queryBuilder.andWhere('patientEntity.id = :id', { id: '0' }); // Always false condition
+  }
+
   // ========== Patient Methods ==========
 
   /**
    * Creates a new Patient
+   * If user has 'patient' role, automatically links the patient to the user
    */
-  async createPatient(createPatientDto: CreatePatientDto): Promise<Patient> {
+  async createPatient(createPatientDto: CreatePatientDto, user?: User): Promise<Patient> {
     const patientId = uuidv4();
     const now = new Date().toISOString();
 
     const patient: Patient = {
-      resourceType: 'Patient',
+      resourceType: FHIR_RESOURCE_TYPES.PATIENT,
       id: patientId,
       meta: {
         versionId: '1',
@@ -198,22 +268,53 @@ export class FhirService {
     };
 
     const entity = this.patientToEntity(patient);
+
+    // If user has 'patient' role, link the patient to the user
+    if (user && user.roles.includes(ROLES.PATIENT)) {
+      entity.keycloakUserId = user.id;
+      this.logger.debug({ patientId, userId: user.id }, 'Patient linked to Keycloak user');
+    }
+
     const savedEntity = await this.patientRepository.save(entity);
     this.logger.info({ patientId }, 'Patient created');
+
+    // Audit log
+    this.auditService
+      .logCreate({
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
+        resourceId: patientId,
+        user: user || null,
+        changes: { resource: patient },
+      })
+      .catch((error) => {
+        this.logger.error({ error }, 'Failed to log audit for patient creation');
+      });
 
     return this.entityToPatient(savedEntity);
   }
 
   /**
    * Gets a Patient by ID (FHIR resource ID, not database UUID)
+   * Applies role-based access control
    */
-  async getPatient(id: string): Promise<Patient> {
+  async getPatient(id: string, user?: User): Promise<Patient> {
     const entity = await this.patientRepository.findOne({
       where: { patientId: id, deletedAt: IsNull() },
     });
 
     if (!entity) {
-      throw new NotFoundException(FhirErrorService.createNotFoundError('Patient', id));
+      throw new NotFoundException(
+        FhirErrorService.createNotFoundError(FHIR_RESOURCE_TYPES.PATIENT, id),
+      );
+    }
+
+    // Check access permissions
+    if (user && !this.canAccessPatient(user, entity)) {
+      this.logger.warn(
+        { patientId: id, userId: user.id, roles: user.roles },
+        'Access denied to patient',
+      );
+      throw new ForbiddenException('You do not have permission to access this patient');
     }
 
     return this.entityToPatient(entity);
@@ -221,17 +322,26 @@ export class FhirService {
 
   /**
    * Searches Patients with optional filters
+   * Applies role-based access control
    */
-  async searchPatients(params: {
-    page?: number;
-    limit?: number;
-    name?: string;
-    identifier?: string;
-  }): Promise<{ total: number; entries: Patient[] }> {
+  async searchPatients(
+    params: {
+      page?: number;
+      limit?: number;
+      name?: string;
+      identifier?: string;
+    },
+    user?: User,
+  ): Promise<{ total: number; entries: Patient[] }> {
     const { page = 1, limit = 10, name, identifier } = params;
     const queryBuilder = this.patientRepository
       .createQueryBuilder('patient')
       .where('patient.deletedAt IS NULL');
+
+    // Apply role-based access filtering
+    if (user) {
+      this.applyPatientAccessFilter(queryBuilder, user);
+    }
 
     // Filter by name (search in JSONB)
     if (name) {
@@ -260,21 +370,40 @@ export class FhirService {
 
     const entries = entities.map((entity) => this.entityToPatient(entity));
 
-    this.logger.debug({ total, page, limit }, 'Patients searched');
+    this.logger.debug(
+      { total, page, limit, userId: user?.id, roles: user?.roles },
+      'Patients searched',
+    );
 
     return { total, entries };
   }
 
   /**
    * Updates an existing Patient
+   * Applies role-based access control
    */
-  async updatePatient(id: string, updatePatientDto: UpdatePatientDto): Promise<Patient> {
+  async updatePatient(
+    id: string,
+    updatePatientDto: UpdatePatientDto,
+    user?: User,
+  ): Promise<Patient> {
     const entity = await this.patientRepository.findOne({
       where: { patientId: id, deletedAt: IsNull() },
     });
 
     if (!entity) {
-      throw new NotFoundException(FhirErrorService.createNotFoundError('Patient', id));
+      throw new NotFoundException(
+        FhirErrorService.createNotFoundError(FHIR_RESOURCE_TYPES.PATIENT, id),
+      );
+    }
+
+    // Check access permissions
+    if (user && !this.canAccessPatient(user, entity)) {
+      this.logger.warn(
+        { patientId: id, userId: user.id, roles: user.roles },
+        'Access denied to update patient',
+      );
+      throw new ForbiddenException('You do not have permission to update this patient');
     }
 
     const existingPatient = this.entityToPatient(entity);
@@ -299,24 +428,62 @@ export class FhirService {
     const savedEntity = await this.patientRepository.save(updatedEntity);
     this.logger.info({ patientId: id }, 'Patient updated');
 
+    // Audit log with changes
+    this.auditService
+      .logUpdate({
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
+        resourceId: id,
+        user: user || null,
+        changes: {
+          before: existingPatient,
+          after: updatedPatient,
+        },
+      })
+      .catch((error) => {
+        this.logger.error({ error }, 'Failed to log audit for patient update');
+      });
+
     return this.entityToPatient(savedEntity);
   }
 
   /**
-   * Deletes a Patient (soft delete)
+   * Deletes (soft delete) a Patient
+   * Applies role-based access control
    */
-  async deletePatient(id: string): Promise<void> {
+  async deletePatient(id: string, user?: User): Promise<void> {
     const entity = await this.patientRepository.findOne({
       where: { patientId: id, deletedAt: IsNull() },
     });
 
     if (!entity) {
-      throw new NotFoundException(FhirErrorService.createNotFoundError('Patient', id));
+      throw new NotFoundException(
+        FhirErrorService.createNotFoundError(FHIR_RESOURCE_TYPES.PATIENT, id),
+      );
+    }
+
+    // Check access permissions
+    if (user && !this.canAccessPatient(user, entity)) {
+      this.logger.warn(
+        { patientId: id, userId: user.id, roles: user.roles },
+        'Access denied to delete patient',
+      );
+      throw new ForbiddenException('You do not have permission to delete this patient');
     }
 
     entity.deletedAt = new Date();
     await this.patientRepository.save(entity);
     this.logger.info({ patientId: id }, 'Patient deleted');
+
+    // Audit log
+    this.auditService
+      .logDelete({
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
+        resourceId: id,
+        user: user || null,
+      })
+      .catch((error) => {
+        this.logger.error({ error }, 'Failed to log audit for patient deletion');
+      });
   }
 
   // ========== Practitioner Methods ==========
@@ -329,7 +496,7 @@ export class FhirService {
     const now = new Date().toISOString();
 
     const practitioner: Practitioner = {
-      resourceType: 'Practitioner',
+      resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
       id: practitionerId,
       meta: {
         versionId: '1',
@@ -341,6 +508,17 @@ export class FhirService {
     const entity = this.practitionerToEntity(practitioner);
     const savedEntity = await this.practitionerRepository.save(entity);
     this.logger.info({ practitionerId }, 'Practitioner created');
+
+    // Audit log
+    this.auditService
+      .logCreate({
+        resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
+        resourceId: practitionerId,
+        changes: { resource: practitioner },
+      })
+      .catch((error) => {
+        this.logger.error({ error }, 'Failed to log audit for practitioner creation');
+      });
 
     return this.entityToPractitioner(savedEntity);
   }
@@ -354,7 +532,9 @@ export class FhirService {
     });
 
     if (!entity) {
-      throw new NotFoundException(FhirErrorService.createNotFoundError('Practitioner', id));
+      throw new NotFoundException(
+        FhirErrorService.createNotFoundError(FHIR_RESOURCE_TYPES.PRACTITIONER, id),
+      );
     }
 
     return this.entityToPractitioner(entity);
@@ -418,7 +598,9 @@ export class FhirService {
     });
 
     if (!entity) {
-      throw new NotFoundException(FhirErrorService.createNotFoundError('Practitioner', id));
+      throw new NotFoundException(
+        FhirErrorService.createNotFoundError(FHIR_RESOURCE_TYPES.PRACTITIONER, id),
+      );
     }
 
     const existingPractitioner = this.entityToPractitioner(entity);
@@ -443,6 +625,20 @@ export class FhirService {
     const savedEntity = await this.practitionerRepository.save(updatedEntity);
     this.logger.info({ practitionerId: id }, 'Practitioner updated');
 
+    // Audit log with changes
+    this.auditService
+      .logUpdate({
+        resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
+        resourceId: id,
+        changes: {
+          before: existingPractitioner,
+          after: updatedPractitioner,
+        },
+      })
+      .catch((error) => {
+        this.logger.error({ error }, 'Failed to log audit for practitioner update');
+      });
+
     return this.entityToPractitioner(savedEntity);
   }
 
@@ -455,12 +651,24 @@ export class FhirService {
     });
 
     if (!entity) {
-      throw new NotFoundException(FhirErrorService.createNotFoundError('Practitioner', id));
+      throw new NotFoundException(
+        FhirErrorService.createNotFoundError(FHIR_RESOURCE_TYPES.PRACTITIONER, id),
+      );
     }
 
     entity.deletedAt = new Date();
     await this.practitionerRepository.save(entity);
     this.logger.info({ practitionerId: id }, 'Practitioner deleted');
+
+    // Audit log
+    this.auditService
+      .logDelete({
+        resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
+        resourceId: id,
+      })
+      .catch((error) => {
+        this.logger.error({ error }, 'Failed to log audit for practitioner deletion');
+      });
   }
 
   // ========== Encounter Methods ==========
@@ -473,7 +681,7 @@ export class FhirService {
     const now = new Date().toISOString();
 
     const encounter: Encounter = {
-      resourceType: 'Encounter',
+      resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
       id: encounterId,
       meta: {
         versionId: '1',
@@ -485,6 +693,17 @@ export class FhirService {
     const entity = this.encounterToEntity(encounter);
     const savedEntity = await this.encounterRepository.save(entity);
     this.logger.info({ encounterId }, 'Encounter created');
+
+    // Audit log
+    this.auditService
+      .logCreate({
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
+        resourceId: encounterId,
+        changes: { resource: encounter },
+      })
+      .catch((error) => {
+        this.logger.error({ error }, 'Failed to log audit for encounter creation');
+      });
 
     return this.entityToEncounter(savedEntity);
   }
@@ -498,7 +717,9 @@ export class FhirService {
     });
 
     if (!entity) {
-      throw new NotFoundException(FhirErrorService.createNotFoundError('Encounter', id));
+      throw new NotFoundException(
+        FhirErrorService.createNotFoundError(FHIR_RESOURCE_TYPES.ENCOUNTER, id),
+      );
     }
 
     return this.entityToEncounter(entity);
@@ -564,7 +785,9 @@ export class FhirService {
     });
 
     if (!entity) {
-      throw new NotFoundException(FhirErrorService.createNotFoundError('Encounter', id));
+      throw new NotFoundException(
+        FhirErrorService.createNotFoundError(FHIR_RESOURCE_TYPES.ENCOUNTER, id),
+      );
     }
 
     const existingEncounter = this.entityToEncounter(entity);
@@ -589,6 +812,20 @@ export class FhirService {
     const savedEntity = await this.encounterRepository.save(updatedEntity);
     this.logger.info({ encounterId: id }, 'Encounter updated');
 
+    // Audit log with changes
+    this.auditService
+      .logUpdate({
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
+        resourceId: id,
+        changes: {
+          before: existingEncounter,
+          after: updatedEncounter,
+        },
+      })
+      .catch((error) => {
+        this.logger.error({ error }, 'Failed to log audit for encounter update');
+      });
+
     return this.entityToEncounter(savedEntity);
   }
 
@@ -601,11 +838,23 @@ export class FhirService {
     });
 
     if (!entity) {
-      throw new NotFoundException(FhirErrorService.createNotFoundError('Encounter', id));
+      throw new NotFoundException(
+        FhirErrorService.createNotFoundError(FHIR_RESOURCE_TYPES.ENCOUNTER, id),
+      );
     }
 
     entity.deletedAt = new Date();
     await this.encounterRepository.save(entity);
     this.logger.info({ encounterId: id }, 'Encounter deleted');
+
+    // Audit log
+    this.auditService
+      .logDelete({
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
+        resourceId: id,
+      })
+      .catch((error) => {
+        this.logger.error({ error }, 'Failed to log audit for encounter deletion');
+      });
   }
 }

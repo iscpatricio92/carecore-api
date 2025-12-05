@@ -7,10 +7,19 @@ import {
   UpdatePractitionerDto,
 } from '../../common/dto/fhir-practitioner.dto';
 import { CreateEncounterDto, UpdateEncounterDto } from '../../common/dto/fhir-encounter.dto';
+import { User } from '../auth/interfaces/user.interface';
+import { FHIR_RESOURCE_TYPES } from '../../common/constants/fhir-resource-types';
 
 describe('FhirController', () => {
   let controller: FhirController;
   let service: FhirService;
+
+  const mockUser: User = {
+    id: 'user-123',
+    username: 'testuser',
+    email: 'test@example.com',
+    roles: ['patient'],
+  };
 
   const mockFhirService = {
     getCapabilityStatement: jest.fn(),
@@ -73,17 +82,17 @@ describe('FhirController', () => {
       };
 
       const expectedResult = {
-        resourceType: 'Patient',
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
         id: 'test-id',
         ...createDto,
       };
 
       mockFhirService.createPatient.mockResolvedValue(expectedResult);
 
-      const result = await controller.createPatient(createDto);
+      const result = await controller.createPatient(createDto, mockUser);
 
       expect(result).toEqual(expectedResult);
-      expect(service.createPatient).toHaveBeenCalledWith(createDto);
+      expect(service.createPatient).toHaveBeenCalledWith(createDto, mockUser);
     });
   });
 
@@ -91,17 +100,17 @@ describe('FhirController', () => {
     it('should return a patient by id', async () => {
       const patientId = 'test-id';
       const expectedResult = {
-        resourceType: 'Patient',
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
         id: patientId,
         name: [{ given: ['John'], family: 'Doe' }],
       };
 
       mockFhirService.getPatient.mockResolvedValue(expectedResult);
 
-      const result = await controller.getPatient(patientId);
+      const result = await controller.getPatient(patientId, mockUser);
 
       expect(result).toEqual(expectedResult);
-      expect(service.getPatient).toHaveBeenCalledWith(patientId);
+      expect(service.getPatient).toHaveBeenCalledWith(patientId, mockUser);
     });
   });
 
@@ -115,10 +124,10 @@ describe('FhirController', () => {
 
       mockFhirService.searchPatients.mockResolvedValue(expectedResult);
 
-      const result = await controller.searchPatients(pagination);
+      const result = await controller.searchPatients(pagination, undefined, undefined, mockUser);
 
       expect(result).toEqual(expectedResult);
-      expect(service.searchPatients).toHaveBeenCalledWith(pagination);
+      expect(service.searchPatients).toHaveBeenCalledWith(pagination, mockUser);
     });
 
     it('should search patients with filters', async () => {
@@ -130,7 +139,7 @@ describe('FhirController', () => {
         total: 1,
         entries: [
           {
-            resourceType: 'Patient',
+            resourceType: FHIR_RESOURCE_TYPES.PATIENT,
             id: 'test-id',
             name: [{ given: ['John'], family: 'Doe' }],
           },
@@ -139,14 +148,17 @@ describe('FhirController', () => {
 
       mockFhirService.searchPatients.mockResolvedValue(expectedResult);
 
-      const result = await controller.searchPatients(pagination, name, identifier);
+      const result = await controller.searchPatients(pagination, name, identifier, mockUser);
 
       expect(result).toEqual(expectedResult);
-      expect(service.searchPatients).toHaveBeenCalledWith({
-        ...pagination,
-        name,
-        identifier,
-      });
+      expect(service.searchPatients).toHaveBeenCalledWith(
+        {
+          ...pagination,
+          name,
+          identifier,
+        },
+        mockUser,
+      );
     });
   });
 
@@ -159,17 +171,17 @@ describe('FhirController', () => {
       };
 
       const expectedResult = {
-        resourceType: 'Patient',
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
         id: patientId,
         gender: 'female',
       };
 
       mockFhirService.updatePatient.mockResolvedValue(expectedResult);
 
-      const result = await controller.updatePatient(patientId, updateDto);
+      const result = await controller.updatePatient(patientId, updateDto, mockUser);
 
       expect(result).toEqual(expectedResult);
-      expect(service.updatePatient).toHaveBeenCalledWith(patientId, updateDto);
+      expect(service.updatePatient).toHaveBeenCalledWith(patientId, updateDto, mockUser);
     });
   });
 
@@ -179,9 +191,9 @@ describe('FhirController', () => {
 
       mockFhirService.deletePatient.mockResolvedValue(undefined);
 
-      await controller.deletePatient(patientId);
+      await controller.deletePatient(patientId, mockUser);
 
-      expect(service.deletePatient).toHaveBeenCalledWith(patientId);
+      expect(service.deletePatient).toHaveBeenCalledWith(patientId, mockUser);
     });
   });
 
@@ -195,7 +207,7 @@ describe('FhirController', () => {
       };
 
       const expectedResult = {
-        resourceType: 'Practitioner',
+        resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
         id: 'test-id',
         ...createDto,
       };
@@ -213,7 +225,7 @@ describe('FhirController', () => {
     it('should return a practitioner by id', async () => {
       const practitionerId = 'test-id';
       const expectedResult = {
-        resourceType: 'Practitioner',
+        resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
         id: practitionerId,
         name: [{ given: ['Dr. Jane'], family: 'Smith' }],
       };
@@ -237,7 +249,7 @@ describe('FhirController', () => {
         total: 1,
         entries: [
           {
-            resourceType: 'Practitioner',
+            resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
             id: 'test-id',
             name: [{ given: ['Dr. Jane'], family: 'Smith' }],
           },
@@ -267,7 +279,7 @@ describe('FhirController', () => {
       };
 
       const expectedResult = {
-        resourceType: 'Practitioner',
+        resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
         id: practitionerId,
         active: false,
       };
@@ -305,7 +317,7 @@ describe('FhirController', () => {
       };
 
       const expectedResult = {
-        resourceType: 'Encounter',
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
         id: 'test-id',
         ...createDto,
       };
@@ -323,7 +335,7 @@ describe('FhirController', () => {
     it('should return an encounter by id', async () => {
       const encounterId = 'test-id';
       const expectedResult = {
-        resourceType: 'Encounter',
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
         id: encounterId,
         status: 'finished',
       };
@@ -348,7 +360,7 @@ describe('FhirController', () => {
         total: 1,
         entries: [
           {
-            resourceType: 'Encounter',
+            resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
             id: 'test-id',
             status: 'finished',
             subject: { reference: 'Patient/123' },
@@ -381,7 +393,7 @@ describe('FhirController', () => {
       };
 
       const expectedResult = {
-        resourceType: 'Encounter',
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
         id: encounterId,
         status: 'finished',
       };

@@ -47,9 +47,12 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
       database,
       entities,
       migrations: [__dirname + '/../migrations/**/*{.ts,.js}'],
+      // Enable synchronize in development or test mode when DB_SYNCHRONIZE is true
+      // This is safe for tests and local development, but should NEVER be used in production
       synchronize:
-        nodeEnv === 'development' && this.configService.get<boolean>('DB_SYNCHRONIZE', false),
-      logging: nodeEnv === 'development',
+        (nodeEnv === 'development' || nodeEnv === 'test') &&
+        this.configService.get<boolean>('DB_SYNCHRONIZE', false),
+      logging: nodeEnv === 'development' || nodeEnv === 'test',
     };
 
     // En producción, usar SSL

@@ -59,6 +59,12 @@ docker-up: ## Iniciar contenedores Docker (PostgreSQL + Keycloak + API)
 	fi; \
 	echo "Esperando a que los servicios estén listos..."; \
 	sleep 5; \
+	echo "🔍 Verificando que la base de datos de Keycloak exista..."; \
+	if docker exec carecore-postgres /usr/local/bin/ensure-keycloak-db.sh 2>/dev/null; then \
+		echo "✅ Base de datos de Keycloak verificada/creada"; \
+	else \
+		echo "⚠️  No se pudo verificar/crear la base de datos de Keycloak (puede que el contenedor aún no esté listo)"; \
+	fi; \
 	echo "✅ PostgreSQL está corriendo en puerto 5432"; \
 	echo "✅ Keycloak está corriendo en puerto 8080 (http://localhost:8080)"; \
 	echo "✅ API está corriendo en puerto 3000 (http://localhost:3000)"; \
@@ -140,11 +146,23 @@ lint: ## Ejecutar linter
 format: ## Formatear código con Prettier
 	npm run format
 
-test: ## Ejecutar tests
+test: ## Ejecutar tests unitarios
 	npm run test
 
-test-cov: ## Ejecutar tests con cobertura
+test-cov: ## Ejecutar tests unitarios con cobertura
 	npm run test:cov
+
+test-e2e: ## Ejecutar tests E2E
+	npm run test:e2e
+
+test-e2e-cov: ## Ejecutar tests E2E con cobertura
+	npm run test:e2e:cov
+
+test-all: ## Ejecutar todos los tests (unitarios + E2E)
+	npm run test:all
+
+test-all-cov: ## Ejecutar todos los tests con cobertura
+	npm run test:all:cov
 
 setup: install docker-up ## Configuración inicial completa
 	@echo "✅ Configuración completada!"

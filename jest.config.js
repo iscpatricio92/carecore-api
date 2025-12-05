@@ -2,6 +2,12 @@ module.exports = {
   // Preset para NestJS con TypeScript
   preset: 'ts-jest',
 
+  // Nombre del proyecto para identificar en reportes
+  displayName: {
+    name: 'UNIT TESTS',
+    color: 'blue',
+  },
+
   // Entorno de pruebas
   testEnvironment: 'node',
 

@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { Patient } from '../common/interfaces/fhir.interface';
+import { FHIR_RESOURCE_TYPES } from '../common/constants/fhir-resource-types';
 
 /**
  * Patient Entity
@@ -45,7 +46,7 @@ export class PatientEntity {
    * Always 'Patient' for this entity
    * Used for filtering and type checking
    */
-  @Column({ type: 'varchar', length: 50, default: 'Patient' })
+  @Column({ type: 'varchar', length: 50, default: FHIR_RESOURCE_TYPES.PATIENT })
   resourceType: string;
 
   /**
@@ -71,6 +72,15 @@ export class PatientEntity {
    */
   @Column({ type: 'varchar', length: 255, nullable: true })
   patientId: string;
+
+  /**
+   * Keycloak user ID that owns this patient record
+   * Links the Patient resource to the Keycloak user account
+   * Used for authorization: patients can only access their own records
+   * Nullable to support patients created before user linking
+   */
+  @Column({ type: 'varchar', length: 255, nullable: true, name: 'keycloak_user_id' })
+  keycloakUserId: string | null;
 
   /**
    * Record creation timestamp

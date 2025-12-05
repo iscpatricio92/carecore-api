@@ -156,6 +156,8 @@ git commit -m "feat(scope): change description"
 The pre-commit hook will automatically run:
 - Formatting with Prettier
 - ESLint fixes
+- Unit tests with coverage
+- E2E tests (authentication, authorization, protected endpoints)
 - Commit message validation
 
 ### 4. Push and Pull Request
@@ -175,7 +177,8 @@ Then create a Pull Request on GitHub/GitLab with:
 - [ ] Code formatted (applied automatically)
 - [ ] No ESLint errors (fixed automatically)
 - [ ] Commit message follows conventions (validated automatically)
-- [ ] Tests pass: `npm test`
+- [ ] Unit tests pass: `npm test` (run automatically in pre-commit)
+- [ ] E2E tests pass: `npm run test:e2e` (run automatically in pre-commit)
 - [ ] Documentation updated (if applicable)
 - [ ] No debug console.logs
 - [ ] No unnecessary commented code

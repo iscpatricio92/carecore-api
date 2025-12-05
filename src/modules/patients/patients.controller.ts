@@ -1,11 +1,14 @@
-import { Body, Controller, Get, Header, Param, Post } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { Body, Controller, Get, Header, Param, Post, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 
 import { PatientsService } from './patients.service';
 import { Patient } from '@/common/interfaces/fhir.interface';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('Patients')
 @Controller('patients')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth('JWT-auth')
 export class PatientsController {
   constructor(private readonly patientsService: PatientsService) {}
 

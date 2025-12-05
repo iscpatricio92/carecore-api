@@ -5,6 +5,7 @@ import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { LoggerModule } from 'nestjs-pino';
 
 import { DatabaseConfig } from './config/database.config';
+import { MigrationRunnerModule } from './config/migration-runner.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { FhirModule } from './modules/fhir/fhir.module';
@@ -14,6 +15,7 @@ import { EncountersModule } from './modules/encounters/encounters.module';
 import { ConsentsModule } from './modules/consents/consents.module';
 import { DocumentsModule } from './modules/documents/documents.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { AuditModule } from './modules/audit/audit.module';
 import { CommonModule } from './common/common.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
@@ -78,10 +80,14 @@ import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
       useClass: DatabaseConfig,
     }),
 
+    // Migration Runner Module (optional - controlled by RUN_MIGRATIONS_ON_STARTUP)
+    MigrationRunnerModule,
+
     // Common module (shared services)
     CommonModule,
 
     // Feature modules
+    AuditModule,
     AuthModule,
     FhirModule,
     PatientsModule,
