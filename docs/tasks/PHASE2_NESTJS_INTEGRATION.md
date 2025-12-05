@@ -787,17 +787,17 @@ async getUser(@CurrentUser() user: any) {
 Configurar Swagger para que los usuarios puedan autenticarse y probar endpoints protegidos desde la UI.
 
 ## Tareas
-- [ ] Configurar `@ApiBearerAuth()` en endpoints protegidos
-- [ ] Agregar configuración de seguridad en `main.ts`:
+- [x] Configurar `@ApiBearerAuth()` en endpoints protegidos
+- [x] Agregar configuración de seguridad en `main.ts`:
 
   ```typescript
   const config = new DocumentBuilder()
     .addBearerAuth()
     .build();
   ```
-- [ ] Configurar botón de autenticación en Swagger UI
-- [ ] Documentar cómo usar autenticación en Swagger
-- [ ] Agregar ejemplos de requests
+- [x] Configurar botón de autenticación en Swagger UI
+- [x] Documentar cómo usar autenticación en Swagger
+- [x] Agregar ejemplos de requests
 
 ## Configuración Esperada
 ```typescript
@@ -820,10 +820,50 @@ const config = new DocumentBuilder()
 ```
 
 ## Criterios de Aceptación
-- [ ] Swagger muestra botón de autenticación
-- [ ] Usuarios pueden ingresar token JWT
-- [ ] Endpoints protegidos funcionan desde Swagger
-- [ ] Documentación clara
+- [x] Swagger muestra botón de autenticación
+- [x] Usuarios pueden ingresar token JWT
+- [x] Endpoints protegidos funcionan desde Swagger
+- [x] Documentación clara
+
+## Implementación Completada
+
+### Cambios Realizados
+
+1. **Configuración de Swagger (`main.ts`)**:
+   - ✅ `addBearerAuth('JWT-auth')` configurado correctamente
+   - ✅ Documentación mejorada con instrucciones de autenticación
+   - ✅ Configuración de `persistAuthorization: true` para mantener tokens entre recargas
+
+2. **Endpoints Protegidos**:
+   - ✅ `@ApiBearerAuth('JWT-auth')` agregado a todos los endpoints protegidos en `fhir.controller.ts`
+   - ✅ `@ApiBearerAuth('JWT-auth')` agregado a endpoints protegidos en `auth.controller.ts` (`logout`, `getUser`)
+   - ✅ Respuestas `401 Unauthorized` documentadas en todos los endpoints protegidos
+
+3. **Documentación**:
+   - ✅ Creado `docs/SWAGGER_AUTHENTICATION.md` con guía completa de uso
+   - ✅ Descripción mejorada en `main.ts` con instrucciones paso a paso
+   - ✅ Ejemplos de requests agregados en la documentación
+
+4. **Funcionalidades**:
+   - ✅ Botón "Authorize" visible en Swagger UI
+   - ✅ Usuarios pueden ingresar tokens JWT
+   - ✅ Tokens se incluyen automáticamente en requests protegidos
+   - ✅ Tokens persisten entre recargas de página
+
+### Archivos Modificados
+
+- `src/main.ts` - Mejorada documentación de autenticación
+- `src/modules/fhir/fhir.controller.ts` - Agregado `@ApiBearerAuth('JWT-auth')` a todos los endpoints protegidos
+- `src/modules/auth/auth.controller.ts` - Actualizado `@ApiBearerAuth()` a `@ApiBearerAuth('JWT-auth')`
+- `docs/SWAGGER_AUTHENTICATION.md` - Nueva documentación completa
+
+### Cómo Usar
+
+1. Obtener URL de autorización: `POST /api/auth/login?returnUrl=true`
+2. Completar flujo OAuth2 en el navegador
+3. Obtener access token de las cookies del navegador
+4. Autorizar en Swagger UI usando el botón "Authorize"
+5. Probar endpoints protegidos
 
 ## Referencias
 - [NestJS Swagger](https://docs.nestjs.com/openapi/introduction)

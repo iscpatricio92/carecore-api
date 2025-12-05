@@ -10,7 +10,14 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 
 import { FhirService } from './fhir.service';
 import { Public } from '../auth/decorators/public.decorator';
@@ -39,27 +46,33 @@ export class FhirController {
   // Patient endpoints
   @Post('Patient')
   @HttpCode(HttpStatus.CREATED)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Create a new Patient' })
   @ApiResponse({ status: 201, description: 'Patient created successfully' })
   @ApiResponse({ status: 400, description: 'Invalid data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
   createPatient(@Body() createPatientDto: CreatePatientDto): Promise<Patient> {
     return this.fhirService.createPatient(createPatientDto);
   }
 
   @Get('Patient/:id')
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get a Patient by ID' })
   @ApiParam({ name: 'id', description: 'Patient ID' })
   @ApiResponse({ status: 200, description: 'Patient found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
   @ApiResponse({ status: 404, description: 'Patient not found' })
   getPatient(@Param('id') id: string): Promise<Patient> {
     return this.fhirService.getPatient(id);
   }
 
   @Get('Patient')
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Search Patients' })
   @ApiQuery({ name: 'name', required: false, description: 'Search by name' })
   @ApiQuery({ name: 'identifier', required: false, description: 'Search by identifier' })
   @ApiResponse({ status: 200, description: 'List of Patients' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
   searchPatients(
     @Query() pagination: PaginationDto,
     @Query('name') name?: string,
@@ -69,9 +82,11 @@ export class FhirController {
   }
 
   @Put('Patient/:id')
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update a Patient' })
   @ApiParam({ name: 'id', description: 'Patient ID' })
   @ApiResponse({ status: 200, description: 'Patient updated successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
   @ApiResponse({ status: 404, description: 'Patient not found' })
   updatePatient(
     @Param('id') id: string,
@@ -82,9 +97,11 @@ export class FhirController {
 
   @Delete('Patient/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Delete a Patient' })
   @ApiParam({ name: 'id', description: 'Patient ID' })
   @ApiResponse({ status: 204, description: 'Patient deleted successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
   @ApiResponse({ status: 404, description: 'Patient not found' })
   deletePatient(@Param('id') id: string): Promise<void> {
     return this.fhirService.deletePatient(id);
@@ -93,23 +110,28 @@ export class FhirController {
   // Practitioner endpoints
   @Post('Practitioner')
   @HttpCode(HttpStatus.CREATED)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Create a new Practitioner' })
   @ApiResponse({ status: 201, description: 'Practitioner created successfully' })
   @ApiResponse({ status: 400, description: 'Invalid data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
   createPractitioner(@Body() createPractitionerDto: CreatePractitionerDto): Promise<Practitioner> {
     return this.fhirService.createPractitioner(createPractitionerDto);
   }
 
   @Get('Practitioner/:id')
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get a Practitioner by ID' })
   @ApiParam({ name: 'id', description: 'Practitioner ID' })
   @ApiResponse({ status: 200, description: 'Practitioner found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
   @ApiResponse({ status: 404, description: 'Practitioner not found' })
   getPractitioner(@Param('id') id: string): Promise<Practitioner> {
     return this.fhirService.getPractitioner(id);
   }
 
   @Get('Practitioner')
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Search Practitioners' })
   @ApiQuery({ name: 'name', required: false, description: 'Search by name' })
   @ApiQuery({
@@ -118,6 +140,7 @@ export class FhirController {
     description: 'Search by identifier (license)',
   })
   @ApiResponse({ status: 200, description: 'List of Practitioners' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
   searchPractitioners(
     @Query() pagination: PaginationDto,
     @Query('name') name?: string,
@@ -131,9 +154,11 @@ export class FhirController {
   }
 
   @Put('Practitioner/:id')
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update a Practitioner' })
   @ApiParam({ name: 'id', description: 'Practitioner ID' })
   @ApiResponse({ status: 200, description: 'Practitioner updated successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
   @ApiResponse({ status: 404, description: 'Practitioner not found' })
   updatePractitioner(
     @Param('id') id: string,
@@ -144,9 +169,11 @@ export class FhirController {
 
   @Delete('Practitioner/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Delete a Practitioner' })
   @ApiParam({ name: 'id', description: 'Practitioner ID' })
   @ApiResponse({ status: 204, description: 'Practitioner deleted successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
   @ApiResponse({ status: 404, description: 'Practitioner not found' })
   deletePractitioner(@Param('id') id: string): Promise<void> {
     return this.fhirService.deletePractitioner(id);
@@ -155,23 +182,28 @@ export class FhirController {
   // Encounter endpoints
   @Post('Encounter')
   @HttpCode(HttpStatus.CREATED)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Create a new Encounter' })
   @ApiResponse({ status: 201, description: 'Encounter created successfully' })
   @ApiResponse({ status: 400, description: 'Invalid data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
   createEncounter(@Body() createEncounterDto: CreateEncounterDto): Promise<Encounter> {
     return this.fhirService.createEncounter(createEncounterDto);
   }
 
   @Get('Encounter/:id')
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get an Encounter by ID' })
   @ApiParam({ name: 'id', description: 'Encounter ID' })
   @ApiResponse({ status: 200, description: 'Encounter found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
   @ApiResponse({ status: 404, description: 'Encounter not found' })
   getEncounter(@Param('id') id: string): Promise<Encounter> {
     return this.fhirService.getEncounter(id);
   }
 
   @Get('Encounter')
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Search Encounters' })
   @ApiQuery({
     name: 'subject',
@@ -189,6 +221,7 @@ export class FhirController {
     description: 'Filter by date (YYYY-MM-DD)',
   })
   @ApiResponse({ status: 200, description: 'List of Encounters' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
   searchEncounters(
     @Query() pagination: PaginationDto,
     @Query('subject') subject?: string,
@@ -204,9 +237,11 @@ export class FhirController {
   }
 
   @Put('Encounter/:id')
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update an Encounter' })
   @ApiParam({ name: 'id', description: 'Encounter ID' })
   @ApiResponse({ status: 200, description: 'Encounter updated successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
   @ApiResponse({ status: 404, description: 'Encounter not found' })
   updateEncounter(
     @Param('id') id: string,
@@ -217,9 +252,11 @@ export class FhirController {
 
   @Delete('Encounter/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Delete an Encounter' })
   @ApiParam({ name: 'id', description: 'Encounter ID' })
   @ApiResponse({ status: 204, description: 'Encounter deleted successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
   @ApiResponse({ status: 404, description: 'Encounter not found' })
   deleteEncounter(@Param('id') id: string): Promise<void> {
     return this.fhirService.deleteEncounter(id);

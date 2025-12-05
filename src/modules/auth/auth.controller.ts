@@ -399,7 +399,7 @@ export class AuthController {
    */
   @Post('logout')
   @HttpCode(HttpStatus.OK)
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Cerrar sesión',
     description:
@@ -495,7 +495,7 @@ export class AuthController {
    * Get current user endpoint - Returns information about the authenticated user
    */
   @Get('user')
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Obtener información del usuario actual',
     description: 'Retorna la información del usuario autenticado desde el token JWT',
