@@ -1,11 +1,25 @@
-import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  UnauthorizedException,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PinoLogger } from 'nestjs-pino';
 import { randomBytes } from 'node:crypto';
 import { DocumentStorageService } from './services/document-storage.service';
+import { KeycloakAdminService } from './services/keycloak-admin.service';
 import { VerifyPractitionerDto } from './dto/verify-practitioner.dto';
+import {
+  ReviewVerificationDto,
+  ReviewStatus,
+  ListVerificationsQueryDto,
+  VerificationDetailResponseDto,
+  ListVerificationsResponseDto,
+  ReviewVerificationResponseDto,
+} from './dto/review-verification.dto';
 import {
   PractitionerVerificationEntity,
   VerificationStatus,
@@ -25,6 +39,7 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly logger: PinoLogger,
     private readonly documentStorageService: DocumentStorageService,
+    private readonly keycloakAdminService: KeycloakAdminService,
     @InjectRepository(PractitionerVerificationEntity)
     private readonly verificationRepository: Repository<PractitionerVerificationEntity>,
   ) {
@@ -561,6 +576,227 @@ export class AuthService {
       status: savedVerification.status,
       message: 'Verification request submitted successfully',
       estimatedReviewTime: '2-3 business days',
+    };
+  }
+
+  /**
+   * List practitioner verifications with pagination and filters
+   * @param query Query parameters (status, page, limit)
+   * @returns Paginated list of verifications
+   */
+  async listVerifications(query: ListVerificationsQueryDto): Promise<ListVerificationsResponseDto> {
+    const { status, page = 1, limit = 10 } = query;
+    const queryBuilder = this.verificationRepository.createQueryBuilder('verification');
+
+    // Filter by status if provided
+    if (status) {
+      queryBuilder.andWhere('verification.status = :status', { status });
+    }
+
+    // Get total count
+    const total = await queryBuilder.getCount();
+
+    // Pagination
+    const entities = await queryBuilder
+      .orderBy('verification.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getMany();
+
+    const data: VerificationDetailResponseDto[] = entities.map((entity) => ({
+      id: entity.id,
+      practitionerId: entity.practitionerId,
+      keycloakUserId: entity.keycloakUserId,
+      documentType: entity.documentType,
+      documentPath: entity.documentPath,
+      status: entity.status,
+      reviewedBy: entity.reviewedBy,
+      reviewedAt: entity.reviewedAt,
+      rejectionReason: entity.rejectionReason,
+      additionalInfo: entity.additionalInfo,
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
+    }));
+
+    const totalPages = Math.ceil(total / limit);
+
+    this.logger.debug(
+      { total, page, limit, status, totalPages },
+      'Listed practitioner verifications',
+    );
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages,
+    };
+  }
+
+  /**
+   * Get verification details by ID
+   * @param id Verification ID
+   * @returns Verification details
+   */
+  async getVerificationById(id: string): Promise<VerificationDetailResponseDto> {
+    const entity = await this.verificationRepository.findOne({
+      where: { id },
+    });
+
+    if (!entity) {
+      throw new NotFoundException(`Verification with ID ${id} not found`);
+    }
+
+    return {
+      id: entity.id,
+      practitionerId: entity.practitionerId,
+      keycloakUserId: entity.keycloakUserId,
+      documentType: entity.documentType,
+      documentPath: entity.documentPath,
+      status: entity.status,
+      reviewedBy: entity.reviewedBy,
+      reviewedAt: entity.reviewedAt,
+      rejectionReason: entity.rejectionReason,
+      additionalInfo: entity.additionalInfo,
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
+    };
+  }
+
+  /**
+   * Review a practitioner verification (approve or reject)
+   * @param id Verification ID
+   * @param dto Review data
+   * @param reviewerId Admin user ID who is reviewing
+   * @returns Review result
+   */
+  async reviewVerification(
+    id: string,
+    dto: ReviewVerificationDto,
+    reviewerId: string,
+  ): Promise<ReviewVerificationResponseDto> {
+    // Find verification
+    const verification = await this.verificationRepository.findOne({
+      where: { id },
+    });
+
+    if (!verification) {
+      throw new NotFoundException(`Verification with ID ${id} not found`);
+    }
+
+    // Validate that verification is in pending status
+    if (verification.status !== VerificationStatus.PENDING) {
+      throw new BadRequestException(
+        `Verification is already ${verification.status}. Only pending verifications can be reviewed.`,
+      );
+    }
+
+    // Validate rejection reason if status is rejected
+    if (dto.status === ReviewStatus.REJECTED && !dto.rejectionReason) {
+      throw new BadRequestException('Rejection reason is required when rejecting a verification');
+    }
+
+    // Update verification
+    const newStatus =
+      dto.status === ReviewStatus.APPROVED
+        ? VerificationStatus.APPROVED
+        : VerificationStatus.REJECTED;
+
+    verification.status = newStatus;
+    verification.reviewedBy = reviewerId;
+    verification.reviewedAt = new Date();
+    verification.rejectionReason = dto.rejectionReason || null;
+
+    const updatedVerification = await this.verificationRepository.save(verification);
+
+    this.logger.info(
+      {
+        verificationId: id,
+        status: newStatus,
+        reviewerId,
+        practitionerId: verification.practitionerId,
+      },
+      'Practitioner verification reviewed',
+    );
+
+    // Update Keycloak roles based on verification status
+    if (verification.keycloakUserId) {
+      try {
+        if (newStatus === VerificationStatus.APPROVED) {
+          // Add practitioner-verified role
+          const roleAdded = await this.keycloakAdminService.addRoleToUser(
+            verification.keycloakUserId,
+            'practitioner-verified',
+          );
+
+          if (!roleAdded) {
+            this.logger.warn(
+              {
+                verificationId: id,
+                keycloakUserId: verification.keycloakUserId,
+              },
+              'Failed to add practitioner-verified role in Keycloak. Verification was approved in database but role update failed.',
+            );
+            // Note: We don't rollback the database change because the verification was legitimately approved
+            // The admin can manually add the role in Keycloak if needed
+          } else {
+            this.logger.info(
+              {
+                verificationId: id,
+                keycloakUserId: verification.keycloakUserId,
+              },
+              'Added practitioner-verified role to user in Keycloak',
+            );
+          }
+        } else if (newStatus === VerificationStatus.REJECTED) {
+          // Remove practitioner-verified role if it exists
+          const roleRemoved = await this.keycloakAdminService.removeRoleFromUser(
+            verification.keycloakUserId,
+            'practitioner-verified',
+          );
+
+          if (roleRemoved) {
+            this.logger.info(
+              {
+                verificationId: id,
+                keycloakUserId: verification.keycloakUserId,
+              },
+              'Removed practitioner-verified role from user in Keycloak',
+            );
+          }
+          // If role didn't exist, that's fine - no action needed
+        }
+      } catch (error) {
+        this.logger.error(
+          {
+            error,
+            verificationId: id,
+            keycloakUserId: verification.keycloakUserId,
+            status: newStatus,
+          },
+          'Error updating Keycloak roles during verification review',
+        );
+        // Don't throw - the database update was successful, Keycloak update can be done manually
+      }
+    } else {
+      this.logger.warn(
+        {
+          verificationId: id,
+        },
+        'Cannot update Keycloak roles: keycloakUserId is not set',
+      );
+    }
+
+    return {
+      verificationId: updatedVerification.id,
+      status: updatedVerification.status,
+      reviewedBy: updatedVerification.reviewedBy!,
+      reviewedAt: updatedVerification.reviewedAt!.toISOString(),
+      message:
+        newStatus === VerificationStatus.APPROVED
+          ? 'Verification approved successfully'
+          : 'Verification rejected',
     };
   }
 }

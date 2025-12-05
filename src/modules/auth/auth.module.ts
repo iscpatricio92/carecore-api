@@ -10,6 +10,7 @@ import { RolesGuard } from './guards/roles.guard';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { DocumentStorageService } from './services/document-storage.service';
+import { KeycloakAdminService } from './services/keycloak-admin.service';
 import { PractitionerVerificationEntity } from '../../entities/practitioner-verification.entity';
 
 /**
@@ -35,7 +36,14 @@ import { PractitionerVerificationEntity } from '../../entities/practitioner-veri
     TypeOrmModule.forFeature([PractitionerVerificationEntity]),
   ],
   controllers: [AuthController],
-  providers: [JwtStrategy, JwtAuthGuard, RolesGuard, AuthService, DocumentStorageService],
+  providers: [
+    JwtStrategy,
+    JwtAuthGuard,
+    RolesGuard,
+    AuthService,
+    DocumentStorageService,
+    KeycloakAdminService,
+  ],
   exports: [PassportModule, JwtModule, JwtAuthGuard, RolesGuard, AuthService],
 })
 export class AuthModule {}

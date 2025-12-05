@@ -920,30 +920,30 @@ Fase 1.8: Documentar setup de Keycloak
 - [x] **1.8** Documentar setup ✅
 
 ### Fase 2: Integración NestJS
-- [ ] **2.0** Definir estructura de carpetas y tipos FHIR (Patient, Practitioner, Encounter, Consent, DocumentReference)
-- [ ] **2.1** Crear módulo `auth`
-- [ ] **2.2** Instalar dependencias Passport
-- [ ] **2.3** Implementar JWT strategy
-- [ ] **2.4** Crear `JwtAuthGuard`
-- [ ] **2.5** Crear decorador `@Public()`
-- [ ] **2.6** Crear decorador `@CurrentUser()`
-- [ ] **2.7** Implementar `AuthController`
-- [ ] **2.8** Implementar endpoint `/auth/login`
-- [ ] **2.9** Implementar endpoint `/auth/callback`
-- [ ] **2.10** Implementar endpoint `/auth/refresh`
-- [ ] **2.11** Implementar endpoint `/auth/logout`
-- [ ] **2.12** Implementar endpoint `/auth/user`
-- [ ] **2.13** Integrar con Swagger
-- [ ] **2.14** Crear `RolesGuard`
-- [ ] **2.15** Crear decorador `@Roles()`
-- [ ] **2.16** Mapear roles de Keycloak
+- [x] **2.0** Definir estructura de carpetas y tipos FHIR (Patient, Practitioner, Encounter, Consent, DocumentReference)
+- [x] **2.1** Crear módulo `auth`
+- [x] **2.2** Instalar dependencias Passport
+- [x] **2.3** Implementar JWT strategy
+- [x] **2.4** Crear `JwtAuthGuard`
+- [x] **2.5** Crear decorador `@Public()`
+- [x] **2.6** Crear decorador `@CurrentUser()`
+- [x] **2.7** Implementar `AuthController`
+- [x] **2.8** Implementar endpoint `/auth/login`
+- [x] **2.9** Implementar endpoint `/auth/callback`
+- [x] **2.10** Implementar endpoint `/auth/refresh`
+- [x] **2.11** Implementar endpoint `/auth/logout`
+- [x] **2.12** Implementar endpoint `/auth/user`
+- [x] **2.13** Integrar con Swagger
+- [x] **2.14** Crear `RolesGuard`
+- [x] **2.15** Crear decorador `@Roles()`
+- [x] **2.16** Mapear roles de Keycloak
 
 ### Fase 3: Funcionalidades Avanzadas
-- [ ] **3.1** Crear entidad `PractitionerVerification`
-- [ ] **3.2** Implementar endpoint `/auth/verify-practitioner`
-- [ ] **3.3** Implementar upload de documentos
-- [ ] **3.4** Crear flujo de revisión manual
-- [ ] **3.5** Integrar actualización de roles
+- [x] **3.1** Crear entidad `PractitionerVerification`
+- [x] **3.2** Implementar endpoint `/auth/verify-practitioner`
+- [x] **3.3** Implementar upload de documentos
+- [x] **3.4** Crear flujo de revisión manual
+- [x] **3.5** Integrar actualización de roles
 - [ ] **3.6** Configurar MFA en Keycloak
 - [ ] **3.7** Implementar endpoint `/auth/mfa/setup`
 - [ ] **3.8** Implementar endpoint `/auth/mfa/verify`

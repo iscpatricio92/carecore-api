@@ -117,6 +117,8 @@ KEYCLOAK_URL=http://localhost:8080
 KEYCLOAK_REALM=
 KEYCLOAK_CLIENT_ID=
 KEYCLOAK_CLIENT_SECRET=
+KEYCLOAK_ADMIN_CLIENT_ID=
+KEYCLOAK_ADMIN_CLIENT_SECRET=
 KEYCLOAK_PORT=8080
 KEYCLOAK_DB_TYPE=postgres
 KEYCLOAK_DB_HOST=postgres
@@ -191,6 +193,13 @@ KEYCLOAK_HTTP_ENABLED=true
   - Production: `https://keycloak.yourdomain.com`
   - Docker internal: `http://keycloak:8080` (when API runs in Docker)
 - `KEYCLOAK_REALM`: Name of the Keycloak realm (**required**)
+- `KEYCLOAK_CLIENT_ID`: Client ID for OAuth2 authentication (**required**)
+- `KEYCLOAK_CLIENT_SECRET`: Client secret for OAuth2 authentication (**required**)
+- `KEYCLOAK_ADMIN_CLIENT_ID`: Client ID for Keycloak Admin API access (**required for practitioner verification**)
+  - This should be a service account client with admin permissions
+  - Used to update user roles when practitioners are verified
+- `KEYCLOAK_ADMIN_CLIENT_SECRET`: Client secret for Keycloak Admin API access (**required for practitioner verification**)
+  - Secret for the service account client
 - `KEYCLOAK_PORT`: Port where Keycloak runs externally (**required**)
 - `KEYCLOAK_DB_TYPE`: Database type for Keycloak (default: `postgres`) (**required**)
 - `KEYCLOAK_DB_HOST`: Database host for Keycloak (**required**)
@@ -222,6 +231,8 @@ KEYCLOAK_HTTP_ENABLED=true
 - Consider using environment-specific realms (e.g., `carecore-dev`, `carecore-prod`)
 - All Keycloak database variables (`KEYCLOAK_DB_*`) must match your PostgreSQL configuration
 - The `KEYCLOAK_DB_NAME` database will be created automatically by the `init-keycloak-db.sh` script
+- `KEYCLOAK_ADMIN_CLIENT_SECRET` is **SENSITIVE** - store only in `.env.local` and never commit to repository
+- The Admin Client must be configured as a service account with appropriate admin permissions in Keycloak
 
 ## Loading Priority
 

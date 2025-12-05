@@ -2,6 +2,8 @@ import {
   Controller,
   Get,
   Post,
+  Put,
+  Param,
   Query,
   Res,
   Req,
@@ -10,6 +12,7 @@ import {
   Body,
   BadRequestException,
   UnauthorizedException,
+  NotFoundException,
   UseInterceptors,
   UploadedFile,
   UseGuards,
@@ -24,6 +27,7 @@ import {
   ApiQuery,
   ApiBody,
   ApiConsumes,
+  ApiParam,
 } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { PinoLogger } from 'nestjs-pino';
@@ -40,6 +44,13 @@ import {
   VerifyPractitionerDto,
   VerifyPractitionerResponseDto,
 } from './dto/verify-practitioner.dto';
+import {
+  ReviewVerificationDto,
+  ReviewVerificationResponseDto,
+  ListVerificationsQueryDto,
+  ListVerificationsResponseDto,
+  VerificationDetailResponseDto,
+} from './dto/review-verification.dto';
 
 /**
  * Authentication Controller
@@ -612,6 +623,156 @@ export class AuthController {
         throw error;
       }
       throw new BadRequestException('Failed to submit verification request');
+    }
+  }
+
+  /**
+   * List all practitioner verifications (admin only)
+   */
+  @Get('verify-practitioner')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(ROLES.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'List all practitioner verifications',
+    description:
+      'Retrieve a paginated list of all practitioner verification requests. Only admins can access this endpoint.',
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['pending', 'approved', 'rejected', 'expired'],
+    description: 'Filter by verification status',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Page number (1-based)',
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Number of items per page',
+    example: 10,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of verifications retrieved successfully',
+    type: ListVerificationsResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token required',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin role required',
+  })
+  async listVerifications(
+    @Query() query: ListVerificationsQueryDto,
+  ): Promise<ListVerificationsResponseDto> {
+    return this.authService.listVerifications(query);
+  }
+
+  /**
+   * Get verification details by ID (admin only)
+   */
+  @Get('verify-practitioner/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(ROLES.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Get verification details',
+    description:
+      'Retrieve detailed information about a specific practitioner verification request. Only admins can access this endpoint.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Verification ID',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Verification details retrieved successfully',
+    type: VerificationDetailResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token required',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin role required',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Verification not found',
+  })
+  async getVerification(@Param('id') id: string): Promise<VerificationDetailResponseDto> {
+    return this.authService.getVerificationById(id);
+  }
+
+  /**
+   * Review a practitioner verification (approve or reject) - Admin only
+   */
+  @Put('verify-practitioner/:id/review')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(ROLES.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Review a practitioner verification',
+    description:
+      'Approve or reject a practitioner verification request. Only admins can review verifications. Rejection requires a reason.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Verification ID',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  @ApiBody({
+    type: ReviewVerificationDto,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Verification reviewed successfully',
+    type: ReviewVerificationResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid data or verification is not in pending status',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token required',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin role required',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Verification not found',
+  })
+  async reviewVerification(
+    @Param('id') id: string,
+    @Body() dto: ReviewVerificationDto,
+    @CurrentUser() user: User,
+  ): Promise<ReviewVerificationResponseDto> {
+    try {
+      return await this.authService.reviewVerification(id, dto, user.id);
+    } catch (error) {
+      this.logger.error(
+        { error, verificationId: id, reviewerId: user.id },
+        'Failed to review verification',
+      );
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException('Failed to review verification');
     }
   }
 }

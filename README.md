@@ -348,16 +348,16 @@ El sistema ahora puede:
 - ✅ OAuth 2.0 / OIDC - Completado (Keycloak integrado)
 - ✅ JWT Authentication - Completado
 - ✅ Role-based Authorization - Completado
-- ⏳ Verificación de Practitioners - En progreso
+- ✅ Verificación de Practitioners - Completado
 - ⏳ MFA (Multi-Factor Authentication) - Pendiente
 - ⏳ Scopes y permisos granulares - Pendiente
 
-**Verificación de Practitioners:**
-- ⏳ Endpoint de verificación
-- ⏳ Entidad PractitionerVerification
-- ⏳ Upload de documentos (cédula/licencia)
-- ⏳ Flujo de revisión manual (admin)
-- ⏳ Actualización automática de roles en Keycloak
+**Verificación de Practitioners:** ✅ COMPLETADO
+- ✅ Endpoint POST /auth/verify-practitioner
+- ✅ Entidad PractitionerVerification
+- ✅ Upload de documentos (cédula/licencia)
+- ✅ Flujo de revisión manual (admin)
+- ✅ Actualización automática de roles en Keycloak
 
 **MFA (Multi-Factor Authentication):**
 - ⏳ Configuración MFA en Keycloak (TOTP)

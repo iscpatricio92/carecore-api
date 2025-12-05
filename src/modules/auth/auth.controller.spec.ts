@@ -4,6 +4,23 @@ import { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { PinoLogger } from 'nestjs-pino';
 
+// Mock @keycloak/keycloak-admin-client before importing services that use it
+jest.mock('@keycloak/keycloak-admin-client', () => ({
+  __esModule: true,
+  default: jest.fn().mockImplementation(() => ({
+    auth: jest.fn(),
+    users: {
+      findOne: jest.fn(),
+      listRealmRoleMappings: jest.fn(),
+      addRealmRoleMappings: jest.fn(),
+      delRealmRoleMappings: jest.fn(),
+    },
+    roles: {
+      find: jest.fn(),
+    },
+  })),
+}));
+
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { User } from './interfaces/user.interface';

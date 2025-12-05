@@ -4,8 +4,26 @@ import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { PinoLogger } from 'nestjs-pino';
 
+// Mock @keycloak/keycloak-admin-client before importing services that use it
+jest.mock('@keycloak/keycloak-admin-client', () => ({
+  __esModule: true,
+  default: jest.fn().mockImplementation(() => ({
+    auth: jest.fn(),
+    users: {
+      findOne: jest.fn(),
+      listRealmRoleMappings: jest.fn(),
+      addRealmRoleMappings: jest.fn(),
+      delRealmRoleMappings: jest.fn(),
+    },
+    roles: {
+      find: jest.fn(),
+    },
+  })),
+}));
+
 import { AuthService } from './auth.service';
 import { DocumentStorageService } from './services/document-storage.service';
+import { KeycloakAdminService } from './services/keycloak-admin.service';
 import { PractitionerVerificationEntity } from '../../entities/practitioner-verification.entity';
 
 describe('AuthService', () => {
@@ -28,6 +46,15 @@ describe('AuthService', () => {
     validateFile: jest.fn(),
     getDocumentPath: jest.fn(),
     deleteDocument: jest.fn(),
+  };
+
+  const mockKeycloakAdminService = {
+    findUserById: jest.fn(),
+    getUserRoles: jest.fn(),
+    addRoleToUser: jest.fn(),
+    removeRoleFromUser: jest.fn(),
+    updateUserRoles: jest.fn(),
+    userHasRole: jest.fn(),
   };
 
   const mockVerificationRepository = {
@@ -54,6 +81,10 @@ describe('AuthService', () => {
         {
           provide: DocumentStorageService,
           useValue: mockDocumentStorageService,
+        },
+        {
+          provide: KeycloakAdminService,
+          useValue: mockKeycloakAdminService,
         },
         {
           provide: getRepositoryToken(PractitionerVerificationEntity),

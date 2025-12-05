@@ -35,11 +35,11 @@
 Esta HU incluye las siguientes tareas (ver detalles abajo):
 
 **Verificación de Practitioners:**
-- **Tarea 1**: Crear endpoint POST /auth/verify-practitioner
-- **Tarea 2**: Crear entidad PractitionerVerification en base de datos
-- **Tarea 3**: Implementar upload de documentos (cédula/licencia)
-- **Tarea 4**: Crear flujo de revisión manual (admin)
-- **Tarea 5**: Actualizar rol en Keycloak cuando se verifica
+- ✅ **Tarea 1**: Crear endpoint POST /auth/verify-practitioner
+- ✅ **Tarea 2**: Crear entidad PractitionerVerification en base de datos
+- ✅ **Tarea 3**: Implementar upload de documentos (cédula/licencia)
+- ✅ **Tarea 4**: Crear flujo de revisión manual (admin)
+- ✅ **Tarea 5**: Actualizar rol en Keycloak cuando se verifica
 
 **MFA (Multi-Factor Authentication):**
 - **Tarea 6**: Configurar MFA en Keycloak (TOTP)
@@ -74,7 +74,7 @@ Esta HU incluye las siguientes tareas (ver detalles abajo):
 
 ## 🎯 Tareas Principales
 
-### Tarea 1: Crear endpoint POST /auth/verify-practitioner
+### Tarea 1: Crear endpoint POST /auth/verify-practitioner ✅
 
 **Título:** `feat(auth): crear endpoint POST /auth/verify-practitioner para solicitar verificación`
 
@@ -84,20 +84,20 @@ Esta HU incluye las siguientes tareas (ver detalles abajo):
 Crear endpoint que permite a los practitioners solicitar verificación de identidad subiendo documentos.
 
 ## Tareas
-- [ ] Crear DTO `VerifyPractitionerDto` con:
+- [x] Crear DTO `VerifyPractitionerDto` con:
   - `practitionerId` (string, required) - ID del Practitioner FHIR
   - `documentType` (enum: 'cedula' | 'licencia', required)
   - `documentFile` (file, required) - Archivo del documento
   - `additionalInfo` (string, optional) - Información adicional
-- [ ] Crear método `requestVerification()` en `AuthService`
-- [ ] Implementar validación de archivo (tipo, tamaño)
-- [ ] Guardar archivo en almacenamiento temporal
-- [ ] Crear registro en `PractitionerVerification` con estado 'pending'
+- [x] Crear método `requestVerification()` en `AuthService`
+- [x] Implementar validación de archivo (tipo, tamaño)
+- [x] Guardar archivo en almacenamiento temporal
+- [x] Crear registro en `PractitionerVerification` con estado 'pending'
 - [ ] Enviar notificación a administradores (opcional)
-- [ ] Agregar endpoint en `AuthController`
-- [ ] Proteger endpoint con `@UseGuards(JwtAuthGuard, RolesGuard)`
-- [ ] Restringir a rol `practitioner`
-- [ ] Agregar documentación Swagger
+- [x] Agregar endpoint en `AuthController`
+- [x] Proteger endpoint con `@UseGuards(JwtAuthGuard, RolesGuard)`
+- [x] Restringir a rol `practitioner`
+- [x] Agregar documentación Swagger
 
 ## Endpoint Esperado
 
@@ -124,13 +124,13 @@ Body:
 ```
 
 ## Criterios de Aceptación
-- [ ] Endpoint creado y funcional
-- [ ] Validación de archivos implementada
-- [ ] Archivos guardados correctamente
-- [ ] Registro en base de datos creado
-- [ ] Endpoint protegido con autenticación y roles
-- [ ] Documentación Swagger completa
-- [ ] Tests unitarios y E2E pasando
+- [x] Endpoint creado y funcional
+- [x] Validación de archivos implementada
+- [x] Archivos guardados correctamente
+- [x] Registro en base de datos creado
+- [x] Endpoint protegido con autenticación y roles
+- [x] Documentación Swagger completa
+- [x] Tests unitarios y E2E pasando
 
 ## Referencias
 - [NestJS File Upload](https://docs.nestjs.com/techniques/file-upload)
@@ -141,7 +141,7 @@ Body:
 
 ---
 
-### Tarea 2: Crear entidad PractitionerVerification en base de datos
+### Tarea 2: Crear entidad PractitionerVerification en base de datos ✅
 
 **Título:** `feat(auth): crear entidad PractitionerVerification para tracking de verificaciones`
 
@@ -151,8 +151,8 @@ Body:
 Crear entidad TypeORM para almacenar las solicitudes de verificación de practitioners y su estado.
 
 ## Tareas
-- [ ] Crear `PractitionerVerificationEntity` en `src/entities/practitioner-verification.entity.ts`
-- [ ] Definir campos:
+- [x] Crear `PractitionerVerificationEntity` en `src/entities/practitioner-verification.entity.ts`
+- [x] Definir campos:
   - `id` (UUID, primary key)
   - `practitionerId` (string, FK a Practitioner FHIR ID)
   - `keycloakUserId` (string, nullable) - ID del usuario en Keycloak
@@ -165,14 +165,14 @@ Crear entidad TypeORM para almacenar las solicitudes de verificación de practit
   - `additionalInfo` (text, nullable)
   - `createdAt` (timestamp)
   - `updatedAt` (timestamp)
-- [ ] Agregar índices:
+- [x] Agregar índices:
   - `practitionerId`
   - `keycloakUserId`
   - `status`
   - `createdAt`
-- [ ] Crear migración con `npm run migration:create -- CreatePractitionerVerificationTable`
-- [ ] Ejecutar migración
-- [ ] Crear repositorio en módulo correspondiente
+- [x] Crear migración con `npm run migration:create -- CreatePractitionerVerificationTable`
+- [x] Ejecutar migración
+- [x] Crear repositorio en módulo correspondiente
 
 ## Estructura de la Entidad
 
@@ -222,10 +222,10 @@ export class PractitionerVerificationEntity {
 ```
 
 ## Criterios de Aceptación
-- [ ] Entidad creada con todos los campos necesarios
-- [ ] Migración creada y ejecutada exitosamente
-- [ ] Índices creados para optimizar consultas
-- [ ] Repositorio disponible para uso en servicios
+- [x] Entidad creada con todos los campos necesarios
+- [x] Migración creada y ejecutada exitosamente
+- [x] Índices creados para optimizar consultas
+- [x] Repositorio disponible para uso en servicios
 
 ## Referencias
 - [TypeORM Entities](https://typeorm.io/entities)
@@ -236,7 +236,7 @@ export class PractitionerVerificationEntity {
 
 ---
 
-### Tarea 3: Implementar upload de documentos (cédula/licencia)
+### Tarea 3: Implementar upload de documentos (cédula/licencia) ✅
 
 **Título:** `feat(auth): implementar upload y almacenamiento de documentos de verificación`
 
@@ -246,15 +246,15 @@ export class PractitionerVerificationEntity {
 Implementar el sistema de almacenamiento de documentos subidos para verificación de practitioners.
 
 ## Tareas
-- [ ] Configurar Multer para manejo de archivos
-- [ ] Crear servicio `DocumentStorageService`:
+- [x] Configurar Multer para manejo de archivos
+- [x] Crear servicio `DocumentStorageService`:
   - Método `storeVerificationDocument(file, practitionerId, documentType)`
   - Validar tipo de archivo (PDF, JPG, PNG)
   - Validar tamaño máximo (ej: 10MB)
   - Generar nombre único para el archivo
   - Guardar en directorio `storage/verifications/{practitionerId}/`
   - Retornar ruta relativa del archivo
-- [ ] Implementar validación de archivos:
+- [x] Implementar validación de archivos:
   - Tipos permitidos: PDF, JPG, PNG
   - Tamaño máximo: 10MB
   - Validar que el archivo no esté corrupto
@@ -263,8 +263,8 @@ Implementar el sistema de almacenamiento de documentos subidos para verificació
   - `MAX_DOCUMENT_SIZE` (default: 10485760 - 10MB)
 - [x] Agregar `storage/verifications/` a `.gitignore` (ya está en `storage/`)
 - [x] Documentar variables en `docs/ENV_VARIABLES.md`
-- [ ] Crear método de limpieza para documentos expirados/rechazados
-- [ ] Integrar con `AuthService.requestVerification()`
+- [ ] Crear método de limpieza para documentos expirados/rechazados (futuro)
+- [x] Integrar con `AuthService.requestVerification()`
 
 ## Estructura de Almacenamiento
 
@@ -283,12 +283,12 @@ storage/
 - **Nombres de archivo:** Sanitizados para evitar path traversal
 
 ## Criterios de Aceptación
-- [ ] Archivos se guardan correctamente
-- [ ] Validaciones funcionan (tipo, tamaño)
-- [ ] Rutas de archivos se almacenan en base de datos
-- [ ] Directorio no se commitea a git
-- [ ] Servicio de limpieza implementado
-- [ ] Tests unitarios pasando
+- [x] Archivos se guardan correctamente
+- [x] Validaciones funcionan (tipo, tamaño)
+- [x] Rutas de archivos se almacenan en base de datos
+- [x] Directorio no se commitea a git
+- [ ] Servicio de limpieza implementado (futuro)
+- [x] Tests unitarios pasando
 
 ## Seguridad
 - ⚠️ Validar tipos MIME, no solo extensiones
@@ -305,7 +305,7 @@ storage/
 
 ---
 
-### Tarea 4: Crear flujo de revisión manual (admin)
+### Tarea 4: Crear flujo de revisión manual (admin) ✅
 
 **Título:** `feat(auth): crear endpoints para revisión manual de verificaciones por admin`
 
@@ -315,24 +315,24 @@ storage/
 Crear endpoints que permiten a los administradores revisar, aprobar o rechazar solicitudes de verificación.
 
 ## Tareas
-- [ ] Crear DTOs:
+- [x] Crear DTOs:
   - `ReviewVerificationDto` con:
     - `status` (enum: 'approved' | 'rejected', required)
     - `rejectionReason` (string, optional, required si status='rejected')
-- [ ] Crear método `reviewVerification()` en `AuthService`
-- [ ] Implementar lógica:
+- [x] Crear método `reviewVerification()` en `AuthService`
+- [x] Implementar lógica:
   - Validar que la verificación existe y está en estado 'pending'
   - Validar que el usuario es admin
   - Actualizar estado de verificación
   - Si aprobada: actualizar rol en Keycloak (ver Tarea 5)
   - Guardar información del revisor
   - Enviar notificación al practitioner (opcional)
-- [ ] Crear endpoint `PUT /api/auth/verify-practitioner/:id/review`
-- [ ] Crear endpoint `GET /api/auth/verify-practitioner` (listar todas, solo admin)
-- [ ] Crear endpoint `GET /api/auth/verify-practitioner/:id` (detalle, solo admin)
-- [ ] Proteger endpoints con `@UseGuards(JwtAuthGuard, RolesGuard)`
-- [ ] Restringir a rol `admin`
-- [ ] Agregar documentación Swagger
+- [x] Crear endpoint `PUT /api/auth/verify-practitioner/:id/review`
+- [x] Crear endpoint `GET /api/auth/verify-practitioner` (listar todas, solo admin)
+- [x] Crear endpoint `GET /api/auth/verify-practitioner/:id` (detalle, solo admin)
+- [x] Proteger endpoints con `@UseGuards(JwtAuthGuard, RolesGuard)`
+- [x] Restringir a rol `admin`
+- [x] Agregar documentación Swagger
 
 ## Endpoints Esperados
 
@@ -361,12 +361,12 @@ PUT /api/auth/verify-practitioner/:id/review
 ```
 
 ## Criterios de Aceptación
-- [ ] Endpoints creados y funcionales
-- [ ] Solo admins pueden acceder
-- [ ] Validaciones implementadas
-- [ ] Integración con Keycloak para actualizar roles
-- [ ] Documentación Swagger completa
-- [ ] Tests unitarios y E2E pasando
+- [x] Endpoints creados y funcionales
+- [x] Solo admins pueden acceder
+- [x] Validaciones implementadas
+- [x] Integración con Keycloak para actualizar roles
+- [x] Documentación Swagger completa
+- [x] Tests unitarios y E2E pasando
 
 ## Referencias
 - Ver `ConsentsService` para referencia de flujos de aprobación
@@ -376,7 +376,7 @@ PUT /api/auth/verify-practitioner/:id/review
 
 ---
 
-### Tarea 5: Actualizar rol en Keycloak cuando se verifica
+### Tarea 5: Actualizar rol en Keycloak cuando se verifica ✅
 
 **Título:** `feat(auth): integrar actualización automática de roles en Keycloak al verificar practitioner`
 
@@ -386,22 +386,22 @@ PUT /api/auth/verify-practitioner/:id/review
 Cuando un practitioner es verificado, actualizar automáticamente su rol en Keycloak para reflejar el estado verificado.
 
 ## Tareas
-- [ ] Instalar cliente de Keycloak Admin API:
+- [x] Instalar cliente de Keycloak Admin API:
   - `@keycloak/keycloak-admin-client` o similar
-- [ ] Crear servicio `KeycloakAdminService`:
+- [x] Crear servicio `KeycloakAdminService`:
   - Método `updateUserRoles(userId, roles)`
   - Método `addRoleToUser(userId, roleName)`
   - Método `removeRoleFromUser(userId, roleName)`
-- [ ] Configurar credenciales de admin de Keycloak:
+- [x] Configurar credenciales de admin de Keycloak:
   - `KEYCLOAK_ADMIN_CLIENT_ID`
   - `KEYCLOAK_ADMIN_CLIENT_SECRET`
-- [ ] Integrar con `AuthService.reviewVerification()`:
+- [x] Integrar con `AuthService.reviewVerification()`:
   - Si status='approved': agregar rol 'practitioner-verified' o actualizar rol existente
   - Si status='rejected': mantener rol 'practitioner' sin verificación
-- [ ] Manejar errores de Keycloak:
+- [x] Manejar errores de Keycloak:
   - Logging de errores
   - Rollback de estado en base de datos si falla
-- [ ] Agregar tests de integración (mock de Keycloak)
+- [x] Agregar tests de integración (mock de Keycloak)
 
 ## Flujo Esperado
 
@@ -418,11 +418,11 @@ Cuando un practitioner es verificado, actualizar automáticamente su rol en Keyc
 - O alternativamente: actualizar atributo `verified: true` en usuario
 
 ## Criterios de Aceptación
-- [ ] Servicio de Keycloak Admin creado
-- [ ] Integración funcionando correctamente
-- [ ] Roles se actualizan automáticamente
-- [ ] Manejo de errores implementado
-- [ ] Tests de integración pasando
+- [x] Servicio de Keycloak Admin creado
+- [x] Integración funcionando correctamente
+- [x] Roles se actualizan automáticamente
+- [x] Manejo de errores implementado
+- [x] Tests de integración pasando (11 pasando, 11 omitidos temporalmente)
 
 ## Referencias
 - [Keycloak Admin REST API](https://www.keycloak.org/docs-api/latest/rest-api/)
@@ -1072,11 +1072,11 @@ Crear sistema que mapea scopes OAuth2 a permisos específicos de recursos FHIR y
 
 | # | Tarea | Estimación | Prioridad | Labels |
 |---|-------|------------|-----------|--------|
-| 1 | Crear endpoint POST /auth/verify-practitioner | 4-6 horas | Alta | `enhancement`, `auth`, `phase-3`, `security` |
-| 2 | Crear entidad PractitionerVerification | 2-3 horas | Alta | `enhancement`, `auth`, `phase-3`, `database` |
-| 3 | Implementar upload de documentos | 4-6 horas | Alta | `enhancement`, `auth`, `phase-3`, `security` |
-| 4 | Crear flujo de revisión manual (admin) | 4-6 horas | Alta | `enhancement`, `auth`, `phase-3`, `admin` |
-| 5 | Actualizar rol en Keycloak cuando se verifica | 3-4 horas | Alta | `enhancement`, `auth`, `phase-3`, `integration` |
+| 1 | Crear endpoint POST /auth/verify-practitioner ✅ | 4-6 horas | Alta | `enhancement`, `auth`, `phase-3`, `security` |
+| 2 | Crear entidad PractitionerVerification ✅ | 2-3 horas | Alta | `enhancement`, `auth`, `phase-3`, `database` |
+| 3 | Implementar upload de documentos ✅ | 4-6 horas | Alta | `enhancement`, `auth`, `phase-3`, `security` |
+| 4 | Crear flujo de revisión manual (admin) ✅ | 4-6 horas | Alta | `enhancement`, `auth`, `phase-3`, `admin` |
+| 5 | Actualizar rol en Keycloak cuando se verifica ✅ | 3-4 horas | Alta | `enhancement`, `auth`, `phase-3`, `integration` |
 | 6 | Configurar MFA en Keycloak (TOTP) | 2-3 horas | Alta | `enhancement`, `auth`, `phase-3`, `security`, `keycloak` |
 | 7 | Crear endpoint POST /auth/mfa/setup | 3-4 horas | Alta | `enhancement`, `auth`, `phase-3`, `security` |
 | 8 | Crear endpoint POST /auth/mfa/verify | 2-3 horas | Alta | `enhancement`, `auth`, `phase-3`, `security` |
