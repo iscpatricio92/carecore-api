@@ -9,6 +9,10 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { FhirModule } from './modules/fhir/fhir.module';
 import { PatientsModule } from './modules/patients/patients.module';
+import { PractitionersModule } from './modules/practitioners/practitioners.module';
+import { EncountersModule } from './modules/encounters/encounters.module';
+import { ConsentsModule } from './modules/consents/consents.module';
+import { DocumentsModule } from './modules/documents/documents.module';
 import { CommonModule } from './common/common.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
@@ -79,6 +83,10 @@ import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
     // Feature modules
     FhirModule,
     PatientsModule,
+    PractitionersModule,
+    EncountersModule,
+    ConsentsModule,
+    DocumentsModule,
   ],
   controllers: [AppController],
   providers: [
