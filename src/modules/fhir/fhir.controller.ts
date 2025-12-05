@@ -13,6 +13,7 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 
 import { FhirService } from './fhir.service';
+import { Public } from '../auth/decorators/public.decorator';
 import { CreatePatientDto, UpdatePatientDto } from '../../common/dto/fhir-patient.dto';
 import {
   CreatePractitionerDto,
@@ -28,6 +29,7 @@ export class FhirController {
   constructor(private readonly fhirService: FhirService) {}
 
   @Get('metadata')
+  @Public()
   @ApiOperation({ summary: 'FHIR CapabilityStatement (metadata)' })
   @ApiResponse({ status: 200, description: 'CapabilityStatement returned successfully' })
   getMetadata() {
