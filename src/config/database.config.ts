@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TypeOrmOptionsFactory, TypeOrmModuleOptions } from '@nestjs/typeorm';
+import { PatientEntity } from '../entities/patient.entity';
+import { PractitionerEntity } from '../entities/practitioner.entity';
+import { EncounterEntity } from '../entities/encounter.entity';
+import { ConsentEntity } from '../entities/consent.entity';
+import { DocumentReferenceEntity } from '../entities/document-reference.entity';
 
 @Injectable()
 export class DatabaseConfig implements TypeOrmOptionsFactory {
@@ -23,6 +28,16 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
       );
     }
 
+    // Importar entidades directamente para compatibilidad con webpack
+    // En desarrollo, webpack no puede resolver glob patterns en tiempo de ejecución
+    const entities = [
+      PatientEntity,
+      PractitionerEntity,
+      EncounterEntity,
+      ConsentEntity,
+      DocumentReferenceEntity,
+    ];
+
     const baseConfig = {
       type: 'postgres' as const,
       host,
@@ -30,7 +45,7 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
       username,
       password,
       database,
-      entities: [__dirname + '/../**/*.entity{.ts,.js}'],
+      entities,
       migrations: [__dirname + '/../migrations/**/*{.ts,.js}'],
       synchronize:
         nodeEnv === 'development' && this.configService.get<boolean>('DB_SYNCHRONIZE', false),

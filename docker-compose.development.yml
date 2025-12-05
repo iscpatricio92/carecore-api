@@ -42,8 +42,9 @@ services:
     environment:
       NODE_ENV: development
       # Variables de base de datos (deben estar en .env.local)
+      # DB_INTERNAL_HOST: Host de la BD dentro del contenedor Docker (usar 'postgres' para Docker, 'localhost' para desarrollo local)
       DB_TYPE: ${DB_TYPE}
-      DB_HOST: ${DB_HOST}
+      DB_HOST: ${DB_INTERNAL_HOST}
       DB_PORT: ${DB_INTERNAL_PORT}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}

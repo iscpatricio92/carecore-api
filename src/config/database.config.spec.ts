@@ -1,6 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { DatabaseConfig } from './database.config';
+import { PatientEntity } from '../entities/patient.entity';
+import { PractitionerEntity } from '../entities/practitioner.entity';
+import { EncounterEntity } from '../entities/encounter.entity';
+import { ConsentEntity } from '../entities/consent.entity';
+import { DocumentReferenceEntity } from '../entities/document-reference.entity';
 
 /**
  * Test constants - These are mock values for testing purposes only.
@@ -198,16 +203,23 @@ describe('DatabaseConfig', () => {
       });
     });
 
-    it('should include entities path pattern', () => {
+    it('should include entity classes', () => {
       mockConfigService.get.mockImplementation((key: string) => {
         return createMockDbConfig('development', false)[key];
       });
 
-      const result = config.createTypeOrmOptions() as { entities: string[] };
+      const result = config.createTypeOrmOptions() as { entities: unknown[] };
 
       expect(Array.isArray(result.entities)).toBe(true);
       expect(result.entities.length).toBeGreaterThan(0);
-      expect(result.entities[0]).toContain('*.entity');
+      // Verify that entities are classes/functions (not strings)
+      expect(typeof result.entities[0]).toBe('function');
+      // Verify that all expected entities are included
+      expect(result.entities).toContain(PatientEntity);
+      expect(result.entities).toContain(PractitionerEntity);
+      expect(result.entities).toContain(EncounterEntity);
+      expect(result.entities).toContain(ConsentEntity);
+      expect(result.entities).toContain(DocumentReferenceEntity);
     });
 
     it('should include migrations path pattern', () => {
