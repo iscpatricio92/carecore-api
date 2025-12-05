@@ -315,50 +315,67 @@ El sistema ahora puede:
 - ✅ Endpoints `/api/fhir/*`
 - ✅ Metadata endpoint
 
-### Fase 2: Funcionalidades Core (Post-MVP) ⏳
+### Fase 2: Funcionalidades Core (Post-MVP) ✅ COMPLETADO
 
 **Recursos FHIR Adicionales:**
 
-**Observation** (Signos vitales, resultados)
-- Prioridad: ALTA
-- Uso: Presión arterial, glucosa, peso
-- Estado: ⏳ Pendiente
-
-**Condition** (Diagnósticos)
-- Prioridad: ALTA
-- Uso: Diagnósticos, enfermedades crónicas
-- Estado: ⏳ Pendiente
-
-**DocumentReference** (Documentos)
+**DocumentReference** (Documentos) ✅
 - Prioridad: MEDIA
 - Uso: Reportes, imágenes, documentos clínicos
-- Nota: Requiere integración con MinIO/S3
-- Estado: ⏳ Pendiente
+- Estado: ✅ Completado (almacenamiento local, preparado para S3/MinIO)
 
-**Consent** (Consentimientos)
+**Consent** (Consentimientos) ✅
 - Prioridad: MEDIA
 - Uso: Consentimientos informados, autorizaciones
-- Nota: Crítico para cumplimiento legal
-- Estado: ⏳ Pendiente
+- Estado: ✅ Completado (share with practitioner, validación de expiración)
 
 **Mejoras Técnicas:**
-- [ ] Migración a base de datos (TypeORM entities) - Actualmente in-memory
+- ✅ Migración a base de datos (TypeORM entities) - Completado
+- ✅ Audit Logging completo (inmutable) - Completado
+- ✅ Constantes para FHIR Resource Types - Completado
+- ✅ Sistema de migraciones con timestamps automáticos - Completado
 - [ ] Validación FHIR más estricta
 - [ ] Profiles FHIR específicos
 - [ ] Mejora en búsquedas (full-text search)
 
-### Fase 3: Integraciones (Futuro) ⏳
+**Recursos Pendientes para Fase 2:**
+- ⏳ Observation (Signos vitales, resultados) - Pendiente
+- ⏳ Condition (Diagnósticos) - Pendiente
 
-**Preparación para SMART on FHIR:**
-- [ ] OAuth 2.0 / OIDC
-- [ ] Scopes y permisos
-- [ ] Launch sequence
-- [ ] CapabilityStatement completo
+### Fase 3: Seguridad Avanzada y Verificación ⏳ EN PROGRESO
 
-**Recursos para Integraciones:**
-- [ ] Medication - Integración con farmacias, recetas electrónicas
-- [ ] Procedure - Procedimientos realizados, integración con quirófanos
-- [ ] Immunization - Registro de vacunas, integración con programas de vacunación
+**Autenticación y Autorización Avanzada:**
+- ✅ OAuth 2.0 / OIDC - Completado (Keycloak integrado)
+- ✅ JWT Authentication - Completado
+- ✅ Role-based Authorization - Completado
+- ⏳ Verificación de Practitioners - En progreso
+- ⏳ MFA (Multi-Factor Authentication) - Pendiente
+- ⏳ Scopes y permisos granulares - Pendiente
+
+**Verificación de Practitioners:**
+- ⏳ Endpoint de verificación
+- ⏳ Entidad PractitionerVerification
+- ⏳ Upload de documentos (cédula/licencia)
+- ⏳ Flujo de revisión manual (admin)
+- ⏳ Actualización automática de roles en Keycloak
+
+**MFA (Multi-Factor Authentication):**
+- ⏳ Configuración MFA en Keycloak (TOTP)
+- ⏳ Endpoints de setup/verify/disable MFA
+- ⏳ Forzar MFA para roles críticos
+
+**Scopes y Permisos:**
+- ⏳ Definir scopes en Keycloak
+- ⏳ ScopesGuard para validación
+- ⏳ Decorador @Scopes() para endpoints
+- ⏳ Mapeo de scopes a permisos FHIR
+
+**Recursos para Integraciones Futuras:**
+- ⏳ Observation - Signos vitales, resultados
+- ⏳ Condition - Diagnósticos
+- ⏳ Medication - Integración con farmacias, recetas electrónicas
+- ⏳ Procedure - Procedimientos realizados, integración con quirófanos
+- ⏳ Immunization - Registro de vacunas, integración con programas de vacunación
 
 ### Matriz de Prioridades
 
@@ -390,13 +407,13 @@ El sistema ahora puede:
 - [x] Crear perfil Patient
 - [x] Registrar Encounter (sólo practitioners)
 - [x] Registrar Practitioner
-- [ ] Registrar DocumentReference (sólo practitioners)
-- [ ] Consentimiento básico (share with practitioner X for Y days)
+- [x] Registrar DocumentReference (sólo practitioners)
+- [x] Consentimiento básico (share with practitioner X for Y days)
 
 **Auditoría:**
 - [x] Logging básico
-- [ ] Audit logging completo (inmutable)
-- [ ] Registro de todos los accesos/modificaciones
+- [x] Audit logging completo (inmutable)
+- [x] Registro de todos los accesos/modificaciones
 
 **Frontend:**
 - [ ] UI móvil para ver perfil y consentimientos
@@ -700,7 +717,9 @@ Access FHIR metadata at: `/api/fhir/metadata`
 
 > Archivos en `docs/tasks/` son temporales y pueden ser eliminados una vez completadas las tareas.
 
-- [docs/tasks/PHASE1_KEYCLOAK_SETUP.md](docs/tasks/PHASE1_KEYCLOAK_SETUP.md) - Tareas detalladas para Fase 1 (Setup Keycloak)
+- [docs/tasks/PHASE1_KEYCLOAK_SETUP.md](docs/tasks/PHASE1_KEYCLOAK_SETUP.md) - Tareas detalladas para Fase 1 (Setup Keycloak) ⚠️ *Temporal*
+- [docs/tasks/PHASE2_NESTJS_INTEGRATION.md](docs/tasks/PHASE2_NESTJS_INTEGRATION.md) - Tareas detalladas para Fase 2 (Integración NestJS) ⚠️ *Temporal*
+- [docs/tasks/PHASE3_SECURITY_AND_VERIFICATION.md](docs/tasks/PHASE3_SECURITY_AND_VERIFICATION.md) - Tareas detalladas para Fase 3 (Seguridad Avanzada) ⚠️ *Temporal*
 - [docs/tasks/README.md](docs/tasks/README.md) - Información sobre archivos temporales
 
 ---
