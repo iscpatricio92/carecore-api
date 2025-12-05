@@ -2,14 +2,19 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { NotFoundException } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
+import { getRepositoryToken } from '@nestjs/typeorm';
 
 import { FhirService } from './fhir.service';
+import { PatientEntity } from '../../entities/patient.entity';
+import { PractitionerEntity } from '../../entities/practitioner.entity';
+import { EncounterEntity } from '../../entities/encounter.entity';
 import { CreatePatientDto, UpdatePatientDto } from '../../common/dto/fhir-patient.dto';
 import {
   CreatePractitionerDto,
   UpdatePractitionerDto,
 } from '../../common/dto/fhir-practitioner.dto';
 import { CreateEncounterDto, UpdateEncounterDto } from '../../common/dto/fhir-encounter.dto';
+import { Patient, Practitioner, Encounter } from '../../common/interfaces/fhir.interface';
 
 describe('FhirService', () => {
   let service: FhirService;
@@ -26,10 +31,41 @@ describe('FhirService', () => {
     error: jest.fn(),
   };
 
+  // Mock repositories
+  const mockPatientRepository = {
+    save: jest.fn(),
+    findOne: jest.fn(),
+    createQueryBuilder: jest.fn(),
+  };
+
+  const mockPractitionerRepository = {
+    save: jest.fn(),
+    findOne: jest.fn(),
+    createQueryBuilder: jest.fn(),
+  };
+
+  const mockEncounterRepository = {
+    save: jest.fn(),
+    findOne: jest.fn(),
+    createQueryBuilder: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         FhirService,
+        {
+          provide: getRepositoryToken(PatientEntity),
+          useValue: mockPatientRepository,
+        },
+        {
+          provide: getRepositoryToken(PractitionerEntity),
+          useValue: mockPractitionerRepository,
+        },
+        {
+          provide: getRepositoryToken(EncounterEntity),
+          useValue: mockEncounterRepository,
+        },
         {
           provide: ConfigService,
           useValue: mockConfigService,
@@ -87,6 +123,24 @@ describe('FhirService', () => {
         gender: 'male',
       };
 
+      const mockPatient: Patient = {
+        resourceType: 'Patient',
+        id: 'test-patient-id',
+        meta: {
+          versionId: '1',
+          lastUpdated: new Date().toISOString(),
+        },
+        ...createDto,
+      };
+
+      const mockEntity = new PatientEntity();
+      mockEntity.id = 'db-uuid';
+      mockEntity.fhirResource = mockPatient;
+      mockEntity.patientId = 'test-patient-id';
+      mockEntity.active = true;
+
+      mockPatientRepository.save.mockResolvedValue(mockEntity);
+
       const result = await service.createPatient(createDto);
 
       expect(result).toBeDefined();
@@ -94,59 +148,121 @@ describe('FhirService', () => {
       expect(result.id).toBeDefined();
       expect(result.name).toEqual(createDto.name);
       expect(result.meta?.versionId).toBe('1');
+      expect(mockPatientRepository.save).toHaveBeenCalled();
       expect(logger.info).toHaveBeenCalled();
     });
   });
 
   describe('getPatient', () => {
     it('should return a patient by id', async () => {
-      const createDto: CreatePatientDto = {
+      const mockPatient: Patient = {
+        resourceType: 'Patient',
+        id: 'test-patient-id',
         name: [{ given: ['Jane'], family: 'Smith' }],
       };
 
-      const created = await service.createPatient(createDto);
-      const patientId = created.id || '';
-      const result = await service.getPatient(patientId);
+      const mockEntity = new PatientEntity();
+      mockEntity.fhirResource = mockPatient;
+      mockEntity.patientId = 'test-patient-id';
+
+      mockPatientRepository.findOne.mockResolvedValue(mockEntity);
+
+      const result = await service.getPatient('test-patient-id');
 
       expect(result).toBeDefined();
-      expect(result.id).toBe(created.id);
-      expect(result.name).toEqual(createDto.name);
+      expect(result.id).toBe('test-patient-id');
+      expect(result.name).toEqual(mockPatient.name);
     });
 
     it('should throw NotFoundException when patient does not exist', async () => {
+      mockPatientRepository.findOne.mockResolvedValue(null);
+
       await expect(service.getPatient('non-existent-id')).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('searchPatients', () => {
-    beforeEach(async () => {
-      // Create test patients
-      await service.createPatient({
-        name: [{ given: ['John'], family: 'Doe' }],
-        identifier: [{ system: 'http://example.com/id', value: '123' }],
-      });
-      await service.createPatient({
-        name: [{ given: ['Jane'], family: 'Smith' }],
-        identifier: [{ system: 'http://example.com/id', value: '456' }],
-      });
-    });
-
     it('should return all patients when no filters', async () => {
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(2),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([
+          {
+            fhirResource: {
+              resourceType: 'Patient',
+              id: '1',
+              name: [{ given: ['John'], family: 'Doe' }],
+            },
+          },
+          {
+            fhirResource: {
+              resourceType: 'Patient',
+              id: '2',
+              name: [{ given: ['Jane'], family: 'Smith' }],
+            },
+          },
+        ]),
+      };
+
+      mockPatientRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
       const result = await service.searchPatients({});
 
       expect(result).toBeDefined();
-      expect(result.total).toBeGreaterThan(0);
+      expect(result.total).toBe(2);
       expect(result.entries).toBeDefined();
+      expect(result.entries.length).toBe(2);
     });
 
     it('should filter patients by name', async () => {
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(1),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([
+          {
+            fhirResource: {
+              resourceType: 'Patient',
+              id: '1',
+              name: [{ given: ['John'], family: 'Doe' }],
+            },
+          },
+        ]),
+      };
+
+      mockPatientRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
       const result = await service.searchPatients({ name: 'John' });
 
-      expect(result.entries.length).toBeGreaterThan(0);
+      expect(result.entries.length).toBe(1);
       expect(result.entries[0].name?.[0].given?.[0]).toBe('John');
     });
 
     it('should filter patients by identifier', async () => {
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(1),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([
+          {
+            fhirResource: {
+              resourceType: 'Patient',
+              id: '1',
+              identifier: [{ system: 'http://example.com/id', value: '123' }],
+            },
+          },
+        ]),
+      };
+
+      mockPatientRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
       const result = await service.searchPatients({ identifier: '123' });
 
       expect(result.entries.length).toBe(1);
@@ -154,35 +270,72 @@ describe('FhirService', () => {
     });
 
     it('should paginate results', async () => {
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(5),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([
+          {
+            fhirResource: {
+              resourceType: 'Patient',
+              id: '1',
+              name: [{ given: ['John'], family: 'Doe' }],
+            },
+          },
+        ]),
+      };
+
+      mockPatientRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
       const result = await service.searchPatients({ page: 1, limit: 1 });
 
       expect(result.entries.length).toBe(1);
-      expect(result.total).toBeGreaterThanOrEqual(1);
+      expect(result.total).toBe(5);
+      expect(mockQueryBuilder.skip).toHaveBeenCalledWith(0);
+      expect(mockQueryBuilder.take).toHaveBeenCalledWith(1);
     });
   });
 
   describe('updatePatient', () => {
     it('should update an existing patient', async () => {
-      const createDto: CreatePatientDto = {
+      const existingPatient: Patient = {
+        resourceType: 'Patient',
+        id: 'test-patient-id',
         name: [{ given: ['John'], family: 'Doe' }],
         gender: 'male',
+        meta: {
+          versionId: '1',
+          lastUpdated: new Date().toISOString(),
+        },
       };
 
-      const created = await service.createPatient(createDto);
-      const patientId = created.id || '';
+      const mockEntity = new PatientEntity();
+      mockEntity.id = 'db-uuid';
+      mockEntity.fhirResource = existingPatient;
+      mockEntity.patientId = 'test-patient-id';
+      mockEntity.createdAt = new Date();
+
+      mockPatientRepository.findOne.mockResolvedValue(mockEntity);
+      mockPatientRepository.save.mockImplementation((entity) => Promise.resolve(entity));
+
       const updateDto: UpdatePatientDto = {
         name: [{ given: ['Jane'], family: 'Doe' }],
         gender: 'female',
       };
 
-      const result = await service.updatePatient(patientId, updateDto);
+      const result = await service.updatePatient('test-patient-id', updateDto);
 
       expect(result.gender).toBe('female');
       expect(result.meta?.versionId).toBe('2');
+      expect(mockPatientRepository.save).toHaveBeenCalled();
       expect(logger.info).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException when patient does not exist', async () => {
+      mockPatientRepository.findOne.mockResolvedValue(null);
+
       const updateDto: UpdatePatientDto = {
         name: [{ given: ['Test'], family: 'User' }],
         gender: 'male',
@@ -196,19 +349,29 @@ describe('FhirService', () => {
 
   describe('deletePatient', () => {
     it('should delete a patient', async () => {
-      const createDto: CreatePatientDto = {
+      const mockPatient: Patient = {
+        resourceType: 'Patient',
+        id: 'test-patient-id',
         name: [{ given: ['John'], family: 'Doe' }],
       };
 
-      const created = await service.createPatient(createDto);
-      const patientId = created.id || '';
-      await service.deletePatient(patientId);
+      const mockEntity = new PatientEntity();
+      mockEntity.fhirResource = mockPatient;
+      mockEntity.patientId = 'test-patient-id';
 
-      await expect(service.getPatient(patientId)).rejects.toThrow(NotFoundException);
+      mockPatientRepository.findOne.mockResolvedValue(mockEntity);
+      mockPatientRepository.save.mockResolvedValue(mockEntity);
+
+      await service.deletePatient('test-patient-id');
+
+      expect(mockEntity.deletedAt).toBeDefined();
+      expect(mockPatientRepository.save).toHaveBeenCalled();
       expect(logger.info).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException when patient does not exist', async () => {
+      mockPatientRepository.findOne.mockResolvedValue(null);
+
       await expect(service.deletePatient('non-existent-id')).rejects.toThrow(NotFoundException);
     });
   });
@@ -233,6 +396,24 @@ describe('FhirService', () => {
         active: true,
       };
 
+      const mockPractitioner: Practitioner = {
+        resourceType: 'Practitioner',
+        id: 'test-practitioner-id',
+        meta: {
+          versionId: '1',
+          lastUpdated: new Date().toISOString(),
+        },
+        ...createDto,
+      };
+
+      const mockEntity = new PractitionerEntity();
+      mockEntity.id = 'db-uuid';
+      mockEntity.fhirResource = mockPractitioner;
+      mockEntity.practitionerId = 'test-practitioner-id';
+      mockEntity.active = true;
+
+      mockPractitionerRepository.save.mockResolvedValue(mockEntity);
+
       const result = await service.createPractitioner(createDto);
 
       expect(result).toBeDefined();
@@ -240,59 +421,121 @@ describe('FhirService', () => {
       expect(result.id).toBeDefined();
       expect(result.name).toEqual(createDto.name);
       expect(result.meta?.versionId).toBe('1');
+      expect(mockPractitionerRepository.save).toHaveBeenCalled();
       expect(logger.info).toHaveBeenCalled();
     });
   });
 
   describe('getPractitioner', () => {
     it('should return a practitioner by id', async () => {
-      const createDto: CreatePractitionerDto = {
-        identifier: [{ system: 'http://example.com/license', value: 'MD-123' }],
+      const mockPractitioner: Practitioner = {
+        resourceType: 'Practitioner',
+        id: 'test-practitioner-id',
         name: [{ given: ['Dr. John'], family: 'Doe' }],
       };
 
-      const created = await service.createPractitioner(createDto);
-      const practitionerId = created.id || '';
-      const result = await service.getPractitioner(practitionerId);
+      const mockEntity = new PractitionerEntity();
+      mockEntity.fhirResource = mockPractitioner;
+      mockEntity.practitionerId = 'test-practitioner-id';
+
+      mockPractitionerRepository.findOne.mockResolvedValue(mockEntity);
+
+      const result = await service.getPractitioner('test-practitioner-id');
 
       expect(result).toBeDefined();
-      expect(result.id).toBe(created.id);
-      expect(result.name).toEqual(createDto.name);
+      expect(result.id).toBe('test-practitioner-id');
+      expect(result.name).toEqual(mockPractitioner.name);
     });
 
     it('should throw NotFoundException when practitioner does not exist', async () => {
+      mockPractitionerRepository.findOne.mockResolvedValue(null);
+
       await expect(service.getPractitioner('non-existent-id')).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('searchPractitioners', () => {
-    beforeEach(async () => {
-      await service.createPractitioner({
-        identifier: [{ system: 'http://example.com/license', value: 'MD-123' }],
-        name: [{ given: ['Dr. John'], family: 'Doe' }],
-      });
-      await service.createPractitioner({
-        identifier: [{ system: 'http://example.com/license', value: 'MD-456' }],
-        name: [{ given: ['Dr. Jane'], family: 'Smith' }],
-      });
-    });
-
     it('should return all practitioners when no filters', async () => {
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(2),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([
+          {
+            fhirResource: {
+              resourceType: 'Practitioner',
+              id: '1',
+              name: [{ given: ['Dr. John'], family: 'Doe' }],
+            },
+          },
+          {
+            fhirResource: {
+              resourceType: 'Practitioner',
+              id: '2',
+              name: [{ given: ['Dr. Jane'], family: 'Smith' }],
+            },
+          },
+        ]),
+      };
+
+      mockPractitionerRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
       const result = await service.searchPractitioners({});
 
       expect(result).toBeDefined();
-      expect(result.total).toBeGreaterThan(0);
+      expect(result.total).toBe(2);
       expect(result.entries).toBeDefined();
+      expect(result.entries.length).toBe(2);
     });
 
     it('should filter practitioners by name', async () => {
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(1),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([
+          {
+            fhirResource: {
+              resourceType: 'Practitioner',
+              id: '1',
+              name: [{ given: ['Dr. John'], family: 'Doe' }],
+            },
+          },
+        ]),
+      };
+
+      mockPractitionerRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
       const result = await service.searchPractitioners({ name: 'John' });
 
-      expect(result.entries.length).toBeGreaterThan(0);
+      expect(result.entries.length).toBe(1);
       expect(result.entries[0].name?.[0].given?.[0]).toContain('John');
     });
 
     it('should filter practitioners by identifier', async () => {
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(1),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([
+          {
+            fhirResource: {
+              resourceType: 'Practitioner',
+              id: '1',
+              identifier: [{ system: 'http://example.com/license', value: 'MD-123' }],
+            },
+          },
+        ]),
+      };
+
+      mockPractitionerRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
       const result = await service.searchPractitioners({ identifier: 'MD-123' });
 
       expect(result.entries.length).toBe(1);
@@ -300,37 +543,72 @@ describe('FhirService', () => {
     });
 
     it('should paginate results', async () => {
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(5),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([
+          {
+            fhirResource: {
+              resourceType: 'Practitioner',
+              id: '1',
+              name: [{ given: ['Dr. John'], family: 'Doe' }],
+            },
+          },
+        ]),
+      };
+
+      mockPractitionerRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
       const result = await service.searchPractitioners({ page: 1, limit: 1 });
 
       expect(result.entries.length).toBe(1);
-      expect(result.total).toBeGreaterThanOrEqual(1);
+      expect(result.total).toBe(5);
     });
   });
 
   describe('updatePractitioner', () => {
     it('should update an existing practitioner', async () => {
-      const createDto: CreatePractitionerDto = {
+      const existingPractitioner: Practitioner = {
+        resourceType: 'Practitioner',
+        id: 'test-practitioner-id',
         identifier: [{ system: 'http://example.com/license', value: 'MD-123' }],
         name: [{ given: ['Dr. John'], family: 'Doe' }],
         active: true,
+        meta: {
+          versionId: '1',
+          lastUpdated: new Date().toISOString(),
+        },
       };
 
-      const created = await service.createPractitioner(createDto);
-      const practitionerId = created.id || '';
+      const mockEntity = new PractitionerEntity();
+      mockEntity.id = 'db-uuid';
+      mockEntity.fhirResource = existingPractitioner;
+      mockEntity.practitionerId = 'test-practitioner-id';
+      mockEntity.createdAt = new Date();
+
+      mockPractitionerRepository.findOne.mockResolvedValue(mockEntity);
+      mockPractitionerRepository.save.mockImplementation((entity) => Promise.resolve(entity));
+
       const updateDto: UpdatePractitionerDto = {
         identifier: [{ system: 'http://example.com/license', value: 'MD-123' }],
         name: [{ given: ['Dr. Jane'], family: 'Smith' }],
         active: false,
       };
 
-      const result = await service.updatePractitioner(practitionerId, updateDto);
+      const result = await service.updatePractitioner('test-practitioner-id', updateDto);
 
       expect(result.active).toBe(false);
       expect(result.meta?.versionId).toBe('2');
+      expect(mockPractitionerRepository.save).toHaveBeenCalled();
       expect(logger.info).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException when practitioner does not exist', async () => {
+      mockPractitionerRepository.findOne.mockResolvedValue(null);
+
       const updateDto: UpdatePractitionerDto = {
         identifier: [{ system: 'http://example.com/license', value: 'MD-123' }],
         name: [{ given: ['Dr. Test'], family: 'User' }],
@@ -344,20 +622,29 @@ describe('FhirService', () => {
 
   describe('deletePractitioner', () => {
     it('should delete a practitioner', async () => {
-      const createDto: CreatePractitionerDto = {
-        identifier: [{ system: 'http://example.com/license', value: 'MD-123' }],
+      const mockPractitioner: Practitioner = {
+        resourceType: 'Practitioner',
+        id: 'test-practitioner-id',
         name: [{ given: ['Dr. John'], family: 'Doe' }],
       };
 
-      const created = await service.createPractitioner(createDto);
-      const practitionerId = created.id || '';
-      await service.deletePractitioner(practitionerId);
+      const mockEntity = new PractitionerEntity();
+      mockEntity.fhirResource = mockPractitioner;
+      mockEntity.practitionerId = 'test-practitioner-id';
 
-      await expect(service.getPractitioner(practitionerId)).rejects.toThrow(NotFoundException);
+      mockPractitionerRepository.findOne.mockResolvedValue(mockEntity);
+      mockPractitionerRepository.save.mockResolvedValue(mockEntity);
+
+      await service.deletePractitioner('test-practitioner-id');
+
+      expect(mockEntity.deletedAt).toBeDefined();
+      expect(mockPractitionerRepository.save).toHaveBeenCalled();
       expect(logger.info).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException when practitioner does not exist', async () => {
+      mockPractitionerRepository.findOne.mockResolvedValue(null);
+
       await expect(service.deletePractitioner('non-existent-id')).rejects.toThrow(
         NotFoundException,
       );
@@ -368,11 +655,6 @@ describe('FhirService', () => {
 
   describe('createEncounter', () => {
     it('should create a new encounter', async () => {
-      // First create a patient for the encounter
-      const patient = await service.createPatient({
-        name: [{ given: ['John'], family: 'Doe' }],
-      });
-
       const createDto: CreateEncounterDto = {
         status: 'finished',
         class: {
@@ -381,7 +663,7 @@ describe('FhirService', () => {
           display: 'ambulatory',
         },
         subject: {
-          reference: `Patient/${patient.id}`,
+          reference: 'Patient/test-patient-id',
           display: 'John Doe',
         },
         period: {
@@ -390,6 +672,25 @@ describe('FhirService', () => {
         },
       };
 
+      const mockEncounter: Encounter = {
+        resourceType: 'Encounter',
+        id: 'test-encounter-id',
+        meta: {
+          versionId: '1',
+          lastUpdated: new Date().toISOString(),
+        },
+        ...createDto,
+      };
+
+      const mockEntity = new EncounterEntity();
+      mockEntity.id = 'db-uuid';
+      mockEntity.fhirResource = mockEncounter;
+      mockEntity.encounterId = 'test-encounter-id';
+      mockEntity.status = 'finished';
+      mockEntity.subjectReference = 'Patient/test-patient-id';
+
+      mockEncounterRepository.save.mockResolvedValue(mockEntity);
+
       const result = await service.createEncounter(createDto);
 
       expect(result).toBeDefined();
@@ -397,142 +698,247 @@ describe('FhirService', () => {
       expect(result.id).toBeDefined();
       expect(result.status).toBe('finished');
       expect(result.meta?.versionId).toBe('1');
+      expect(mockEncounterRepository.save).toHaveBeenCalled();
       expect(logger.info).toHaveBeenCalled();
     });
   });
 
   describe('getEncounter', () => {
     it('should return an encounter by id', async () => {
-      const patient = await service.createPatient({
-        name: [{ given: ['John'], family: 'Doe' }],
-      });
-
-      const createDto: CreateEncounterDto = {
+      const mockEncounter: Encounter = {
+        resourceType: 'Encounter',
+        id: 'test-encounter-id',
         status: 'finished',
         class: {
           code: 'AMB',
           display: 'ambulatory',
         },
         subject: {
-          reference: `Patient/${patient.id}`,
-        },
-        period: {
-          start: '2024-01-15T10:00:00Z',
+          reference: 'Patient/test-patient-id',
         },
       };
 
-      const created = await service.createEncounter(createDto);
-      const encounterId = created.id || '';
-      const result = await service.getEncounter(encounterId);
+      const mockEntity = new EncounterEntity();
+      mockEntity.fhirResource = mockEncounter;
+      mockEntity.encounterId = 'test-encounter-id';
+
+      mockEncounterRepository.findOne.mockResolvedValue(mockEntity);
+
+      const result = await service.getEncounter('test-encounter-id');
 
       expect(result).toBeDefined();
-      expect(result.id).toBe(created.id);
+      expect(result.id).toBe('test-encounter-id');
       expect(result.status).toBe('finished');
     });
 
     it('should throw NotFoundException when encounter does not exist', async () => {
+      mockEncounterRepository.findOne.mockResolvedValue(null);
+
       await expect(service.getEncounter('non-existent-id')).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('searchEncounters', () => {
-    let patientId: string;
-
-    beforeEach(async () => {
-      const patient = await service.createPatient({
-        name: [{ given: ['John'], family: 'Doe' }],
-      });
-      patientId = patient.id || '';
-
-      await service.createEncounter({
-        status: 'finished',
-        class: { code: 'AMB', display: 'ambulatory' },
-        subject: { reference: `Patient/${patientId}` },
-        period: { start: '2024-01-15T10:00:00Z', end: '2024-01-15T10:30:00Z' },
-      });
-
-      await service.createEncounter({
-        status: 'planned',
-        class: { code: 'AMB', display: 'ambulatory' },
-        subject: { reference: `Patient/${patientId}` },
-        period: { start: '2024-01-20T14:00:00Z' },
-      });
-    });
-
     it('should return all encounters when no filters', async () => {
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(2),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([
+          {
+            fhirResource: {
+              resourceType: 'Encounter',
+              id: '1',
+              status: 'finished',
+              subject: { reference: 'Patient/1' },
+            },
+          },
+          {
+            fhirResource: {
+              resourceType: 'Encounter',
+              id: '2',
+              status: 'planned',
+              subject: { reference: 'Patient/1' },
+            },
+          },
+        ]),
+      };
+
+      mockEncounterRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
       const result = await service.searchEncounters({});
 
       expect(result).toBeDefined();
-      expect(result.total).toBeGreaterThan(0);
+      expect(result.total).toBe(2);
       expect(result.entries).toBeDefined();
+      expect(result.entries.length).toBe(2);
     });
 
     it('should filter encounters by subject (patient)', async () => {
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(1),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([
+          {
+            fhirResource: {
+              resourceType: 'Encounter',
+              id: '1',
+              status: 'finished',
+              subject: { reference: 'Patient/test-patient-id' },
+            },
+          },
+        ]),
+      };
+
+      mockEncounterRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
       const result = await service.searchEncounters({
-        subject: `Patient/${patientId}`,
+        subject: 'Patient/test-patient-id',
       });
 
-      expect(result.entries.length).toBeGreaterThan(0);
-      expect(result.entries[0].subject?.reference).toContain(patientId);
+      expect(result.entries.length).toBe(1);
+      expect(result.entries[0].subject?.reference).toContain('test-patient-id');
     });
 
     it('should filter encounters by status', async () => {
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(1),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([
+          {
+            fhirResource: {
+              resourceType: 'Encounter',
+              id: '1',
+              status: 'finished',
+              subject: { reference: 'Patient/1' },
+            },
+          },
+        ]),
+      };
+
+      mockEncounterRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
       const result = await service.searchEncounters({ status: 'finished' });
 
-      expect(result.entries.length).toBeGreaterThan(0);
+      expect(result.entries.length).toBe(1);
       expect(result.entries[0].status).toBe('finished');
     });
 
     it('should filter encounters by date', async () => {
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(1),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([
+          {
+            fhirResource: {
+              resourceType: 'Encounter',
+              id: '1',
+              status: 'finished',
+              period: { start: '2024-01-15T10:00:00Z' },
+            },
+          },
+        ]),
+      };
+
+      mockEncounterRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
       const result = await service.searchEncounters({ date: '2024-01-15' });
 
-      expect(result.entries.length).toBeGreaterThan(0);
+      expect(result.entries.length).toBe(1);
       if (result.entries.length > 0) {
         expect(result.entries[0].period?.start).toContain('2024-01-15');
       }
     });
 
     it('should paginate results', async () => {
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(5),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([
+          {
+            fhirResource: {
+              resourceType: 'Encounter',
+              id: '1',
+              status: 'finished',
+            },
+          },
+        ]),
+      };
+
+      mockEncounterRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
       const result = await service.searchEncounters({ page: 1, limit: 1 });
 
       expect(result.entries.length).toBe(1);
-      expect(result.total).toBeGreaterThanOrEqual(1);
+      expect(result.total).toBe(5);
     });
   });
 
   describe('updateEncounter', () => {
     it('should update an existing encounter', async () => {
-      const patient = await service.createPatient({
-        name: [{ given: ['John'], family: 'Doe' }],
-      });
-
-      const createDto: CreateEncounterDto = {
+      const existingEncounter: Encounter = {
+        resourceType: 'Encounter',
+        id: 'test-encounter-id',
         status: 'in-progress',
         class: { code: 'AMB', display: 'ambulatory' },
-        subject: { reference: `Patient/${patient.id}` },
+        subject: { reference: 'Patient/test-patient-id' },
         period: { start: '2024-01-15T10:00:00Z' },
+        meta: {
+          versionId: '1',
+          lastUpdated: new Date().toISOString(),
+        },
       };
 
-      const created = await service.createEncounter(createDto);
-      const encounterId = created.id || '';
+      const mockEntity = new EncounterEntity();
+      mockEntity.id = 'db-uuid';
+      mockEntity.fhirResource = existingEncounter;
+      mockEntity.encounterId = 'test-encounter-id';
+      mockEntity.createdAt = new Date();
+
+      mockEncounterRepository.findOne.mockResolvedValue(mockEntity);
+      mockEncounterRepository.save.mockImplementation((entity) => Promise.resolve(entity));
+
       const updateDto: UpdateEncounterDto = {
-        ...createDto,
         status: 'finished',
+        class: {
+          code: 'AMB',
+          display: 'ambulatory',
+        },
+        subject: {
+          reference: 'Patient/test-patient-id',
+        },
         period: {
           start: '2024-01-15T10:00:00Z',
           end: '2024-01-15T10:30:00Z',
         },
       };
 
-      const result = await service.updateEncounter(encounterId, updateDto);
+      const result = await service.updateEncounter('test-encounter-id', updateDto);
 
       expect(result.status).toBe('finished');
       expect(result.period?.end).toBeDefined();
       expect(result.meta?.versionId).toBe('2');
+      expect(mockEncounterRepository.save).toHaveBeenCalled();
       expect(logger.info).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException when encounter does not exist', async () => {
+      mockEncounterRepository.findOne.mockResolvedValue(null);
+
       const updateDto: UpdateEncounterDto = {
         status: 'finished',
         class: { code: 'AMB' },
@@ -548,26 +954,34 @@ describe('FhirService', () => {
 
   describe('deleteEncounter', () => {
     it('should delete an encounter', async () => {
-      const patient = await service.createPatient({
-        name: [{ given: ['John'], family: 'Doe' }],
-      });
-
-      const createDto: CreateEncounterDto = {
+      const mockEncounter: Encounter = {
+        resourceType: 'Encounter',
+        id: 'test-encounter-id',
         status: 'finished',
-        class: { code: 'AMB', display: 'ambulatory' },
-        subject: { reference: `Patient/${patient.id}` },
-        period: { start: '2024-01-15T10:00:00Z' },
+        class: {
+          code: 'AMB',
+          display: 'ambulatory',
+        },
+        subject: { reference: 'Patient/test-patient-id' },
       };
 
-      const created = await service.createEncounter(createDto);
-      const encounterId = created.id || '';
-      await service.deleteEncounter(encounterId);
+      const mockEntity = new EncounterEntity();
+      mockEntity.fhirResource = mockEncounter;
+      mockEntity.encounterId = 'test-encounter-id';
 
-      await expect(service.getEncounter(encounterId)).rejects.toThrow(NotFoundException);
+      mockEncounterRepository.findOne.mockResolvedValue(mockEntity);
+      mockEncounterRepository.save.mockResolvedValue(mockEntity);
+
+      await service.deleteEncounter('test-encounter-id');
+
+      expect(mockEntity.deletedAt).toBeDefined();
+      expect(mockEncounterRepository.save).toHaveBeenCalled();
       expect(logger.info).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException when encounter does not exist', async () => {
+      mockEncounterRepository.findOne.mockResolvedValue(null);
+
       await expect(service.deleteEncounter('non-existent-id')).rejects.toThrow(NotFoundException);
     });
   });

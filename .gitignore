@@ -6,6 +6,7 @@ node_modules/
 # Testing
 coverage/
 .nyc_output/
+.jest-cache/
 
 # Production
 dist/

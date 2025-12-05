@@ -910,16 +910,17 @@ Fase 1.8: Documentar setup de Keycloak
 
 **Tareas detalladas con descripción:**
 
-- [ ] **1.1** Agregar Keycloak a docker-compose.yml
-- [ ] **1.2** Configurar variables de entorno
-- [ ] **1.3** Crear script de inicialización
-- [ ] **1.4** Crear Realm "carecore"
-- [ ] **1.5** Configurar cliente "carecore-api"
-- [ ] **1.6** Configurar cliente "carecore-web"
-- [ ] **1.7** Definir roles base
-- [ ] **1.8** Documentar setup
+- [x] **1.1** Agregar Keycloak a docker-compose.yml ✅
+- [x] **1.2** Configurar variables de entorno ✅
+- [x] **1.3** Crear script de inicialización ✅
+- [x] **1.4** Crear Realm "carecore" ✅
+- [x] **1.5** Configurar cliente "carecore-api" ✅
+- [x] **1.6** Configurar cliente "carecore-web" ✅
+- [x] **1.7** Definir roles base ✅
+- [x] **1.8** Documentar setup ✅
 
 ### Fase 2: Integración NestJS
+- [ ] **2.0** Definir estructura de carpetas y tipos FHIR (Patient, Practitioner, Encounter, Consent, DocumentReference)
 - [ ] **2.1** Crear módulo `auth`
 - [ ] **2.2** Instalar dependencias Passport
 - [ ] **2.3** Implementar JWT strategy
@@ -985,7 +986,7 @@ Fase 1.8: Documentar setup de Keycloak
 | Fase | Tareas | Tiempo Estimado |
 |------|--------|-----------------|
 | Fase 1: Setup Keycloak | 8 tareas | 3-5 días |
-| Fase 2: Integración NestJS | 16 tareas | 5-7 días |
+| Fase 2: Integración NestJS | 17 tareas | 5-7 días |
 | Fase 3: Funcionalidades Avanzadas | 13 tareas | 5-7 días |
 | Fase 4: SMART on FHIR | 9 tareas | 4-6 días |
 | Fase 5: Testing y Documentación | 13 tareas | 4-6 días |

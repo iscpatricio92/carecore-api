@@ -150,21 +150,29 @@ Creamos una plataforma móvil y web que centraliza el perfil médico del pacient
 ```
 /src
   /modules
-    /fhir          ✅ Implementado
-    /patients      ✅ Implementado
-    /practitioners ⏳ (to be implemented)
-    /encounters    ⏳ (to be implemented)
-    /documents     ⏳ (to be implemented)
-    /consents      ⏳ (to be implemented)
+    /fhir          ✅ Implementado (FHIR endpoints y metadata)
+    /patients      ✅ Implementado (CRUD completo)
+    /practitioners ✅ Implementado (CRUD completo)
+    /encounters    ✅ Implementado (CRUD completo)
+    /documents     ✅ Implementado (CRUD completo)
+    /consents      ✅ Implementado (CRUD completo)
     /audit         ⏳ (to be implemented)
     /ai            ⏳ (to be implemented)
+  /entities        ✅ Implementado (TypeORM entities para FHIR resources)
+    /patient.entity.ts
+    /practitioner.entity.ts
+    /encounter.entity.ts
+    /consent.entity.ts
+    /document-reference.entity.ts
   /common
-    /dto           ✅ Implementado
+    /dto           ✅ Implementado (DTOs para todos los recursos FHIR)
+    /interfaces    ✅ Implementado (TypeScript interfaces FHIR)
     /filters       ✅ Implementado
     /interceptors  ✅ Implementado
     /middleware    ✅ Implementado
-    /services      ✅ Implementado
+    /services      ✅ Implementado (FhirService, EncryptionService, etc.)
   /config          ✅ Implementado
+  /migrations      ✅ Implementado (TypeORM migrations)
 ```
 
 **Stack Base:**
@@ -562,26 +570,63 @@ carecore-api/
 │   ├── main.ts                 # Entry point
 │   ├── app.module.ts           # Main module
 │   ├── config/                 # Configurations
-│   │   ├── database.config.ts
-│   │   └── fhir.config.ts
+│   │   ├── database.config.ts  # TypeORM database configuration
+│   │   ├── data-source.ts      # TypeORM CLI data source
+│   │   └── fhir.config.ts      # FHIR configuration
+│   ├── entities/               # TypeORM entities (FHIR resources)
+│   │   ├── patient.entity.ts
+│   │   ├── practitioner.entity.ts
+│   │   ├── encounter.entity.ts
+│   │   ├── consent.entity.ts
+│   │   └── document-reference.entity.ts
+│   ├── migrations/             # TypeORM migrations
+│   │   ├── EnablePgcrypto*.ts
+│   │   └── CreateFhirEntities*.ts
 │   ├── common/                 # Shared utilities
-│   │   ├── dto/
-│   │   ├── filters/
-│   │   └── interceptors/
+│   │   ├── dto/                # Data Transfer Objects
+│   │   │   ├── fhir-patient.dto.ts
+│   │   │   ├── fhir-practitioner.dto.ts
+│   │   │   ├── fhir-encounter.dto.ts
+│   │   │   ├── fhir-consent.dto.ts
+│   │   │   └── fhir-document-reference.dto.ts
+│   │   ├── interfaces/         # TypeScript interfaces
+│   │   │   └── fhir.interface.ts
+│   │   ├── filters/           # Exception filters
+│   │   ├── interceptors/      # Request/Response interceptors
+│   │   ├── middleware/        # Custom middleware
+│   │   └── services/          # Shared services
+│   │       ├── encryption.service.ts
+│   │       └── fhir-error.service.ts
 │   └── modules/                # Business modules
-│       ├── fhir/
-│       ├── patients/
-│       ├── practitioners/      # (to be implemented)
-│       ├── encounters/         # (to be implemented)
-│       ├── documents/          # (to be implemented)
-│       ├── consents/           # (to be implemented)
+│       ├── fhir/               # FHIR endpoints and metadata
+│       ├── patients/           # Patient module (CRUD)
+│       ├── practitioners/      # Practitioner module (CRUD)
+│       ├── encounters/         # Encounter module (CRUD)
+│       ├── documents/          # DocumentReference module (CRUD)
+│       ├── consents/           # Consent module (CRUD)
 │       ├── audit/              # (to be implemented)
 │       └── ai/                 # (to be implemented)
+├── keycloak/                   # Keycloak configuration
+│   ├── init/                   # Initialization scripts
+│   └── realms/                 # Realm exports
+├── docs/                       # Documentation
+│   ├── tasks/                  # Task documentation (temporary)
+│   └── *.md                    # Permanent documentation
+├── scripts/                    # Utility scripts
+│   ├── verify-encryption.ts
+│   └── create-github-tasks-*.js
 ├── docker-compose.yml          # Docker configuration
 ├── .eslintrc.js               # ESLint configuration
 ├── .prettierrc                # Prettier configuration
 ├── tsconfig.json              # TypeScript configuration
 └── package.json               # Dependencies
+```
+
+**Estructura de Datos:**
+- **Entidades TypeORM**: Almacenan recursos FHIR completos en JSONB (PostgreSQL)
+- **Campos indexados**: Campos comunes extraídos para búsquedas eficientes (status, active, references)
+- **Soft Delete**: Todos los recursos usan `deletedAt` para mantener historial
+- **Migraciones**: TypeORM migrations para versionado de esquema
 ```
 
 ---
@@ -620,13 +665,13 @@ carecore-api/
 The API supports the following FHIR R4 resources:
 
 **Implementados:**
-- ✅ Patient
-- ✅ Practitioner
-- ✅ Encounter
+- ✅ Patient (CRUD completo, persistencia en BD)
+- ✅ Practitioner (CRUD completo, persistencia en BD)
+- ✅ Encounter (CRUD completo, persistencia en BD)
+- ✅ DocumentReference (CRUD completo, persistencia en BD)
+- ✅ Consent (CRUD completo, persistencia en BD)
 
 **Pendientes:**
-- ⏳ DocumentReference
-- ⏳ Consent
 - ⏳ Observation
 - ⏳ Condition
 - ⏳ Medication
