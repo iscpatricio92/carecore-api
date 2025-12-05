@@ -586,10 +586,10 @@ async login(@Res() res: Response) {
 Implementar el endpoint de callback que recibe el código de autorización de Keycloak y obtiene los tokens.
 
 ## Tareas
-- [ ] Implementar método `callback()` en `AuthController`
-- [ ] Validar parámetro `state` (CSRF protection)
-- [ ] Extraer `code` del query parameter
-- [ ] Intercambiar código por tokens:
+- [x] Implementar método `callback()` en `AuthController`
+- [x] Validar parámetro `state` (CSRF protection)
+- [x] Extraer `code` del query parameter
+- [x] Intercambiar código por tokens:
   - Hacer POST a `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token`
   - Parámetros:
     - `grant_type`: `authorization_code`
@@ -597,10 +597,10 @@ Implementar el endpoint de callback que recibe el código de autorización de Ke
     - `client_id`: `KEYCLOAK_CLIENT_ID`
     - `client_secret`: `KEYCLOAK_CLIENT_SECRET`
     - `redirect_uri`: `${API_URL}/api/auth/callback`
-- [ ] Guardar tokens en cookies HTTP-only (o retornar en response)
-- [ ] Redirigir al frontend con tokens
-- [ ] Manejar errores (código inválido, etc.)
-- [ ] Agregar tests
+- [x] Guardar tokens en cookies HTTP-only (o retornar en response)
+- [x] Redirigir al frontend con tokens
+- [x] Manejar errores (código inválido, etc.)
+- [x] Agregar tests
 
 ## Implementación Esperada
 ```typescript
@@ -620,11 +620,11 @@ async callback(
 ```
 
 ## Criterios de Aceptación
-- [ ] Callback recibe código correctamente
-- [ ] Intercambia código por tokens
-- [ ] Tokens guardados de forma segura
-- [ ] Maneja errores correctamente
-- [ ] Tests pasando
+- [x] Callback recibe código correctamente
+- [x] Intercambia código por tokens
+- [x] Tokens guardados de forma segura
+- [x] Maneja errores correctamente
+- [x] Tests pasando
 
 ## Referencias
 - [OAuth2 Token Exchange](https://oauth.net/2/grant-types/authorization-code/)

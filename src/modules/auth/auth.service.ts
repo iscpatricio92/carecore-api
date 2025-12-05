@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PinoLogger } from 'nestjs-pino';
 import { randomBytes } from 'node:crypto';
@@ -81,22 +81,226 @@ export class AuthService {
   }
 
   /**
-   * Handle OAuth2 callback from Keycloak
+   * Validate state token for CSRF protection
+   * @param receivedState State token received from Keycloak
+   * @param storedState State token stored in cookie
+   * @throws UnauthorizedException if state tokens don't match
+   */
+  validateStateToken(receivedState: string, storedState: string | undefined): void {
+    if (!receivedState || !storedState) {
+      this.logger.warn('State token missing in callback');
+      throw new UnauthorizedException('Invalid state token');
+    }
+
+    if (receivedState !== storedState) {
+      this.logger.warn('State token mismatch - possible CSRF attack');
+      throw new UnauthorizedException('State token mismatch');
+    }
+
+    this.logger.debug('State token validated successfully');
+  }
+
+  /**
+   * Exchange authorization code for tokens
    * @param code Authorization code from Keycloak
-   * @param state CSRF state token
+   * @param redirectUri Callback URL used in the authorization request
    * @returns Tokens (access, refresh) and user information
    */
-  async handleCallback(
-    _code: string,
-    _state: string,
+  async exchangeCodeForTokens(
+    code: string,
+    redirectUri: string,
   ): Promise<{
     accessToken: string;
     refreshToken: string;
-    user: unknown;
+    expiresIn: number;
+    tokenType: string;
   }> {
-    // TODO: Implement in Tarea 9
-    this.logger.warn('handleCallback() not yet implemented');
-    throw new Error('Not implemented');
+    const keycloakUrl = this.configService.get<string>('KEYCLOAK_URL');
+    const keycloakRealm = this.configService.get<string>('KEYCLOAK_REALM') || 'carecore';
+    const clientId = this.configService.get<string>('KEYCLOAK_CLIENT_ID');
+    const clientSecret = this.configService.get<string>('KEYCLOAK_CLIENT_SECRET');
+
+    // Validate required configuration
+    if (!keycloakUrl) {
+      this.logger.error('KEYCLOAK_URL is not configured');
+      throw new BadRequestException('Keycloak URL is not configured');
+    }
+
+    if (!clientId) {
+      this.logger.error('KEYCLOAK_CLIENT_ID is not configured');
+      throw new BadRequestException('Keycloak client ID is not configured');
+    }
+
+    if (!clientSecret) {
+      this.logger.error('KEYCLOAK_CLIENT_SECRET is not configured');
+      throw new BadRequestException('Keycloak client secret is not configured');
+    }
+
+    if (!code) {
+      this.logger.error('Authorization code is required');
+      throw new BadRequestException('Authorization code is required');
+    }
+
+    // Build token endpoint URL
+    const tokenUrl = `${keycloakUrl}/realms/${keycloakRealm}/protocol/openid-connect/token`;
+
+    // Prepare request body
+    const body = new URLSearchParams();
+    body.append('grant_type', 'authorization_code');
+    body.append('code', code);
+    body.append('client_id', clientId);
+    body.append('client_secret', clientSecret);
+    body.append('redirect_uri', redirectUri);
+
+    try {
+      this.logger.debug({ tokenUrl, clientId }, 'Exchanging authorization code for tokens');
+
+      const response = await fetch(tokenUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: body.toString(),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        this.logger.error(
+          { status: response.status, error: errorText },
+          'Failed to exchange code for tokens',
+        );
+        throw new UnauthorizedException('Failed to exchange authorization code for tokens');
+      }
+
+      const tokenData = await response.json();
+
+      if (!tokenData.access_token) {
+        this.logger.error({ tokenData }, 'Token response missing access_token');
+        throw new UnauthorizedException('Invalid token response from Keycloak');
+      }
+
+      this.logger.debug('Successfully exchanged code for tokens');
+
+      return {
+        accessToken: tokenData.access_token,
+        refreshToken: tokenData.refresh_token || '',
+        expiresIn: tokenData.expires_in || 3600,
+        tokenType: tokenData.token_type || 'Bearer',
+      };
+    } catch (error) {
+      if (error instanceof UnauthorizedException || error instanceof BadRequestException) {
+        throw error;
+      }
+
+      this.logger.error({ error }, 'Error exchanging code for tokens');
+      throw new UnauthorizedException('Failed to exchange authorization code for tokens');
+    }
+  }
+
+  /**
+   * Get user information from Keycloak using access token
+   * @param accessToken Access token from Keycloak
+   * @returns User information
+   */
+  async getUserInfoFromKeycloak(accessToken: string): Promise<{
+    id: string;
+    username: string;
+    email?: string;
+    name?: string;
+    givenName?: string;
+    familyName?: string;
+  }> {
+    const keycloakUrl = this.configService.get<string>('KEYCLOAK_URL');
+    const keycloakRealm = this.configService.get<string>('KEYCLOAK_REALM') || 'carecore';
+
+    if (!keycloakUrl) {
+      throw new BadRequestException('Keycloak URL is not configured');
+    }
+
+    const userInfoUrl = `${keycloakUrl}/realms/${keycloakRealm}/protocol/openid-connect/userinfo`;
+
+    try {
+      const response = await fetch(userInfoUrl, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        this.logger.error(
+          { status: response.status, error: errorText },
+          'Failed to get user info from Keycloak',
+        );
+        throw new UnauthorizedException('Failed to get user information');
+      }
+
+      const userInfo = await response.json();
+
+      return {
+        id: userInfo.sub || '',
+        username: userInfo.preferred_username || userInfo.sub || '',
+        email: userInfo.email,
+        name: userInfo.name,
+        givenName: userInfo.given_name,
+        familyName: userInfo.family_name,
+      };
+    } catch (error) {
+      if (error instanceof UnauthorizedException || error instanceof BadRequestException) {
+        throw error;
+      }
+
+      this.logger.error({ error }, 'Error getting user info from Keycloak');
+      throw new UnauthorizedException('Failed to get user information');
+    }
+  }
+
+  /**
+   * Handle OAuth2 callback from Keycloak
+   * @param code Authorization code from Keycloak
+   * @param state CSRF state token
+   * @param storedState State token stored in cookie
+   * @param redirectUri Callback URL used in the authorization request
+   * @returns Tokens (access, refresh) and user information
+   */
+  async handleCallback(
+    code: string,
+    state: string,
+    storedState: string | undefined,
+    redirectUri: string,
+  ): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    expiresIn: number;
+    tokenType: string;
+    user: {
+      id: string;
+      username: string;
+      email?: string;
+      name?: string;
+      givenName?: string;
+      familyName?: string;
+    };
+  }> {
+    // Validate state token (CSRF protection)
+    this.validateStateToken(state, storedState);
+
+    // Exchange authorization code for tokens
+    const tokens = await this.exchangeCodeForTokens(code, redirectUri);
+
+    // Get user information from Keycloak
+    const user = await this.getUserInfoFromKeycloak(tokens.accessToken);
+
+    this.logger.debug(
+      { userId: user.id, username: user.username },
+      'Callback handled successfully',
+    );
+
+    return {
+      ...tokens,
+      user,
+    };
   }
 
   /**

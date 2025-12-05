@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { HttpStatus, BadRequestException } from '@nestjs/common';
+import { HttpStatus, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { ConfigService } from '@nestjs/config';
 import { PinoLogger } from 'nestjs-pino';
 
 import { AuthController } from './auth.controller';
@@ -17,6 +18,10 @@ describe('AuthController', () => {
     refreshToken: jest.fn(),
     logout: jest.fn(),
     getUserInfo: jest.fn(),
+  };
+
+  const mockConfigService = {
+    get: jest.fn(),
   };
 
   const mockLogger = {
@@ -43,6 +48,10 @@ describe('AuthController', () => {
         {
           provide: AuthService,
           useValue: mockAuthService,
+        },
+        {
+          provide: ConfigService,
+          useValue: mockConfigService,
         },
         {
           provide: PinoLogger,
@@ -154,53 +163,139 @@ describe('AuthController', () => {
   });
 
   describe('callback', () => {
-    it('should handle callback successfully', async () => {
+    beforeEach(() => {
+      mockConfigService.get.mockImplementation((key: string) => {
+        if (key === 'FRONTEND_URL' || key === 'CLIENT_URL') {
+          return 'http://localhost:3001';
+        }
+        return null;
+      });
+    });
+
+    it('should handle callback successfully and redirect to frontend', async () => {
+      const mockRequest = {
+        protocol: 'http',
+        get: jest.fn().mockReturnValue('localhost:3000'),
+        cookies: {
+          oauth_state: 'state123',
+        },
+      } as unknown as Request;
+
       const mockResponse = {
+        cookie: jest.fn(),
+        clearCookie: jest.fn(),
+        redirect: jest.fn(),
         status: jest.fn().mockReturnThis(),
         json: jest.fn(),
       } as unknown as Response;
 
       mockAuthService.handleCallback.mockResolvedValue({
-        accessToken: 'token',
-        refreshToken: 'refresh',
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+        expiresIn: 3600,
+        tokenType: 'Bearer',
         user: mockUser,
       });
 
-      await controller.callback('code123', 'state123', mockResponse);
+      await controller.callback('code123', 'state123', mockRequest, mockResponse);
 
-      expect(mockAuthService.handleCallback).toHaveBeenCalledWith('code123', 'state123');
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.OK);
+      expect(mockAuthService.handleCallback).toHaveBeenCalledWith(
+        'code123',
+        'state123',
+        'state123',
+        'http://localhost:3000/api/auth/callback',
+      );
+      expect(mockResponse.cookie).toHaveBeenCalledWith(
+        'access_token',
+        'access-token',
+        expect.objectContaining({
+          httpOnly: true,
+          secure: false,
+          sameSite: 'lax',
+          maxAge: 3600000,
+          path: '/',
+        }),
+      );
+      expect(mockResponse.cookie).toHaveBeenCalledWith(
+        'refresh_token',
+        'refresh-token',
+        expect.objectContaining({
+          httpOnly: true,
+          secure: false,
+          sameSite: 'lax',
+          path: '/',
+        }),
+      );
+      expect(mockResponse.clearCookie).toHaveBeenCalledWith('oauth_state', {
+        path: '/api/auth',
+      });
+      expect(mockResponse.redirect).toHaveBeenCalledWith('http://localhost:3001?auth=success');
     });
 
     it('should return error if code is missing', async () => {
+      const mockRequest = {
+        protocol: 'http',
+        get: jest.fn().mockReturnValue('localhost:3000'),
+      } as unknown as Request;
+
       const mockResponse = {
         status: jest.fn().mockReturnThis(),
         json: jest.fn(),
       } as unknown as Response;
 
-      await controller.callback('', 'state123', mockResponse);
+      await controller.callback('', 'state123', mockRequest, mockResponse);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
       expect(mockResponse.json).toHaveBeenCalledWith({
-        message: 'Authorization code is required',
+        message: 'Authorization code and state are required',
       });
     });
 
-    it('should handle callback errors', async () => {
+    it('should return error if state is missing', async () => {
+      const mockRequest = {
+        protocol: 'http',
+        get: jest.fn().mockReturnValue('localhost:3000'),
+      } as unknown as Request;
+
       const mockResponse = {
         status: jest.fn().mockReturnThis(),
         json: jest.fn(),
       } as unknown as Response;
 
-      mockAuthService.handleCallback.mockRejectedValue(new Error('Callback failed'));
+      await controller.callback('code123', '', mockRequest, mockResponse);
 
-      await controller.callback('code123', 'state123', mockResponse);
-
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
       expect(mockResponse.json).toHaveBeenCalledWith({
-        message: 'Failed to process authentication callback',
-        error: 'Callback failed',
+        message: 'Authorization code and state are required',
       });
+    });
+
+    it('should redirect to frontend with error on callback failure', async () => {
+      const mockRequest = {
+        protocol: 'http',
+        get: jest.fn().mockReturnValue('localhost:3000'),
+        cookies: {
+          oauth_state: 'state123',
+        },
+      } as unknown as Request;
+
+      const mockResponse = {
+        cookie: jest.fn(),
+        clearCookie: jest.fn(),
+        redirect: jest.fn(),
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      } as unknown as Response;
+
+      mockAuthService.handleCallback.mockRejectedValue(
+        new UnauthorizedException('Invalid state token'),
+      );
+
+      await controller.callback('code123', 'state123', mockRequest, mockResponse);
+
+      expect(mockResponse.redirect).toHaveBeenCalledWith(
+        expect.stringContaining('http://localhost:3001?auth=error&message='),
+      );
     });
   });
 

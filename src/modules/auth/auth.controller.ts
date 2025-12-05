@@ -10,6 +10,7 @@ import {
   Body,
   BadRequestException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   ApiTags,
   ApiOperation,
@@ -37,6 +38,7 @@ import { User } from './interfaces/user.interface';
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
+    private readonly configService: ConfigService,
     private readonly logger: PinoLogger,
   ) {
     this.logger.setContext(AuthController.name);
@@ -111,56 +113,119 @@ export class AuthController {
   @Get('callback')
   @Public()
   @ApiOperation({
-    summary: 'Callback de OAuth2',
-    description: 'Endpoint que recibe el código de autorización de Keycloak',
+    summary: 'Callback de Keycloak OAuth2',
+    description:
+      'Endpoint que recibe el código de autorización de Keycloak y lo intercambia por tokens.',
   })
   @ApiQuery({
     name: 'code',
-    description: 'Código de autorización de Keycloak',
     required: true,
+    type: String,
+    description: 'Código de autorización de Keycloak',
   })
   @ApiQuery({
     name: 'state',
-    description: 'Token CSRF para validar la solicitud',
-    required: false,
+    required: true,
+    type: String,
+    description: 'Token CSRF para protección de estado',
   })
   @ApiResponse({
-    status: 200,
-    description: 'Autenticación exitosa, tokens retornados',
+    status: 302,
+    description: 'Redirección al frontend con tokens en cookies',
   })
   @ApiResponse({
     status: 400,
-    description: 'Código de autorización inválido o faltante',
+    description: 'Código o estado inválido',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'State token inválido o código de autorización inválido',
   })
   @ApiResponse({
     status: 500,
-    description: 'Error al intercambiar código por tokens',
+    description: 'Error al procesar el callback',
   })
   async callback(
     @Query('code') code: string,
     @Query('state') state: string,
+    @Req() req: Request,
     @Res() res: Response,
   ): Promise<void> {
-    // TODO: Implement in Tarea 9
-    if (!code) {
+    if (!code || !state) {
       res.status(HttpStatus.BAD_REQUEST).json({
-        message: 'Authorization code is required',
+        message: 'Authorization code and state are required',
       });
       return;
     }
 
     try {
-      await this.authService.handleCallback(code, state);
-      // In a real implementation, we would set cookies or return tokens
-      res.status(HttpStatus.OK).json({
-        message: 'Authentication successful',
-        // Tokens would be returned here
+      // Get stored state token from cookie
+      const storedState = req.cookies?.oauth_state;
+
+      // Build redirect URI (must match the one used in login)
+      const protocol = req.protocol || 'http';
+      const host = req.get('host') || 'localhost:3000';
+      const redirectUri = `${protocol}://${host}/api/auth/callback`;
+
+      // Handle callback: validate state, exchange code for tokens, get user info
+      const result = await this.authService.handleCallback(code, state, storedState, redirectUri);
+
+      // Get frontend URL from environment or use default
+      const frontendUrl =
+        this.configService.get<string>('FRONTEND_URL') ||
+        this.configService.get<string>('CLIENT_URL') ||
+        'http://localhost:3001';
+
+      // Set secure HTTP-only cookies for tokens
+      const isProduction = process.env.NODE_ENV === 'production';
+
+      // Access token cookie (expires based on token expiration)
+      res.cookie('access_token', result.accessToken, {
+        httpOnly: true,
+        secure: isProduction, // Only send over HTTPS in production
+        sameSite: 'lax',
+        maxAge: result.expiresIn * 1000, // Convert seconds to milliseconds
+        path: '/',
       });
+
+      // Refresh token cookie (longer expiration, typically 30 days)
+      if (result.refreshToken) {
+        res.cookie('refresh_token', result.refreshToken, {
+          httpOnly: true,
+          secure: isProduction,
+          sameSite: 'lax',
+          maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+          path: '/',
+        });
+      }
+
+      // Clear the oauth_state cookie (no longer needed)
+      res.clearCookie('oauth_state', {
+        path: '/api/auth',
+      });
+
+      this.logger.debug(
+        { userId: result.user.id, username: result.user.username },
+        'Authentication successful, redirecting to frontend',
+      );
+
+      // Redirect to frontend (tokens are in cookies)
+      res.redirect(`${frontendUrl}?auth=success`);
     } catch (error) {
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-        message: 'Failed to process authentication callback',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      this.logger.error(
+        { error, code: !!code, state: !!state },
+        'Failed to process authentication callback',
+      );
+
+      // Get frontend URL for error redirect
+      const frontendUrl =
+        this.configService.get<string>('FRONTEND_URL') ||
+        this.configService.get<string>('CLIENT_URL') ||
+        'http://localhost:3001';
+
+      // Redirect to frontend with error
+      const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
+      res.redirect(`${frontendUrl}?auth=error&message=${encodeURIComponent(errorMessage)}`);
     }
   }
 
