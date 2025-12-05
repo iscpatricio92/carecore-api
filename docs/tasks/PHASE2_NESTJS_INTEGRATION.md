@@ -258,16 +258,16 @@ Instalar y configurar todas las dependencias necesarias para implementar autenti
 Implementar la estrategia JWT de Passport para validar tokens emitidos por Keycloak.
 
 ## Tareas
-- [ ] Crear `src/modules/auth/strategies/jwt.strategy.ts`
-- [ ] Configurar extracción del token desde header `Authorization: Bearer <token>`
-- [ ] Configurar validación del token usando la clave pública de Keycloak
-- [ ] Obtener URL de Keycloak desde variables de entorno:
+- [x] Crear `src/modules/auth/strategies/jwt.strategy.ts`
+- [x] Configurar extracción del token desde header `Authorization: Bearer <token>`
+- [x] Configurar validación del token usando la clave pública de Keycloak
+- [x] Obtener URL de Keycloak desde variables de entorno:
   - `KEYCLOAK_URL`
   - `KEYCLOAK_REALM`
-- [ ] Implementar método `validate()` que extrae información del usuario del token
-- [ ] Mapear claims del token JWT a objeto de usuario
-- [ ] Manejar errores de token inválido/expirado
-- [ ] Agregar tests unitarios
+- [x] Implementar método `validate()` que extrae información del usuario del token
+- [x] Mapear claims del token JWT a objeto de usuario
+- [x] Manejar errores de token inválido/expirado
+- [x] Agregar tests unitarios
 
 ## Configuración Esperada
 ```typescript
@@ -297,10 +297,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 ```
 
 ## Criterios de Aceptación
-- [ ] Strategy valida tokens de Keycloak correctamente
-- [ ] Extrae información del usuario del token
-- [ ] Maneja errores de token inválido
-- [ ] Tests unitarios pasando
+- [x] Strategy valida tokens de Keycloak correctamente
+- [x] Extrae información del usuario del token
+- [x] Maneja errores de token inválido
+- [x] Tests unitarios pasando
 
 ## Referencias
 - [Passport JWT Strategy](http://www.passportjs.org/packages/passport-jwt/)

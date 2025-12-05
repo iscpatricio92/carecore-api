@@ -3,6 +3,8 @@ import { ConfigModule } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 
+import { JwtStrategy } from './strategies/jwt.strategy';
+
 /**
  * Auth Module
  *
@@ -19,12 +21,12 @@ import { JwtModule } from '@nestjs/jwt';
     ConfigModule,
     // PassportModule for authentication strategies
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    // JwtModule will be configured in a future task
-    // For now, just register it (configuration will be added in Tarea 3)
+    // JwtModule is registered but not used for token validation
+    // Token validation is handled by passport-jwt with Keycloak's public keys
     JwtModule.register({}),
   ],
   controllers: [],
-  providers: [],
+  providers: [JwtStrategy],
   exports: [PassportModule, JwtModule],
 })
 export class AuthModule {}
