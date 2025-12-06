@@ -1,0 +1,7 @@
+# Este archivo mantiene el directorio en git
+# Los scripts en este directorio son seguros para commitear porque:
+# - No contienen credenciales hardcodeadas
+# - Todas las credenciales se leen de variables de entorno (.env.local)
+# - .env.local está en .gitignore
+# - Solo contienen lógica de configuración y valores por defecto no sensibles (URLs, nombres)
+

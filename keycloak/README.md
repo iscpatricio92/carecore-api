@@ -37,14 +37,37 @@ Este script se ejecuta automáticamente cuando:
 
 ### Configuración del Realm
 
-Para crear y configurar el realm "carecore":
+Para crear y configurar el realm "carecore" automáticamente:
 
-**📖 Guía completa:** Ver [REALM_SETUP.md](./REALM_SETUP.md)
+**🚀 Método Automático (Recomendado):**
 
-**Resumen rápido:**
-1. Iniciar servicios: `npm run docker:up`
-2. Acceder a Admin Console: `${KEYCLOAK_URL}` (ver `.env.local` para el puerto)
-3. Crear realm "carecore" (manual o importar desde `realms/carecore-realm.json`)
+La configuración de Keycloak se ejecuta **automáticamente** cuando ejecutas `make docker-up`:
+
+```bash
+make docker-up
+```
+
+El script `scripts/init-keycloak-config.sh` se ejecuta automáticamente y:
+- ✅ **Verifica rápidamente** si el realm, roles y clientes ya existen
+- ✅ **Es silencioso** cuando todo está configurado (no muestra output innecesario)
+- ✅ **Solo ejecuta setup** si falta algo (ahorra recursos y tiempo)
+- ✅ **Es idempotente** - se puede ejecutar múltiples veces sin problemas
+
+**Si necesitas configurar manualmente:**
+```bash
+# Configurar todo manualmente (realm, roles, clientes)
+make keycloak-setup
+
+# Obtener Client Secret automáticamente
+make keycloak-get-secret
+```
+
+**Después de la primera configuración:**
+- El script se ejecutará automáticamente en cada `make docker-up`
+- Si todo está configurado, será silencioso y rápido (~0.2 segundos)
+- Si falta algo, lo creará automáticamente
+
+**📖 Método Manual:** Ver [REALM_SETUP.md](./REALM_SETUP.md) para configuración paso a paso manual.
 
 ### Configuración de Clientes
 
@@ -60,6 +83,9 @@ Después de crear el realm:
 - [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) - Guía de troubleshooting y solución de problemas
 - [BACKUP_RESTORE.md](./BACKUP_RESTORE.md) - Guía de backup y restore
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - Arquitectura y diagramas del sistema
+
+**🔐 Seguridad Avanzada:**
+- [../docs/MFA_SETUP_GUIDE.md](../docs/MFA_SETUP_GUIDE.md) - Guía completa para configurar MFA (TOTP) en Keycloak
 
 ## 📝 Scripts
 

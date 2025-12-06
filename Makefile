@@ -65,6 +65,15 @@ docker-up: ## Iniciar contenedores Docker (PostgreSQL + Keycloak + API)
 	else \
 		echo "⚠️  No se pudo verificar/crear la base de datos de Keycloak (puede que el contenedor aún no esté listo)"; \
 	fi; \
+	echo "🔧 Verificando configuración de Keycloak..."; \
+	# El script es silencioso cuando todo está bien (0 líneas de output)
+	# Solo muestra output si falta algo o hay un problema
+	OUTPUT=$$(bash scripts/init-keycloak-config.sh 2>&1); \
+	if [ -z "$$OUTPUT" ]; then \
+		echo "✅ Configuración de Keycloak verificada (todo está bien)"; \
+	else \
+		echo "$$OUTPUT"; \
+	fi; \
 	echo "✅ PostgreSQL está corriendo en puerto 5432"; \
 	echo "✅ Keycloak está corriendo en puerto 8080 (http://localhost:8080)"; \
 	echo "✅ API está corriendo en puerto 3000 (http://localhost:3000)"; \
@@ -168,4 +177,15 @@ setup: install docker-up ## Configuración inicial completa
 	@echo "✅ Configuración completada!"
 	@echo "📝 No olvides crear el archivo .env.local basado en .env.example"
 	@echo "🚀 Ejecuta 'make dev' para iniciar el servidor"
+
+keycloak-setup: ## Configurar Keycloak (realm, roles, clientes)
+	@echo "🔧 Configurando Keycloak..."
+	@bash keycloak/init/setup-keycloak.sh
+	@echo ""
+	@echo "✅ Configuración de Keycloak completada"
+	@echo "📝 No olvides guardar el Client Secret de carecore-api en .env.local"
+	@echo "💡 Ejecuta 'make keycloak-get-secret' para obtener el Client Secret automáticamente"
+
+keycloak-get-secret: ## Obtener Client Secret de carecore-api
+	@bash keycloak/init/get-client-secret.sh
 
