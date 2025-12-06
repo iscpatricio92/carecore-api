@@ -433,7 +433,7 @@ Cuando un practitioner es verificado, actualizar automáticamente su rol en Keyc
 
 ---
 
-### Tarea 6: Configurar MFA en Keycloak (TOTP)
+### Tarea 6: Configurar MFA en Keycloak (TOTP) ⏳ EN PROGRESO
 
 **Título:** `feat(auth): configurar MFA TOTP en Keycloak realm`
 
@@ -443,6 +443,7 @@ Cuando un practitioner es verificado, actualizar automáticamente su rol en Keyc
 Configurar Multi-Factor Authentication usando TOTP (Time-based One-Time Password) en Keycloak.
 
 ## Tareas
+- [x] Crear guía detallada de configuración MFA (`docs/MFA_SETUP_GUIDE.md`)
 - [ ] Acceder a admin console de Keycloak
 - [ ] Navegar a Authentication > Flows
 - [ ] Crear o modificar flow de autenticación:
