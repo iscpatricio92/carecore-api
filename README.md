@@ -362,7 +362,7 @@ El sistema ahora puede:
 **MFA (Multi-Factor Authentication):**
 - ✅ Configuración MFA en Keycloak (TOTP)
 - ✅ Endpoints de setup/verify/disable MFA
-- ⏳ Forzar MFA para roles críticos
+- ✅ Forzar MFA para roles críticos (admin, practitioner)
 
 **Scopes y Permisos:**
 - ⏳ Definir scopes en Keycloak

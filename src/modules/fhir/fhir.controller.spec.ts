@@ -1,3 +1,22 @@
+// Mock @keycloak/keycloak-admin-client before importing services that use it
+jest.mock('@keycloak/keycloak-admin-client', () => ({
+  __esModule: true,
+  default: jest.fn().mockImplementation(() => ({
+    auth: jest.fn(),
+    users: {
+      findOne: jest.fn(),
+      listRealmRoleMappings: jest.fn(),
+      addRealmRoleMappings: jest.fn(),
+      delRealmRoleMappings: jest.fn(),
+      getCredentials: jest.fn(),
+      deleteCredential: jest.fn(),
+    },
+    roles: {
+      find: jest.fn(),
+    },
+  })),
+}));
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { FhirController } from './fhir.controller';
 import { FhirService } from './fhir.service';
@@ -9,6 +28,8 @@ import {
 import { CreateEncounterDto, UpdateEncounterDto } from '../../common/dto/fhir-encounter.dto';
 import { User } from '../auth/interfaces/user.interface';
 import { FHIR_RESOURCE_TYPES } from '../../common/constants/fhir-resource-types';
+import { MFARequiredGuard } from '../auth/guards/mfa-required.guard';
+import { KeycloakAdminService } from '../auth/services/keycloak-admin.service';
 
 describe('FhirController', () => {
   let controller: FhirController;
@@ -41,7 +62,27 @@ describe('FhirController', () => {
     deleteEncounter: jest.fn(),
   };
 
+  const mockKeycloakAdminService = {
+    userHasMFA: jest.fn(),
+    findUserById: jest.fn(),
+    getUserRoles: jest.fn(),
+    addRoleToUser: jest.fn(),
+    removeRoleFromUser: jest.fn(),
+    updateUserRoles: jest.fn(),
+    userHasRole: jest.fn(),
+    generateTOTPSecret: jest.fn(),
+    verifyTOTPCode: jest.fn(),
+    verifyAndEnableTOTP: jest.fn(),
+    removeTOTPCredential: jest.fn(),
+  };
+
+  const mockMFARequiredGuard = {
+    canActivate: jest.fn().mockReturnValue(true),
+  };
+
   beforeEach(async () => {
+    jest.clearAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [FhirController],
       providers: [
@@ -49,8 +90,19 @@ describe('FhirController', () => {
           provide: FhirService,
           useValue: mockFhirService,
         },
+        {
+          provide: KeycloakAdminService,
+          useValue: mockKeycloakAdminService,
+        },
+        {
+          provide: MFARequiredGuard,
+          useValue: mockMFARequiredGuard,
+        },
       ],
-    }).compile();
+    })
+      .overrideGuard(MFARequiredGuard)
+      .useValue(mockMFARequiredGuard)
+      .compile();
 
     controller = module.get<FhirController>(FhirController);
     service = module.get<FhirService>(FhirService);

@@ -701,12 +701,12 @@ CREATE TABLE practitioner_verifications (
 #### 3.2 MFA (Multi-Factor Authentication)
 
 **Tareas:**
-- [ ] Configurar MFA en Keycloak (TOTP)
-- [ ] Crear endpoint `POST /auth/mfa/setup` - Setup MFA
-- [ ] Crear endpoint `POST /auth/mfa/verify` - Verificar código
-- [ ] Crear endpoint `POST /auth/mfa/disable` - Deshabilitar MFA
+- [x] Configurar MFA en Keycloak (TOTP)
+- [x] Crear endpoint `POST /auth/mfa/setup` - Setup MFA
+- [x] Crear endpoint `POST /auth/mfa/verify` - Verificar código
+- [x] Crear endpoint `POST /auth/mfa/disable` - Deshabilitar MFA
 - [ ] UI para configuración de MFA
-- [ ] Forzar MFA para roles críticos (admin, practitioner)
+- [x] Forzar MFA para roles críticos (admin, practitioner)
 
 **Entregables:**
 - MFA configurado en Keycloak
@@ -948,10 +948,11 @@ Fase 1.8: Documentar setup de Keycloak
 - [x] **3.7** Implementar endpoint `/auth/mfa/setup`
 - [x] **3.8** Implementar endpoint `/auth/mfa/verify`
 - [x] **3.9** Implementar endpoint `/auth/mfa/disable`
-- [ ] **3.10** Definir scopes en Keycloak
-- [ ] **3.11** Crear `ScopesGuard`
-- [ ] **3.12** Crear decorador `@Scopes()`
-- [ ] **3.13** Mapear scopes a permisos FHIR
+- [x] **3.10** Forzar MFA para roles críticos (admin, practitioner)
+- [ ] **3.11** Definir scopes en Keycloak
+- [ ] **3.12** Crear `ScopesGuard`
+- [ ] **3.13** Crear decorador `@Scopes()`
+- [ ] **3.14** Mapear scopes a permisos FHIR
 
 ### Fase 4: SMART on FHIR
 - [ ] **4.1** Implementar endpoint `/fhir/auth`

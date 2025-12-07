@@ -7,6 +7,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
+import { MFARequiredGuard } from './guards/mfa-required.guard';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { DocumentStorageService } from './services/document-storage.service';
@@ -40,10 +41,19 @@ import { PractitionerVerificationEntity } from '../../entities/practitioner-veri
     JwtStrategy,
     JwtAuthGuard,
     RolesGuard,
+    MFARequiredGuard,
     AuthService,
     DocumentStorageService,
     KeycloakAdminService,
   ],
-  exports: [PassportModule, JwtModule, JwtAuthGuard, RolesGuard, AuthService],
+  exports: [
+    PassportModule,
+    JwtModule,
+    JwtAuthGuard,
+    RolesGuard,
+    MFARequiredGuard,
+    AuthService,
+    KeycloakAdminService, // Export KeycloakAdminService for MFARequiredGuard in other modules
+  ],
 })
 export class AuthModule {}

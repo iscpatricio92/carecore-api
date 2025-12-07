@@ -24,6 +24,7 @@ import { FhirService } from './fhir.service';
 import { Public } from '../auth/decorators/public.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { MFARequiredGuard } from '../auth/guards/mfa-required.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User } from '../auth/interfaces/user.interface';
@@ -126,7 +127,7 @@ export class FhirController {
   // Practitioner endpoints
   @Post('Practitioner')
   @HttpCode(HttpStatus.CREATED)
-  @UseGuards(RolesGuard)
+  @UseGuards(RolesGuard, MFARequiredGuard)
   @Roles(ROLES.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Create a new Practitioner' })
@@ -173,7 +174,7 @@ export class FhirController {
   }
 
   @Put('Practitioner/:id')
-  @UseGuards(RolesGuard)
+  @UseGuards(RolesGuard, MFARequiredGuard)
   @Roles(ROLES.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update a Practitioner' })
@@ -191,7 +192,7 @@ export class FhirController {
 
   @Delete('Practitioner/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @UseGuards(RolesGuard)
+  @UseGuards(RolesGuard, MFARequiredGuard)
   @Roles(ROLES.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Delete a Practitioner' })
@@ -207,7 +208,7 @@ export class FhirController {
   // Encounter endpoints
   @Post('Encounter')
   @HttpCode(HttpStatus.CREATED)
-  @UseGuards(RolesGuard)
+  @UseGuards(RolesGuard, MFARequiredGuard)
   @Roles(ROLES.PRACTITIONER, ROLES.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Create a new Encounter' })
@@ -265,7 +266,7 @@ export class FhirController {
   }
 
   @Put('Encounter/:id')
-  @UseGuards(RolesGuard)
+  @UseGuards(RolesGuard, MFARequiredGuard)
   @Roles(ROLES.PRACTITIONER, ROLES.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update an Encounter' })

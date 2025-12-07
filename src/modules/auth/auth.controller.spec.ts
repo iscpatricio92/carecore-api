@@ -24,6 +24,8 @@ jest.mock('@keycloak/keycloak-admin-client', () => ({
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { User } from './interfaces/user.interface';
+import { MFARequiredGuard } from './guards/mfa-required.guard';
+import { KeycloakAdminService } from './services/keycloak-admin.service';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -47,6 +49,24 @@ describe('AuthController', () => {
     warn: jest.fn(),
     debug: jest.fn(),
     info: jest.fn(),
+  };
+
+  const mockKeycloakAdminService = {
+    userHasMFA: jest.fn(),
+    findUserById: jest.fn(),
+    getUserRoles: jest.fn(),
+    addRoleToUser: jest.fn(),
+    removeRoleFromUser: jest.fn(),
+    updateUserRoles: jest.fn(),
+    userHasRole: jest.fn(),
+    generateTOTPSecret: jest.fn(),
+    verifyTOTPCode: jest.fn(),
+    verifyAndEnableTOTP: jest.fn(),
+    removeTOTPCredential: jest.fn(),
+  };
+
+  const mockMFARequiredGuard = {
+    canActivate: jest.fn().mockReturnValue(true),
   };
 
   const mockUser: User = {
@@ -75,8 +95,19 @@ describe('AuthController', () => {
           provide: PinoLogger,
           useValue: mockLogger,
         },
+        {
+          provide: KeycloakAdminService,
+          useValue: mockKeycloakAdminService,
+        },
+        {
+          provide: MFARequiredGuard,
+          useValue: mockMFARequiredGuard,
+        },
       ],
-    }).compile();
+    })
+      .overrideGuard(MFARequiredGuard)
+      .useValue(mockMFARequiredGuard)
+      .compile();
 
     controller = module.get<AuthController>(AuthController);
   });
