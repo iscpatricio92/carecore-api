@@ -219,3 +219,16 @@ keycloak-verify-backup: ## Verificar que un backup de Keycloak es válido (requi
 	fi
 	@bash scripts/verify-keycloak-backup.sh $(BACKUP_TIMESTAMP)
 
+assign-practitioner-role: ## Asignar rol 'practitioner' a un usuario (requiere USERNAME=username)
+	@if [ -z "$(USERNAME)" ]; then \
+		echo "❌ Error: Se requiere USERNAME"; \
+		echo ""; \
+		echo "Uso:"; \
+		echo "  make assign-practitioner-role USERNAME=dr.smith"; \
+		echo ""; \
+		echo "Ejemplo:"; \
+		echo "  make assign-practitioner-role USERNAME=dr.smith"; \
+		exit 1; \
+	fi
+	@bash scripts/assign-practitioner-role.sh $(USERNAME)
+
