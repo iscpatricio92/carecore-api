@@ -24,11 +24,14 @@ import { FhirService } from './fhir.service';
 import { Public } from '../auth/decorators/public.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { ScopesGuard } from '../auth/guards/scopes.guard';
 import { MFARequiredGuard } from '../auth/guards/mfa-required.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { Scopes } from '../auth/decorators/scopes.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User } from '../auth/interfaces/user.interface';
 import { ROLES } from '../../common/constants/roles';
+import { FHIR_SCOPES } from '../../common/constants/fhir-scopes';
 import { CreatePatientDto, UpdatePatientDto } from '../../common/dto/fhir-patient.dto';
 import {
   CreatePractitionerDto,
@@ -55,11 +58,17 @@ export class FhirController {
   // Patient endpoints
   @Post('Patient')
   @HttpCode(HttpStatus.CREATED)
+  @UseGuards(ScopesGuard)
+  @Scopes(FHIR_SCOPES.PATIENT_WRITE)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Create a new Patient' })
   @ApiResponse({ status: 201, description: 'Patient created successfully' })
   @ApiResponse({ status: 400, description: 'Invalid data' })
   @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient scopes (patient:write required)',
+  })
   createPatient(
     @Body() createPatientDto: CreatePatientDto,
     @CurrentUser() user: User,
@@ -68,24 +77,35 @@ export class FhirController {
   }
 
   @Get('Patient/:id')
+  @UseGuards(ScopesGuard)
+  @Scopes(FHIR_SCOPES.PATIENT_READ)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get a Patient by ID' })
   @ApiParam({ name: 'id', description: 'Patient ID' })
   @ApiResponse({ status: 200, description: 'Patient found' })
   @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient scopes (patient:read required)',
+  })
   @ApiResponse({ status: 404, description: 'Patient not found' })
   getPatient(@Param('id') id: string, @CurrentUser() user: User): Promise<Patient> {
     return this.fhirService.getPatient(id, user);
   }
 
   @Get('Patient')
+  @UseGuards(ScopesGuard)
+  @Scopes(FHIR_SCOPES.PATIENT_READ)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Search Patients' })
   @ApiQuery({ name: 'name', required: false, description: 'Search by name' })
   @ApiQuery({ name: 'identifier', required: false, description: 'Search by identifier' })
   @ApiResponse({ status: 200, description: 'List of Patients' })
   @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient scopes (patient:read required)',
+  })
   searchPatients(
     @Query() pagination: PaginationDto,
     @Query('name') name?: string,
@@ -96,12 +116,17 @@ export class FhirController {
   }
 
   @Put('Patient/:id')
+  @UseGuards(ScopesGuard)
+  @Scopes(FHIR_SCOPES.PATIENT_WRITE)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update a Patient' })
   @ApiParam({ name: 'id', description: 'Patient ID' })
   @ApiResponse({ status: 200, description: 'Patient updated successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient scopes (patient:write required)',
+  })
   @ApiResponse({ status: 404, description: 'Patient not found' })
   updatePatient(
     @Param('id') id: string,
@@ -113,12 +138,17 @@ export class FhirController {
 
   @Delete('Patient/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(ScopesGuard)
+  @Scopes(FHIR_SCOPES.PATIENT_WRITE)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Delete a Patient' })
   @ApiParam({ name: 'id', description: 'Patient ID' })
   @ApiResponse({ status: 204, description: 'Patient deleted successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient scopes (patient:write required)',
+  })
   @ApiResponse({ status: 404, description: 'Patient not found' })
   deletePatient(@Param('id') id: string, @CurrentUser() user: User): Promise<void> {
     return this.fhirService.deletePatient(id, user);
@@ -140,17 +170,25 @@ export class FhirController {
   }
 
   @Get('Practitioner/:id')
+  @UseGuards(ScopesGuard)
+  @Scopes(FHIR_SCOPES.PRACTITIONER_READ)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get a Practitioner by ID' })
   @ApiParam({ name: 'id', description: 'Practitioner ID' })
   @ApiResponse({ status: 200, description: 'Practitioner found' })
   @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient scopes (practitioner:read required)',
+  })
   @ApiResponse({ status: 404, description: 'Practitioner not found' })
   getPractitioner(@Param('id') id: string): Promise<Practitioner> {
     return this.fhirService.getPractitioner(id);
   }
 
   @Get('Practitioner')
+  @UseGuards(ScopesGuard)
+  @Scopes(FHIR_SCOPES.PRACTITIONER_READ)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Search Practitioners' })
   @ApiQuery({ name: 'name', required: false, description: 'Search by name' })
@@ -161,6 +199,10 @@ export class FhirController {
   })
   @ApiResponse({ status: 200, description: 'List of Practitioners' })
   @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient scopes (practitioner:read required)',
+  })
   searchPractitioners(
     @Query() pagination: PaginationDto,
     @Query('name') name?: string,
@@ -221,17 +263,25 @@ export class FhirController {
   }
 
   @Get('Encounter/:id')
+  @UseGuards(ScopesGuard)
+  @Scopes(FHIR_SCOPES.ENCOUNTER_READ)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get an Encounter by ID' })
   @ApiParam({ name: 'id', description: 'Encounter ID' })
   @ApiResponse({ status: 200, description: 'Encounter found' })
   @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient scopes (encounter:read required)',
+  })
   @ApiResponse({ status: 404, description: 'Encounter not found' })
   getEncounter(@Param('id') id: string): Promise<Encounter> {
     return this.fhirService.getEncounter(id);
   }
 
   @Get('Encounter')
+  @UseGuards(ScopesGuard)
+  @Scopes(FHIR_SCOPES.ENCOUNTER_READ)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Search Encounters' })
   @ApiQuery({
@@ -251,6 +301,10 @@ export class FhirController {
   })
   @ApiResponse({ status: 200, description: 'List of Encounters' })
   @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient scopes (encounter:read required)',
+  })
   searchEncounters(
     @Query() pagination: PaginationDto,
     @Query('subject') subject?: string,
@@ -284,11 +338,17 @@ export class FhirController {
 
   @Delete('Encounter/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(ScopesGuard)
+  @Scopes(FHIR_SCOPES.ENCOUNTER_WRITE)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Delete an Encounter' })
   @ApiParam({ name: 'id', description: 'Encounter ID' })
   @ApiResponse({ status: 204, description: 'Encounter deleted successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient scopes (encounter:write required)',
+  })
   @ApiResponse({ status: 404, description: 'Encounter not found' })
   deleteEncounter(@Param('id') id: string): Promise<void> {
     return this.fhirService.deleteEncounter(id);

@@ -342,15 +342,15 @@ El sistema ahora puede:
 - ⏳ Observation (Signos vitales, resultados) - Pendiente
 - ⏳ Condition (Diagnósticos) - Pendiente
 
-### Fase 3: Seguridad Avanzada y Verificación ⏳ EN PROGRESO
+### Fase 3: Seguridad Avanzada y Verificación ✅ COMPLETADO
 
 **Autenticación y Autorización Avanzada:**
 - ✅ OAuth 2.0 / OIDC - Completado (Keycloak integrado)
 - ✅ JWT Authentication - Completado
 - ✅ Role-based Authorization - Completado
 - ✅ Verificación de Practitioners - Completado
-- ⏳ MFA (Multi-Factor Authentication) - Pendiente
-- ⏳ Scopes y permisos granulares - Pendiente
+- ✅ MFA (Multi-Factor Authentication) - Completado
+- ✅ Scopes y permisos granulares - Completado
 
 **Verificación de Practitioners:** ✅ COMPLETADO
 - ✅ Endpoint POST /auth/verify-practitioner
@@ -359,16 +359,17 @@ El sistema ahora puede:
 - ✅ Flujo de revisión manual (admin)
 - ✅ Actualización automática de roles en Keycloak
 
-**MFA (Multi-Factor Authentication):**
+**MFA (Multi-Factor Authentication):** ✅ COMPLETADO
 - ✅ Configuración MFA en Keycloak (TOTP)
 - ✅ Endpoints de setup/verify/disable MFA
 - ✅ Forzar MFA para roles críticos (admin, practitioner)
 
-**Scopes y Permisos:**
-- ⏳ Definir scopes en Keycloak (guía creada - ver `docs/SCOPES_SETUP_GUIDE.md`)
+**Scopes y Permisos:** ✅ COMPLETADO
+- ✅ Definir scopes en Keycloak (scripts y guía creados - ver `docs/SCOPES_SETUP_GUIDE.md`)
 - ✅ ScopesGuard para validación
 - ✅ Decorador @Scopes() para endpoints
-- ⏳ Mapeo de scopes a permisos FHIR
+- ✅ Mapeo de scopes a permisos FHIR
+- ✅ Constantes para acciones y scopes (type safety)
 
 **Recursos para Integraciones Futuras:**
 - ⏳ Observation - Signos vitales, resultados

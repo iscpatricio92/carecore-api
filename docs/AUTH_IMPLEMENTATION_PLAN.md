@@ -950,10 +950,10 @@ Fase 1.8: Documentar setup de Keycloak
 - [x] **3.8** Implementar endpoint `/auth/mfa/verify`
 - [x] **3.9** Implementar endpoint `/auth/mfa/disable`
 - [x] **3.10** Forzar MFA para roles críticos (admin, practitioner)
-- [ ] **3.11** Definir scopes en Keycloak (guía creada, pendiente configuración manual)
+- [x] **3.11** Definir scopes en Keycloak (guía y scripts creados) ✅
 - [x] **3.12** Crear `ScopesGuard` ✅
 - [x] **3.13** Crear decorador `@Scopes()` ✅
-- [ ] **3.14** Mapear scopes a permisos FHIR
+- [x] **3.14** Mapear scopes a permisos FHIR ✅
 
 ### Fase 4: SMART on FHIR
 - [ ] **4.1** Implementar endpoint `/fhir/auth`
