@@ -13,6 +13,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { DocumentStorageService } from './services/document-storage.service';
 import { KeycloakAdminService } from './services/keycloak-admin.service';
+import { ScopePermissionService } from './services/scope-permission.service';
 import { PractitionerVerificationEntity } from '../../entities/practitioner-verification.entity';
 
 /**
@@ -47,6 +48,7 @@ import { PractitionerVerificationEntity } from '../../entities/practitioner-veri
     AuthService,
     DocumentStorageService,
     KeycloakAdminService,
+    ScopePermissionService,
   ],
   exports: [
     PassportModule,
@@ -57,6 +59,7 @@ import { PractitionerVerificationEntity } from '../../entities/practitioner-veri
     ScopesGuard,
     AuthService,
     KeycloakAdminService, // Export KeycloakAdminService for MFARequiredGuard in other modules
+    ScopePermissionService, // Export ScopePermissionService for FHIR services
   ],
 })
 export class AuthModule {}

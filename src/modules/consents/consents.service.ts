@@ -15,7 +15,9 @@ import { PatientEntity } from '../../entities/patient.entity';
 import { User } from '../auth/interfaces/user.interface';
 import { ROLES } from '../../common/constants/roles';
 import { FHIR_RESOURCE_TYPES } from '../../common/constants/fhir-resource-types';
+import { FHIR_ACTIONS } from '../../common/constants/fhir-actions';
 import { AuditService } from '../audit/audit.service';
+import { ScopePermissionService } from '../auth/services/scope-permission.service';
 
 /**
  * Consents Service
@@ -31,6 +33,7 @@ export class ConsentsService {
     private patientRepository: Repository<PatientEntity>,
     private readonly logger: PinoLogger,
     private readonly auditService: AuditService,
+    private readonly scopePermissionService: ScopePermissionService,
   ) {
     this.logger.setContext(ConsentsService.name);
   }
@@ -72,11 +75,18 @@ export class ConsentsService {
 
   /**
    * Checks if user has permission to access a consent
+   * Combines role-based and scope-based authorization
    * @param user - Current authenticated user
    * @param consentEntity - Consent entity to check access for
+   * @param action - Action type ('read', 'write', or 'share')
    * @returns true if user has access, false otherwise
    */
-  private async canAccessConsent(user: User, consentEntity: ConsentEntity): Promise<boolean> {
+  private async canAccessConsent(
+    user: User,
+    consentEntity: ConsentEntity,
+    action: string = FHIR_ACTIONS.READ,
+  ): Promise<boolean> {
+    // Check role-based permissions first (more permissive)
     // Admin can access all consents
     if (user.roles.includes(ROLES.ADMIN)) {
       return true;
@@ -107,6 +117,41 @@ export class ConsentsService {
     // TODO: Filter by assigned patients or explicit consent
     if (user.roles.includes(ROLES.PRACTITIONER)) {
       return consentEntity.status === 'active';
+    }
+
+    // Check scope-based permissions for other roles
+    // If role grants permission, allow access
+    if (
+      this.scopePermissionService.roleGrantsPermission(user, FHIR_RESOURCE_TYPES.CONSENT, action)
+    ) {
+      return true;
+    }
+
+    // Check if user has required scopes
+    const hasScopePermission = this.scopePermissionService.hasResourcePermission(
+      user,
+      FHIR_RESOURCE_TYPES.CONSENT,
+      action,
+    );
+
+    if (hasScopePermission) {
+      // For scope-based access, still need to check resource ownership for write operations
+      // Read operations with scopes can access any consent (subject to consent rules)
+      if (action === FHIR_ACTIONS.WRITE || action === FHIR_ACTIONS.SHARE) {
+        // Write/share operations require ownership or practitioner role
+        const patientId = this.extractPatientId(consentEntity.patientReference);
+        if (patientId) {
+          const patientEntity = await this.patientRepository.findOne({
+            where: { patientId, deletedAt: IsNull() },
+          });
+          if (patientEntity) {
+            return (
+              patientEntity.keycloakUserId === user.id || user.roles.includes(ROLES.PRACTITIONER)
+            );
+          }
+        }
+      }
+      return true;
     }
 
     // Other roles need explicit consent
@@ -165,10 +210,35 @@ export class ConsentsService {
   /**
    * Creates a new Consent
    * Patients can only create consents for themselves
+   * Validates user has 'consent:write' scope or appropriate role
    */
   async create(createConsentDto: CreateConsentDto, user?: User): Promise<Consent> {
-    // Validate patient ownership if user is a patient
+    // Validate user has permission to create consents
     if (user) {
+      // Check role-based permissions first
+      const hasRolePermission =
+        user.roles.includes(ROLES.ADMIN) ||
+        user.roles.includes(ROLES.PATIENT) ||
+        user.roles.includes(ROLES.PRACTITIONER);
+
+      // Check scope-based permissions
+      const hasScopePermission = this.scopePermissionService.hasResourcePermission(
+        user,
+        FHIR_RESOURCE_TYPES.CONSENT,
+        FHIR_ACTIONS.WRITE,
+      );
+
+      if (!hasRolePermission && !hasScopePermission) {
+        this.logger.warn(
+          { userId: user.id, roles: user.roles, scopes: user.scopes },
+          'Access denied to create consent',
+        );
+        throw new ForbiddenException(
+          'You do not have permission to create consents. Required: consent:write scope or patient/practitioner/admin role',
+        );
+      }
+
+      // Validate patient ownership if user is a patient
       await this.validatePatientOwnership(user, createConsentDto.patient?.reference);
     }
 
@@ -281,10 +351,10 @@ export class ConsentsService {
       throw new NotFoundException(`Consent with ID ${id} not found`);
     }
 
-    // Check access permissions
-    if (user && !(await this.canAccessConsent(user, entity))) {
+    // Check access permissions (read operation)
+    if (user && !(await this.canAccessConsent(user, entity, FHIR_ACTIONS.READ))) {
       this.logger.warn(
-        { consentId: id, userId: user.id, roles: user.roles },
+        { consentId: id, userId: user.id, roles: user.roles, scopes: user.scopes },
         'Access denied to consent',
       );
       throw new ForbiddenException('You do not have permission to access this consent');
@@ -318,10 +388,10 @@ export class ConsentsService {
       throw new NotFoundException(`Consent with ID ${id} not found`);
     }
 
-    // Check access permissions
-    if (user && !(await this.canAccessConsent(user, entity))) {
+    // Check access permissions (write operation)
+    if (user && !(await this.canAccessConsent(user, entity, FHIR_ACTIONS.WRITE))) {
       this.logger.warn(
-        { consentId: id, userId: user.id, roles: user.roles },
+        { consentId: id, userId: user.id, roles: user.roles, scopes: user.scopes },
         'Access denied to update consent',
       );
       throw new ForbiddenException('You do not have permission to update this consent');
@@ -384,10 +454,10 @@ export class ConsentsService {
       throw new NotFoundException(`Consent with ID ${id} not found`);
     }
 
-    // Check access permissions
-    if (user && !(await this.canAccessConsent(user, entity))) {
+    // Check access permissions (write operation for delete)
+    if (user && !(await this.canAccessConsent(user, entity, FHIR_ACTIONS.WRITE))) {
       this.logger.warn(
-        { consentId: id, userId: user.id, roles: user.roles },
+        { consentId: id, userId: user.id, roles: user.roles, scopes: user.scopes },
         'Access denied to delete consent',
       );
       throw new ForbiddenException('You do not have permission to delete this consent');
@@ -427,10 +497,10 @@ export class ConsentsService {
       throw new NotFoundException(`Consent with ID ${id} not found`);
     }
 
-    // Check access permissions - only patient or admin can share
-    if (user && !(await this.canAccessConsent(user, entity))) {
+    // Check access permissions - share operation requires consent:share scope or patient/admin role
+    if (user && !(await this.canAccessConsent(user, entity, FHIR_ACTIONS.SHARE))) {
       this.logger.warn(
-        { consentId: id, userId: user.id, roles: user.roles },
+        { consentId: id, userId: user.id, roles: user.roles, scopes: user.scopes },
         'Access denied to share consent',
       );
       throw new ForbiddenException('You do not have permission to share this consent');

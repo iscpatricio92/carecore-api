@@ -19,7 +19,9 @@ import { EncounterEntity } from '../../entities/encounter.entity';
 import { User } from '../auth/interfaces/user.interface';
 import { ROLES } from '../../common/constants/roles';
 import { FHIR_RESOURCE_TYPES } from '../../common/constants/fhir-resource-types';
+import { FHIR_ACTIONS } from '../../common/constants/fhir-actions';
 import { AuditService } from '../audit/audit.service';
+import { ScopePermissionService } from '../auth/services/scope-permission.service';
 
 /**
  * FHIR service for managing FHIR R4 resources
@@ -37,6 +39,7 @@ export class FhirService {
     private configService: ConfigService,
     private readonly logger: PinoLogger,
     private readonly auditService: AuditService,
+    private readonly scopePermissionService: ScopePermissionService,
   ) {
     this.logger.setContext(FhirService.name);
   }
@@ -187,11 +190,18 @@ export class FhirService {
 
   /**
    * Checks if user has permission to access a patient resource
+   * Combines role-based and scope-based authorization
    * @param user - Current authenticated user
    * @param patientEntity - Patient entity to check access for
+   * @param action - Action type ('read' or 'write')
    * @returns true if user has access, false otherwise
    */
-  private canAccessPatient(user: User, patientEntity: PatientEntity): boolean {
+  private canAccessPatient(
+    user: User,
+    patientEntity: PatientEntity,
+    action: string = FHIR_ACTIONS.READ,
+  ): boolean {
+    // Check role-based permissions first (more permissive)
     // Admin can access all patients
     if (user.roles.includes(ROLES.ADMIN)) {
       return true;
@@ -206,6 +216,31 @@ export class FhirService {
     // TODO: In the future, filter by assigned patients or consent
     if (user.roles.includes(ROLES.PRACTITIONER)) {
       return patientEntity.active === true;
+    }
+
+    // Check scope-based permissions for other roles
+    // If role grants permission, allow access
+    if (
+      this.scopePermissionService.roleGrantsPermission(user, FHIR_RESOURCE_TYPES.PATIENT, action)
+    ) {
+      return true;
+    }
+
+    // Check if user has required scopes
+    const hasScopePermission = this.scopePermissionService.hasResourcePermission(
+      user,
+      FHIR_RESOURCE_TYPES.PATIENT,
+      action,
+    );
+
+    if (hasScopePermission) {
+      // For scope-based access, still need to check resource ownership for write operations
+      // Read operations with scopes can access any patient (subject to consent)
+      if (action === FHIR_ACTIONS.WRITE) {
+        // Write operations require ownership or practitioner role
+        return patientEntity.keycloakUserId === user.id || user.roles.includes(ROLES.PRACTITIONER);
+      }
+      return true;
     }
 
     // Other roles (viewer, lab, insurer) need explicit consent
@@ -252,8 +287,35 @@ export class FhirService {
   /**
    * Creates a new Patient
    * If user has 'patient' role, automatically links the patient to the user
+   * Validates user has 'patient:write' scope or appropriate role
    */
   async createPatient(createPatientDto: CreatePatientDto, user?: User): Promise<Patient> {
+    // Validate user has permission to create patients
+    if (user) {
+      // Check role-based permissions first
+      const hasRolePermission =
+        user.roles.includes(ROLES.ADMIN) ||
+        user.roles.includes(ROLES.PATIENT) ||
+        user.roles.includes(ROLES.PRACTITIONER);
+
+      // Check scope-based permissions
+      const hasScopePermission = this.scopePermissionService.hasResourcePermission(
+        user,
+        FHIR_RESOURCE_TYPES.PATIENT,
+        FHIR_ACTIONS.WRITE,
+      );
+
+      if (!hasRolePermission && !hasScopePermission) {
+        this.logger.warn(
+          { userId: user.id, roles: user.roles, scopes: user.scopes },
+          'Access denied to create patient',
+        );
+        throw new ForbiddenException(
+          'You do not have permission to create patients. Required: patient:write scope or patient/practitioner/admin role',
+        );
+      }
+    }
+
     const patientId = uuidv4();
     const now = new Date().toISOString();
 
@@ -308,10 +370,10 @@ export class FhirService {
       );
     }
 
-    // Check access permissions
-    if (user && !this.canAccessPatient(user, entity)) {
+    // Check access permissions (read operation)
+    if (user && !this.canAccessPatient(user, entity, FHIR_ACTIONS.READ)) {
       this.logger.warn(
-        { patientId: id, userId: user.id, roles: user.roles },
+        { patientId: id, userId: user.id, roles: user.roles, scopes: user.scopes },
         'Access denied to patient',
       );
       throw new ForbiddenException('You do not have permission to access this patient');
@@ -397,10 +459,10 @@ export class FhirService {
       );
     }
 
-    // Check access permissions
-    if (user && !this.canAccessPatient(user, entity)) {
+    // Check access permissions (write operation)
+    if (user && !this.canAccessPatient(user, entity, FHIR_ACTIONS.WRITE)) {
       this.logger.warn(
-        { patientId: id, userId: user.id, roles: user.roles },
+        { patientId: id, userId: user.id, roles: user.roles, scopes: user.scopes },
         'Access denied to update patient',
       );
       throw new ForbiddenException('You do not have permission to update this patient');

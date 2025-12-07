@@ -13,6 +13,7 @@ import { ROLES } from '../../common/constants/roles';
 import { FHIR_RESOURCE_TYPES } from '../../common/constants/fhir-resource-types';
 import { User } from '../auth/interfaces/user.interface';
 import { AuditService } from '../audit/audit.service';
+import { ScopePermissionService } from '../auth/services/scope-permission.service';
 
 const mockLogger: Record<string, jest.Mock> = {
   setContext: jest.fn(),
@@ -33,6 +34,11 @@ describe('ConsentsService', () => {
     logUpdate: jest.fn().mockResolvedValue(undefined),
     logDelete: jest.fn().mockResolvedValue(undefined),
     logAction: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const mockScopePermissionService = {
+    hasResourcePermission: jest.fn().mockReturnValue(false),
+    roleGrantsPermission: jest.fn().mockReturnValue(false),
   };
 
   const adminUser: User = {
@@ -97,6 +103,7 @@ describe('ConsentsService', () => {
         { provide: getRepositoryToken(PatientEntity), useValue: patientRepository },
         { provide: PinoLogger, useValue: mockLogger },
         { provide: AuditService, useValue: mockAuditService },
+        { provide: ScopePermissionService, useValue: mockScopePermissionService },
       ],
     }).compile();
 
@@ -116,6 +123,14 @@ describe('ConsentsService', () => {
     mockAuditService.logUpdate.mockResolvedValue(undefined);
     mockAuditService.logDelete.mockResolvedValue(undefined);
     mockAuditService.logAction.mockResolvedValue(undefined);
+
+    // Reset scope permission service mocks
+    mockScopePermissionService.hasResourcePermission.mockClear();
+    mockScopePermissionService.roleGrantsPermission.mockClear();
+    // Default: role-based permissions work (admin, patient, practitioner have access)
+    // Scope-based permissions return false by default
+    mockScopePermissionService.hasResourcePermission.mockReturnValue(false);
+    mockScopePermissionService.roleGrantsPermission.mockReturnValue(false);
   });
 
   afterEach(() => {
