@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Script para inicializar la configuración de Keycloak automáticamente
-# Este script verifica si el realm, roles y clientes existen, y los crea si no existen
+# Este script verifica si el realm, roles, clientes y scopes existen, y los crea si no existen
 # Se ejecuta automáticamente después de que Keycloak esté listo
 #
 # Características:
@@ -129,6 +129,42 @@ clients_exist() {
   fi
 }
 
+# Función para verificar si los scopes existen
+scopes_exist() {
+  local token="$1"
+  local required_scopes=("patient:read" "patient:write" "practitioner:read" "practitioner:write" "encounter:read" "encounter:write" "document:read" "document:write" "consent:read" "consent:write" "consent:share")
+  local missing_scopes=0
+
+  # Obtener todos los scopes del realm
+  local response=$(curl -s -X GET "${KEYCLOAK_URL}/admin/realms/${KEYCLOAK_REALM}/client-scopes" \
+    -H "Authorization: Bearer ${token}" \
+    -H "Content-Type: application/json")
+
+  for scope_name in "${required_scopes[@]}"; do
+    local found=0
+    if command -v jq >/dev/null 2>&1; then
+      local count=$(echo "$response" | jq -r "[.[] | select(.name == \"${scope_name}\")] | length")
+      if [ "$count" -gt 0 ]; then
+        found=1
+      fi
+    else
+      if echo "$response" | grep -q "\"name\":\"${scope_name}\""; then
+        found=1
+      fi
+    fi
+
+    if [ "$found" -eq 0 ]; then
+      missing_scopes=$((missing_scopes + 1))
+    fi
+  done
+
+  if [ $missing_scopes -eq 0 ]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
 # Verificar rápidamente si Keycloak está listo (sin esperar mucho)
 # Si no está listo, salir silenciosamente (se ejecutará en el próximo intento)
 if ! keycloak_ready; then
@@ -163,14 +199,15 @@ if [ -z "$ACCESS_TOKEN" ] || [ "$ACCESS_TOKEN" = "null" ]; then
   exit 0
 fi
 
-# Verificar configuración completa (realm, roles, clientes) de forma rápida
+# Verificar configuración completa (realm, roles, clientes, scopes) de forma rápida
 REALM_OK=false
 ROLES_OK=false
 CLIENTS_OK=false
+SCOPES_OK=false
 
 if realm_exists "$ACCESS_TOKEN"; then
   REALM_OK=true
-  # Verificar roles y clientes solo si el realm existe (ahorra tiempo)
+  # Verificar roles, clientes y scopes solo si el realm existe (ahorra tiempo)
   if roles_exist "$ACCESS_TOKEN"; then
     ROLES_OK=true
   fi
@@ -178,11 +215,15 @@ if realm_exists "$ACCESS_TOKEN"; then
   if clients_exist "$ACCESS_TOKEN"; then
     CLIENTS_OK=true
   fi
+
+  if scopes_exist "$ACCESS_TOKEN"; then
+    SCOPES_OK=true
+  fi
 fi
 
 # Si todo está configurado, salir silenciosamente (sin output)
 # Esto hace que el script sea rápido y no moleste cuando todo está bien
-if [ "$REALM_OK" = true ] && [ "$ROLES_OK" = true ] && [ "$CLIENTS_OK" = true ]; then
+if [ "$REALM_OK" = true ] && [ "$ROLES_OK" = true ] && [ "$CLIENTS_OK" = true ] && [ "$SCOPES_OK" = true ]; then
   # Salir silenciosamente - todo está bien
   exit 0
 fi
@@ -202,23 +243,50 @@ if [ "$REALM_OK" = true ] && [ "$CLIENTS_OK" = false ]; then
   echo -e "   ${YELLOW}⚠️  Faltan algunos clientes${NC}"
 fi
 
-# Si falta algo, ejecutar setup
-echo ""
-echo -e "${YELLOW}🔧 Configuración incompleta, ejecutando setup automático...${NC}"
-echo ""
+if [ "$REALM_OK" = true ] && [ "$SCOPES_OK" = false ]; then
+  echo -e "   ${YELLOW}⚠️  Faltan algunos scopes OAuth2${NC}"
+fi
 
-# Ejecutar el script de setup
-if [ -f "$PROJECT_ROOT/keycloak/init/setup-keycloak.sh" ]; then
-  # Ejecutar de forma no interactiva (no recrear realm si existe)
-  echo "N" | bash "$PROJECT_ROOT/keycloak/init/setup-keycloak.sh" || {
-    echo -e "${YELLOW}⚠️  Error al ejecutar setup automático${NC}"
-    echo -e "${YELLOW}   Ejecuta 'make keycloak-setup' manualmente${NC}"
-    exit 0
-  }
+# Si solo faltan scopes, ejecutar solo el script de scopes (más eficiente)
+if [ "$REALM_OK" = true ] && [ "$ROLES_OK" = true ] && [ "$CLIENTS_OK" = true ] && [ "$SCOPES_OK" = false ]; then
   echo ""
-  echo -e "${GREEN}✅ Configuración automática de Keycloak completada${NC}"
-else
-  echo -e "${YELLOW}⚠️  Script de setup no encontrado${NC}"
-  echo -e "${YELLOW}   Ejecuta 'make keycloak-setup' manualmente${NC}"
+  echo -e "${YELLOW}🔧 Creando scopes OAuth2 faltantes...${NC}"
+  echo ""
+  if [ -f "$PROJECT_ROOT/keycloak/init/create-scopes.sh" ]; then
+    bash "$PROJECT_ROOT/keycloak/init/create-scopes.sh" "$ACCESS_TOKEN" || {
+      echo -e "${YELLOW}⚠️  Error al crear scopes${NC}"
+      echo -e "${YELLOW}   Ejecuta 'make keycloak-create-scopes' manualmente${NC}"
+      exit 0
+    }
+    echo ""
+    echo -e "${GREEN}✅ Scopes OAuth2 creados exitosamente${NC}"
+    exit 0
+  else
+    echo -e "${YELLOW}⚠️  Script create-scopes.sh no encontrado${NC}"
+    echo -e "${YELLOW}   Ejecuta 'make keycloak-create-scopes' manualmente${NC}"
+    exit 0
+  fi
+fi
+
+# Si falta algo más (realm, roles o clientes), ejecutar setup completo
+if [ "$REALM_OK" = false ] || [ "$ROLES_OK" = false ] || [ "$CLIENTS_OK" = false ]; then
+  echo ""
+  echo -e "${YELLOW}🔧 Configuración incompleta, ejecutando setup automático...${NC}"
+  echo ""
+
+  # Ejecutar el script de setup
+  if [ -f "$PROJECT_ROOT/keycloak/init/setup-keycloak.sh" ]; then
+    # Ejecutar de forma no interactiva (no recrear realm si existe)
+    echo "N" | bash "$PROJECT_ROOT/keycloak/init/setup-keycloak.sh" || {
+      echo -e "${YELLOW}⚠️  Error al ejecutar setup automático${NC}"
+      echo -e "${YELLOW}   Ejecuta 'make keycloak-setup' manualmente${NC}"
+      exit 0
+    }
+    echo ""
+    echo -e "${GREEN}✅ Configuración automática de Keycloak completada${NC}"
+  else
+    echo -e "${YELLOW}⚠️  Script de setup no encontrado${NC}"
+    echo -e "${YELLOW}   Ejecuta 'make keycloak-setup' manualmente${NC}"
+  fi
 fi
 

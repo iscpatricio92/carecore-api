@@ -35,6 +35,12 @@ export class MockJwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   async validate(payload: jwt.JwtPayload): Promise<User> {
     // Extract user information from token payload
     const keycloakUserId = payload.sub || '';
+
+    // Extract scopes from token (can be in 'scope' or 'scp' field)
+    // Keycloak typically uses 'scope' as a space-separated string
+    const scopeString = payload.scope || payload.scp || '';
+    const scopes = scopeString ? scopeString.split(' ').filter((s: string) => s.length > 0) : [];
+
     const user: User = {
       id: keycloakUserId,
       keycloakUserId,
@@ -44,6 +50,7 @@ export class MockJwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       name: payload.name,
       givenName: payload.given_name,
       familyName: payload.family_name,
+      scopes,
     };
 
     // Validate required fields
