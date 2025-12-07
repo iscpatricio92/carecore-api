@@ -365,7 +365,7 @@ El sistema ahora puede:
 - ✅ Forzar MFA para roles críticos (admin, practitioner)
 
 **Scopes y Permisos:**
-- ⏳ Definir scopes en Keycloak
+- ⏳ Definir scopes en Keycloak (guía creada - ver `docs/SCOPES_SETUP_GUIDE.md`)
 - ⏳ ScopesGuard para validación
 - ⏳ Decorador @Scopes() para endpoints
 - ⏳ Mapeo de scopes a permisos FHIR

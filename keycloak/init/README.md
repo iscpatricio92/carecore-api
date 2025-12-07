@@ -62,6 +62,39 @@ TOKEN=$(curl -s -X POST "${KEYCLOAK_URL}/realms/master/protocol/openid-connect/t
 bash keycloak/init/create-roles.sh "$TOKEN"
 ```
 
+### `create-scopes.sh`
+
+Crea todos los client scopes OAuth2 necesarios para permisos granulares de recursos FHIR:
+- `patient:read`, `patient:write`
+- `practitioner:read`, `practitioner:write`
+- `encounter:read`, `encounter:write`
+- `document:read`, `document:write`
+- `consent:read`, `consent:write`, `consent:share`
+
+**Características:**
+- Crea 11 scopes en total
+- Asigna automáticamente los scopes al cliente "carecore-api"
+- Idempotente: verifica si los scopes ya existen antes de crearlos
+- Configura "Include in Token Scope" automáticamente
+
+**Uso:**
+```bash
+# Obtener token primero
+TOKEN=$(curl -s -X POST "${KEYCLOAK_URL}/realms/master/protocol/openid-connect/token" \
+  -d "client_id=admin-cli" \
+  -d "username=${KEYCLOAK_ADMIN}" \
+  -d "password=${KEYCLOAK_ADMIN_PASSWORD}" \
+  -d "grant_type=password" | jq -r '.access_token')
+
+# Ejecutar script
+bash keycloak/init/create-scopes.sh "$TOKEN"
+```
+
+**O usando Makefile:**
+```bash
+make keycloak-create-scopes
+```
+
 ### `create-api-client.sh`
 
 Crea el cliente `carecore-api` (confidential) para la API backend.

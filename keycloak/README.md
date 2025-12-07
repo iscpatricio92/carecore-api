@@ -86,6 +86,7 @@ Después de crear el realm:
 
 **🔐 Seguridad Avanzada:**
 - [../docs/MFA_SETUP_GUIDE.md](../docs/MFA_SETUP_GUIDE.md) - Guía completa para configurar MFA (TOTP) en Keycloak
+- [../docs/SCOPES_SETUP_GUIDE.md](../docs/SCOPES_SETUP_GUIDE.md) - Guía completa para configurar scopes OAuth2 en Keycloak
 
 ## 📝 Scripts
 

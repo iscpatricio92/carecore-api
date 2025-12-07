@@ -723,7 +723,8 @@ CREATE TABLE practitioner_verifications (
 #### 3.3 Scopes y Permisos Granulares
 
 **Tareas:**
-- [ ] Definir scopes en Keycloak:
+- [x] Crear guía de configuración de scopes (`docs/SCOPES_SETUP_GUIDE.md`)
+- [ ] Definir scopes en Keycloak (configuración manual - ver guía):
   - `patient:read`, `patient:write`
   - `practitioner:read`, `practitioner:write`
   - `encounter:read`, `encounter:write`
@@ -732,7 +733,7 @@ CREATE TABLE practitioner_verifications (
 - [ ] Crear `ScopesGuard` que valida scopes
 - [ ] Crear decorador `@Scopes()` para endpoints
 - [ ] Mapear scopes a permisos de recursos FHIR
-- [ ] Documentar scopes disponibles
+- [x] Documentar scopes disponibles (guía creada)
 
 **Entregables:**
 - Scopes definidos en Keycloak
@@ -949,7 +950,7 @@ Fase 1.8: Documentar setup de Keycloak
 - [x] **3.8** Implementar endpoint `/auth/mfa/verify`
 - [x] **3.9** Implementar endpoint `/auth/mfa/disable`
 - [x] **3.10** Forzar MFA para roles críticos (admin, practitioner)
-- [ ] **3.11** Definir scopes en Keycloak
+- [ ] **3.11** Definir scopes en Keycloak (guía creada, pendiente configuración manual)
 - [ ] **3.12** Crear `ScopesGuard`
 - [ ] **3.13** Crear decorador `@Scopes()`
 - [ ] **3.14** Mapear scopes a permisos FHIR
@@ -976,7 +977,7 @@ Fase 1.8: Documentar setup de Keycloak
 - [ ] **5.8** Documentar flujo de autenticación
 - [ ] **5.9** Documentar configuración Keycloak
 - [ ] **5.10** Documentar roles y permisos
-- [ ] **5.11** Documentar scopes
+- [x] **5.11** Documentar scopes (guía creada en `docs/SCOPES_SETUP_GUIDE.md`)
 - [ ] **5.12** Documentar SMART on FHIR
 - [ ] **5.13** Actualizar README
 

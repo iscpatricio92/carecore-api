@@ -181,6 +181,14 @@ else
 fi
 echo ""
 
+echo -e "${BLUE}📋 Paso 5: Configurando client scopes...${NC}"
+if [ -f "$SCRIPT_DIR/create-scopes.sh" ]; then
+  bash "$SCRIPT_DIR/create-scopes.sh" "$ACCESS_TOKEN"
+else
+  echo -e "${YELLOW}⚠️  Script create-scopes.sh no encontrado, saltando...${NC}"
+fi
+echo ""
+
 echo -e "${GREEN}✅ Configuración de Keycloak completada${NC}"
 echo ""
 echo -e "${BLUE}📝 Próximos pasos:${NC}"

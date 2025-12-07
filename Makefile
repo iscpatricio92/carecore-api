@@ -193,6 +193,33 @@ keycloak-backup: ## Hacer backup completo de Keycloak (realm + base de datos)
 	@echo "💾 Iniciando backup de Keycloak..."
 	@bash scripts/backup-keycloak.sh
 
+keycloak-backup-realm: ## Hacer backup solo del realm de Keycloak (incluye scopes)
+	@bash scripts/backup-keycloak-realm.sh
+
+keycloak-create-scopes: ## Crear client scopes OAuth2 en Keycloak
+	@if [ -z "$${KEYCLOAK_ADMIN}" ] || [ -z "$${KEYCLOAK_ADMIN_PASSWORD}" ]; then \
+		echo "❌ Error: KEYCLOAK_ADMIN y KEYCLOAK_ADMIN_PASSWORD deben estar configurados"; \
+		echo "   Configúralos en .env.local antes de ejecutar este comando"; \
+		exit 1; \
+	fi
+	@echo "🔐 Obteniendo token de administrador..."
+	@TOKEN_RESPONSE=$$(curl -s -X POST "$${KEYCLOAK_URL:-http://localhost:8080}/realms/master/protocol/openid-connect/token" \
+		-H "Content-Type: application/x-www-form-urlencoded" \
+		-d "client_id=admin-cli" \
+		-d "username=$${KEYCLOAK_ADMIN}" \
+		-d "password=$${KEYCLOAK_ADMIN_PASSWORD}" \
+		-d "grant_type=password"); \
+	ACCESS_TOKEN=$$(echo "$$TOKEN_RESPONSE" | grep -o '"access_token":"[^"]*' | cut -d'"' -f4); \
+	if [ -z "$$ACCESS_TOKEN" ] && command -v jq >/dev/null 2>&1; then \
+		ACCESS_TOKEN=$$(echo "$$TOKEN_RESPONSE" | jq -r '.access_token // empty'); \
+	fi; \
+	if [ -z "$$ACCESS_TOKEN" ] || [ "$$ACCESS_TOKEN" = "null" ]; then \
+		echo "❌ Error: No se pudo obtener token de administrador"; \
+		echo "   Verifica KEYCLOAK_ADMIN y KEYCLOAK_ADMIN_PASSWORD en .env.local"; \
+		exit 1; \
+	fi; \
+	bash keycloak/init/create-scopes.sh "$$ACCESS_TOKEN"
+
 keycloak-restore: ## Restaurar backup de Keycloak (requiere BACKUP_TIMESTAMP=YYYYMMDD-HHMMSS)
 	@if [ -z "$(BACKUP_TIMESTAMP)" ]; then \
 		echo "❌ Error: Se requiere BACKUP_TIMESTAMP"; \

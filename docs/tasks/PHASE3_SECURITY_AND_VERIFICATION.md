@@ -794,8 +794,9 @@ export class MFARequiredGuard implements CanActivate {
 Definir scopes OAuth2 en Keycloak que mapean a permisos específicos de recursos FHIR.
 
 ## Tareas
+- [x] Crear guía detallada de configuración (`docs/SCOPES_SETUP_GUIDE.md`)
 - [ ] Acceder a admin console de Keycloak
-- [ ] Navegar a Clients > carecore-api > Client Scopes
+- [ ] Navegar a Client scopes
 - [ ] Crear client scopes para recursos FHIR:
   - `patient:read` - Leer datos de pacientes
   - `patient:write` - Crear/actualizar pacientes
@@ -817,7 +818,7 @@ Definir scopes OAuth2 en Keycloak que mapean a permisos específicos de recursos
   - `fhir:read` - Agrupa todos los scopes de lectura
   - `fhir:write` - Agrupa todos los scopes de escritura
 - [ ] Exportar configuración del realm
-- [ ] Documentar scopes en `docs/AUTH_IMPLEMENTATION_PLAN.md`
+- [x] Documentar scopes en `docs/SCOPES_SETUP_GUIDE.md` y actualizar referencias
 
 ## Scopes a Crear
 
@@ -836,12 +837,14 @@ Definir scopes OAuth2 en Keycloak que mapean a permisos específicos de recursos
 | `consent:share` | Compartir consentimientos | Consent |
 
 ## Criterios de Aceptación
-- [ ] Todos los scopes creados en Keycloak
+- [x] Guía de configuración creada (`docs/SCOPES_SETUP_GUIDE.md`)
+- [ ] Todos los scopes creados en Keycloak (configuración manual)
 - [ ] Scopes asignados al client correcto
 - [ ] Configuración exportada y versionada
-- [ ] Documentación actualizada
+- [x] Documentación actualizada (guía creada y referencias actualizadas)
 
 ## Referencias
+- [Guía de Configuración de Scopes](../SCOPES_SETUP_GUIDE.md) - Guía completa paso a paso
 - [Keycloak Client Scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes)
 - [OAuth2 Scopes](https://oauth.net/2/scope/)
 ```
