@@ -12,6 +12,12 @@ export interface User {
   id: string;
 
   /**
+   * Keycloak user ID (same as id, but explicitly named for clarity)
+   * This is the user's ID in Keycloak
+   */
+  keycloakUserId: string;
+
+  /**
    * Username (preferred_username claim from JWT)
    * The username used for login
    */

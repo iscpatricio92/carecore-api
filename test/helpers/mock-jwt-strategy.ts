@@ -34,8 +34,10 @@ export class MockJwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
   async validate(payload: jwt.JwtPayload): Promise<User> {
     // Extract user information from token payload
+    const keycloakUserId = payload.sub || '';
     const user: User = {
-      id: payload.sub || '',
+      id: keycloakUserId,
+      keycloakUserId,
       username: payload.preferred_username || payload.sub || '',
       email: payload.email,
       roles: payload.realm_access?.roles || [],

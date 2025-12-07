@@ -9,6 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PinoLogger } from 'nestjs-pino';
 import { randomBytes } from 'node:crypto';
+import * as QRCode from 'qrcode';
 import { DocumentStorageService } from './services/document-storage.service';
 import { KeycloakAdminService } from './services/keycloak-admin.service';
 import { VerifyPractitionerDto } from './dto/verify-practitioner.dto';
@@ -24,6 +25,7 @@ import {
   PractitionerVerificationEntity,
   VerificationStatus,
 } from '../../entities/practitioner-verification.entity';
+import { SetupMFAResponseDto, VerifyMFAResponseDto, DisableMFAResponseDto } from './dto/mfa.dto';
 
 /**
  * Auth Service
@@ -797,6 +799,130 @@ export class AuthService {
         newStatus === VerificationStatus.APPROVED
           ? 'Verification approved successfully'
           : 'Verification rejected',
+    };
+  }
+
+  /**
+   * Setup MFA for a user
+   * Generates TOTP secret and QR code for the user to scan with authenticator app
+   * @param userId Keycloak user ID
+   * @param userEmail User email for QR code label
+   * @returns Setup MFA response with secret and QR code
+   */
+  async setupMFA(userId: string, userEmail: string): Promise<SetupMFAResponseDto> {
+    this.logger.info({ userId }, 'Setting up MFA for user');
+
+    // Check if user already has MFA configured
+    const hasMFA = await this.keycloakAdminService.userHasMFA(userId);
+    if (hasMFA) {
+      throw new BadRequestException('MFA is already configured for this user');
+    }
+
+    // Generate TOTP secret from Keycloak
+    const totpData = await this.keycloakAdminService.generateTOTPSecret(userId);
+    if (!totpData || !totpData.secret) {
+      throw new BadRequestException('Failed to generate TOTP secret');
+    }
+
+    const secret = totpData.secret;
+
+    // Generate QR code
+    // Format: otpauth://totp/{issuer}:{email}?secret={secret}&issuer={issuer}
+    const keycloakRealm = this.configService.get<string>('KEYCLOAK_REALM') || 'carecore';
+    const issuer = `CareCore (${keycloakRealm})`;
+    const otpAuthUrl = `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(
+      userEmail,
+    )}?secret=${secret}&issuer=${encodeURIComponent(issuer)}`;
+
+    let qrCode: string;
+    try {
+      qrCode = await QRCode.toDataURL(otpAuthUrl, {
+        errorCorrectionLevel: 'M',
+        type: 'image/png',
+        width: 300,
+      });
+    } catch (error) {
+      this.logger.error({ error }, 'Failed to generate QR code');
+      throw new BadRequestException('Failed to generate QR code');
+    }
+
+    this.logger.info({ userId }, 'MFA setup completed successfully');
+
+    return {
+      secret,
+      qrCode,
+      manualEntryKey: secret,
+      message: 'Scan the QR code with your authenticator app',
+    };
+  }
+
+  /**
+   * Verify MFA setup and enable MFA for user
+   * Validates the TOTP code and enables MFA permanently in Keycloak
+   * @param userId Keycloak user ID
+   * @param code TOTP code from authenticator app
+   * @returns Verification response
+   */
+  async verifyMFASetup(userId: string, code: string): Promise<VerifyMFAResponseDto> {
+    this.logger.info({ userId }, 'Verifying MFA setup for user');
+
+    // Check if user already has MFA configured
+    const hasMFA = await this.keycloakAdminService.userHasMFA(userId);
+    if (hasMFA) {
+      throw new BadRequestException('MFA is already enabled for this user');
+    }
+
+    // Verify TOTP code and enable MFA in Keycloak
+    const isValid = await this.keycloakAdminService.verifyAndEnableTOTP(userId, code);
+    if (!isValid) {
+      throw new BadRequestException('Invalid TOTP code. Please try again.');
+    }
+
+    this.logger.info({ userId }, 'MFA verified and enabled successfully');
+
+    return {
+      success: true,
+      message: 'MFA enabled successfully',
+      mfaEnabled: true,
+    };
+  }
+
+  /**
+   * Disable MFA for user
+   * Requires valid TOTP code for security
+   * @param userId Keycloak user ID
+   * @param code Current TOTP code for verification
+   * @returns Disable response
+   */
+  async disableMFA(userId: string, code: string): Promise<DisableMFAResponseDto> {
+    this.logger.info({ userId }, 'Disabling MFA for user');
+
+    // Check if user has MFA configured
+    const hasMFA = await this.keycloakAdminService.userHasMFA(userId);
+    if (!hasMFA) {
+      throw new BadRequestException('MFA is not enabled for this user');
+    }
+
+    // Verify TOTP code before disabling
+    const isValid = await this.keycloakAdminService.verifyTOTPCode(userId, code);
+    if (!isValid) {
+      throw new BadRequestException(
+        'Invalid TOTP code. Please provide a valid code to disable MFA.',
+      );
+    }
+
+    // Remove TOTP credential from user
+    const removed = await this.keycloakAdminService.removeTOTPCredential(userId);
+    if (!removed) {
+      throw new BadRequestException('Failed to disable MFA. Please try again.');
+    }
+
+    this.logger.info({ userId }, 'MFA disabled successfully');
+
+    return {
+      success: true,
+      message: 'MFA disabled successfully',
+      mfaEnabled: false,
     };
   }
 }

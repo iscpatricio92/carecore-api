@@ -10,6 +10,7 @@ import { FHIR_RESOURCE_TYPES } from '../../common/constants/fhir-resource-types'
 
 const mockUser: User = {
   id: 'user-1',
+  keycloakUserId: 'user-1',
   username: 'patient',
   email: '',
   roles: [ROLES.PATIENT],

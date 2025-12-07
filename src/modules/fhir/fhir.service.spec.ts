@@ -192,6 +192,7 @@ describe('FhirService', () => {
 
       const user: User = {
         id: 'keycloak-user-123',
+        keycloakUserId: 'keycloak-user-123',
         username: 'patient',
         email: 'patient@example.com',
         roles: [ROLES.PATIENT],
@@ -253,6 +254,7 @@ describe('FhirService', () => {
     it('should throw ForbiddenException when patient user tries to access other patient', async () => {
       const user: User = {
         id: 'patient-user-1',
+        keycloakUserId: 'patient-user-1',
         username: 'patient',
         email: '',
         roles: [ROLES.PATIENT],
@@ -275,6 +277,7 @@ describe('FhirService', () => {
     it('should allow admin to access any patient', async () => {
       const user: User = {
         id: 'admin-user',
+        keycloakUserId: 'admin-user',
         username: 'admin',
         email: '',
         roles: [ROLES.ADMIN],
@@ -297,6 +300,7 @@ describe('FhirService', () => {
     it('should allow practitioner to access active patients', async () => {
       const user: User = {
         id: 'practitioner-user',
+        keycloakUserId: 'practitioner-user',
         username: 'practitioner',
         email: '',
         roles: [ROLES.PRACTITIONER],
@@ -319,6 +323,7 @@ describe('FhirService', () => {
     it('should deny practitioner access to inactive patients', async () => {
       const user: User = {
         id: 'practitioner-user',
+        keycloakUserId: 'practitioner-user',
         username: 'practitioner',
         email: '',
         roles: [ROLES.PRACTITIONER],
@@ -391,6 +396,7 @@ describe('FhirService', () => {
     it('should apply admin filter (no restrictions)', async () => {
       const user: User = {
         id: 'admin-user',
+        keycloakUserId: 'admin-user',
         username: 'admin',
         email: '',
         roles: [ROLES.ADMIN],
@@ -404,6 +410,7 @@ describe('FhirService', () => {
     it('should apply patient filter (only own records)', async () => {
       const user: User = {
         id: 'patient-user',
+        keycloakUserId: 'patient-user',
         username: 'patient',
         email: '',
         roles: [ROLES.PATIENT],
@@ -420,6 +427,7 @@ describe('FhirService', () => {
     it('should apply practitioner filter (only active patients)', async () => {
       const user: User = {
         id: 'practitioner-user',
+        keycloakUserId: 'practitioner-user',
         username: 'practitioner',
         email: '',
         roles: [ROLES.PRACTITIONER],
@@ -435,6 +443,7 @@ describe('FhirService', () => {
     it('should deny access for other roles', async () => {
       const user: User = {
         id: 'viewer-user',
+        keycloakUserId: 'viewer-user',
         username: 'viewer',
         email: '',
         roles: [ROLES.VIEWER],
@@ -449,6 +458,7 @@ describe('FhirService', () => {
     it('should allow patient to access their own patient record', async () => {
       const user: User = {
         id: 'patient-user',
+        keycloakUserId: 'patient-user',
         username: 'patient',
         email: '',
         roles: [ROLES.PATIENT],
@@ -471,6 +481,7 @@ describe('FhirService', () => {
     it('should deny access for other roles in canAccessPatient', async () => {
       const user: User = {
         id: 'viewer-user',
+        keycloakUserId: 'viewer-user',
         username: 'viewer',
         email: '',
         roles: [ROLES.VIEWER],
@@ -621,6 +632,7 @@ describe('FhirService', () => {
     it('should throw ForbiddenException when patient user tries to update other patient', async () => {
       const user: User = {
         id: 'patient-user-1',
+        keycloakUserId: 'patient-user-1',
         username: 'patient',
         email: '',
         roles: [ROLES.PATIENT],
@@ -678,6 +690,7 @@ describe('FhirService', () => {
     it('should throw ForbiddenException when patient user tries to delete other patient', async () => {
       const user: User = {
         id: 'patient-user-1',
+        keycloakUserId: 'patient-user-1',
         username: 'patient',
         email: '',
         roles: [ROLES.PATIENT],

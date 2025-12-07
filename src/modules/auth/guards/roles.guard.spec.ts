@@ -34,11 +34,23 @@ describe('RolesGuard', () => {
   });
 
   describe('canActivate', () => {
-    const createMockContext = (user?: User): ExecutionContext => {
+    const createMockContext = (user?: Partial<User>): ExecutionContext => {
+      const fullUser: User | undefined = user
+        ? {
+            id: user.id || 'user-123',
+            keycloakUserId: user.keycloakUserId || user.id || 'user-123',
+            username: user.username || 'testuser',
+            email: user.email,
+            roles: user.roles || [],
+            name: user.name,
+            givenName: user.givenName,
+            familyName: user.familyName,
+          }
+        : undefined;
       return {
         switchToHttp: () => ({
           getRequest: () => ({
-            user,
+            user: fullUser,
           }),
         }),
         getHandler: () => ({}),

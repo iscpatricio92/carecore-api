@@ -80,3 +80,6 @@ keycloak/realms/*-*.json
 !keycloak/realms/carecore-realm.json
 !keycloak/realms/.gitkeep
 !keycloak/realms/README.md
+
+# Keycloak backups (contienen información sensible: usuarios, secrets, etc.)
+keycloak/backups/

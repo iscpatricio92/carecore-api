@@ -18,6 +18,8 @@ export class KeycloakAdminService {
   private readonly adminClientId: string;
   private readonly adminClientSecret: string;
   private kcAdminClient: KcAdminClient;
+  private accessToken: string | null = null;
+  private tokenExpiry: number = 0; // Unix timestamp in milliseconds
 
   constructor(
     private readonly configService: ConfigService,
@@ -55,11 +57,30 @@ export class KeycloakAdminService {
    */
   private async authenticate(): Promise<void> {
     try {
+      // Check if we have a valid token
+      if (this.accessToken && Date.now() < this.tokenExpiry) {
+        return; // Token is still valid
+      }
+
       await this.kcAdminClient.auth({
         grantType: 'client_credentials',
         clientId: this.adminClientId,
         clientSecret: this.adminClientSecret,
       });
+
+      // Extract access token from the client
+      // The client stores it internally, we need to get it from the token set
+      const tokenSet = (
+        this.kcAdminClient as unknown as {
+          tokenSet?: { access_token?: string; expires_in?: number };
+        }
+      ).tokenSet;
+      if (tokenSet?.access_token) {
+        this.accessToken = tokenSet.access_token;
+        // Set expiry to 5 minutes before actual expiry for safety
+        const expiresIn = (tokenSet.expires_in || 60) - 5;
+        this.tokenExpiry = Date.now() + expiresIn * 1000;
+      }
 
       this.logger.debug('Authenticated with Keycloak Admin API');
     } catch (error) {
@@ -268,6 +289,228 @@ export class KeycloakAdminService {
       return roles.includes(roleName);
     } catch (error) {
       this.logger.error({ error, userId, roleName }, 'Failed to check user role in Keycloak');
+      return false;
+    }
+  }
+
+  /**
+   * Generate TOTP secret for a user
+   * @param userId Keycloak user ID
+   * @returns Object with secret, or null if failed
+   */
+  async generateTOTPSecret(userId: string): Promise<{ secret: string } | null> {
+    try {
+      await this.authenticate();
+
+      // Check if user already has TOTP configured
+      const hasMFA = await this.userHasMFA(userId);
+      if (hasMFA) {
+        this.logger.warn({ userId }, 'User already has TOTP configured');
+        return null;
+      }
+
+      // Generate TOTP secret using Keycloak's REST API
+      // Endpoint: POST /admin/realms/{realm}/users/{id}/totp/generate
+      // We need to use fetch because the admin client doesn't have this method
+      const token = await this.getAccessToken();
+      if (!token) {
+        this.logger.error({ userId }, 'Failed to get access token for TOTP generation');
+        return null;
+      }
+
+      const response = await fetch(
+        `${this.keycloakUrl}/admin/realms/${this.keycloakRealm}/users/${userId}/totp/generate`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        this.logger.error(
+          { userId, status: response.status, error: errorText },
+          'Failed to generate TOTP secret',
+        );
+        return null;
+      }
+
+      const totpData = await response.json();
+      return {
+        secret: totpData.secret || '',
+      };
+    } catch (error) {
+      this.logger.error({ error, userId }, 'Failed to generate TOTP secret in Keycloak');
+      return null;
+    }
+  }
+
+  /**
+   * Get access token for Admin API requests
+   * @private
+   */
+  private async getAccessToken(): Promise<string | null> {
+    try {
+      await this.authenticate();
+      return this.accessToken;
+    } catch (error) {
+      this.logger.error({ error }, 'Failed to get access token');
+      return null;
+    }
+  }
+
+  /**
+   * Check if user has MFA enabled
+   * @param userId Keycloak user ID
+   * @returns True if user has TOTP configured, false otherwise
+   */
+  async userHasMFA(userId: string): Promise<boolean> {
+    try {
+      await this.authenticate();
+
+      const credentials = await this.kcAdminClient.users.getCredentials({
+        id: userId,
+      });
+
+      return credentials.some((cred) => cred.type === 'otp');
+    } catch (error) {
+      this.logger.error({ error, userId }, 'Failed to check MFA status in Keycloak');
+      return false;
+    }
+  }
+
+  /**
+   * Remove TOTP credential from user
+   * @param userId Keycloak user ID
+   * @returns True if successful, false otherwise
+   */
+  async removeTOTPCredential(userId: string): Promise<boolean> {
+    try {
+      await this.authenticate();
+
+      const credentials = await this.kcAdminClient.users.getCredentials({
+        id: userId,
+      });
+
+      const totpCredential = credentials.find((cred) => cred.type === 'otp');
+      if (!totpCredential || !totpCredential.id) {
+        this.logger.warn({ userId }, 'User does not have TOTP credential to remove');
+        return false;
+      }
+
+      await this.kcAdminClient.users.deleteCredential({
+        id: userId,
+        credentialId: totpCredential.id,
+      });
+
+      this.logger.info({ userId }, 'TOTP credential removed from user');
+      return true;
+    } catch (error) {
+      this.logger.error({ error, userId }, 'Failed to remove TOTP credential in Keycloak');
+      return false;
+    }
+  }
+
+  /**
+   * Verify TOTP code and enable MFA for user
+   * @param userId Keycloak user ID
+   * @param code TOTP code to verify
+   * @returns True if code is valid and MFA is enabled, false otherwise
+   */
+  async verifyAndEnableTOTP(userId: string, code: string): Promise<boolean> {
+    try {
+      await this.authenticate();
+
+      const token = await this.getAccessToken();
+      if (!token) {
+        this.logger.error({ userId }, 'Failed to get access token for TOTP verification');
+        return false;
+      }
+
+      // Verify TOTP code using Keycloak's REST API
+      // Endpoint: POST /admin/realms/{realm}/users/{id}/totp/verify
+      const response = await fetch(
+        `${this.keycloakUrl}/admin/realms/${this.keycloakRealm}/users/${userId}/totp/verify`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ code }),
+        },
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        this.logger.error(
+          { userId, status: response.status, error: errorText },
+          'Failed to verify TOTP code',
+        );
+        return false;
+      }
+
+      const result = await response.json();
+      const isValid = result.valid === true;
+
+      if (isValid) {
+        this.logger.info({ userId }, 'TOTP code verified and MFA enabled');
+      } else {
+        this.logger.warn({ userId }, 'Invalid TOTP code provided');
+      }
+
+      return isValid;
+    } catch (error) {
+      this.logger.error({ error, userId }, 'Failed to verify TOTP code in Keycloak');
+      return false;
+    }
+  }
+
+  /**
+   * Verify TOTP code without enabling (for disable operation)
+   * @param userId Keycloak user ID
+   * @param code TOTP code to verify
+   * @returns True if code is valid, false otherwise
+   */
+  async verifyTOTPCode(userId: string, code: string): Promise<boolean> {
+    try {
+      await this.authenticate();
+
+      const token = await this.getAccessToken();
+      if (!token) {
+        this.logger.error({ userId }, 'Failed to get access token for TOTP verification');
+        return false;
+      }
+
+      // Verify TOTP code using Keycloak's REST API
+      const response = await fetch(
+        `${this.keycloakUrl}/admin/realms/${this.keycloakRealm}/users/${userId}/totp/verify`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ code }),
+        },
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        this.logger.error(
+          { userId, status: response.status, error: errorText },
+          'Failed to verify TOTP code',
+        );
+        return false;
+      }
+
+      const result = await response.json();
+      return result.valid === true;
+    } catch (error) {
+      this.logger.error({ error, userId }, 'Failed to verify TOTP code in Keycloak');
       return false;
     }
   }

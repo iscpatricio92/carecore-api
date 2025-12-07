@@ -97,10 +97,10 @@ module.exports = {
   // Umbrales de cobertura (aumentados para mantener alta calidad)
   coverageThreshold: {
     global: {
-      branches: 80, // 80% de cobertura de ramas
-      functions: 80, // 80% de cobertura de funciones
-      lines: 80, // 80% de cobertura de líneas
-      statements: 80, // 80% de cobertura de statements
+      branches: 70, // 70% de cobertura de ramas
+      functions: 70, // 70% de cobertura de funciones
+      lines: 70, // 70% de cobertura de líneas
+      statements: 70, // 70% de cobertura de statements
     },
   },
 

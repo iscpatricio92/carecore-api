@@ -86,7 +86,14 @@ create_client() {
     "access.token.lifespan": "300",
     "client.session.idle.timeout": "1800",
     "client.session.max.lifespan": "36000"
-  }
+  },
+  "defaultClientScopes": [
+    "web-origins",
+    "role_list",
+    "profile",
+    "roles",
+    "email"
+  ]
 }
 EOF
 )

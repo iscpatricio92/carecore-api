@@ -16,6 +16,7 @@ describe('FhirController', () => {
 
   const mockUser: User = {
     id: 'user-123',
+    keycloakUserId: 'user-123',
     username: 'testuser',
     email: 'test@example.com',
     roles: ['patient'],
