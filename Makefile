@@ -189,3 +189,33 @@ keycloak-setup: ## Configurar Keycloak (realm, roles, clientes)
 keycloak-get-secret: ## Obtener Client Secret de carecore-api
 	@bash keycloak/init/get-client-secret.sh
 
+keycloak-backup: ## Hacer backup completo de Keycloak (realm + base de datos)
+	@echo "💾 Iniciando backup de Keycloak..."
+	@bash scripts/backup-keycloak.sh
+
+keycloak-restore: ## Restaurar backup de Keycloak (requiere BACKUP_TIMESTAMP=YYYYMMDD-HHMMSS)
+	@if [ -z "$(BACKUP_TIMESTAMP)" ]; then \
+		echo "❌ Error: Se requiere BACKUP_TIMESTAMP"; \
+		echo ""; \
+		echo "Uso:"; \
+		echo "  make keycloak-restore BACKUP_TIMESTAMP=20251205-143022"; \
+		echo ""; \
+		echo "Para ver backups disponibles:"; \
+		echo "  ls -la keycloak/backups/realms/"; \
+		exit 1; \
+	fi
+	@bash scripts/restore-keycloak.sh $(BACKUP_TIMESTAMP)
+
+keycloak-verify-backup: ## Verificar que un backup de Keycloak es válido (requiere BACKUP_TIMESTAMP=YYYYMMDD-HHMMSS)
+	@if [ -z "$(BACKUP_TIMESTAMP)" ]; then \
+		echo "❌ Error: Se requiere BACKUP_TIMESTAMP"; \
+		echo ""; \
+		echo "Uso:"; \
+		echo "  make keycloak-verify-backup BACKUP_TIMESTAMP=20251205-143022"; \
+		echo ""; \
+		echo "Para ver backups disponibles:"; \
+		echo "  ls -la keycloak/backups/realms/"; \
+		exit 1; \
+	fi
+	@bash scripts/verify-keycloak-backup.sh $(BACKUP_TIMESTAMP)
+

@@ -67,7 +67,7 @@ Crear el realm principal "carecore" con configuración básica para el MVP.
 2. Configurar tiempos de vida:
    - **Access Token Lifespan:** 5 minutos (300 segundos)
    - **SSO Session Idle:** 30 minutos (1800 segundos)
-   - **SSO Session Max:** 10 horas (36000 segundos)
+   - **SSO Session Max:** 30 días (2592000 segundos) - Controla el refresh token lifespan
 3. Hacer clic en "Save"
 
 ## 📋 Método 2: Importar desde JSON (Rápido)
@@ -139,7 +139,7 @@ docker-compose restart keycloak
 ### Tokens
 - **Access Token Lifespan:** 5 minutes
 - **SSO Session Idle:** 30 minutes
-- **SSO Session Max:** 10 hours
+- **SSO Session Max:** 30 days (controls refresh token lifespan)
 
 ## 🔄 Exportar Realm (Para Backup)
 
