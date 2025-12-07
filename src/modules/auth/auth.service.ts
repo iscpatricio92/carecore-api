@@ -25,7 +25,13 @@ import {
   PractitionerVerificationEntity,
   VerificationStatus,
 } from '../../entities/practitioner-verification.entity';
-import { SetupMFAResponseDto, VerifyMFAResponseDto, DisableMFAResponseDto } from './dto/mfa.dto';
+import {
+  SetupMFAResponseDto,
+  VerifyMFAResponseDto,
+  DisableMFAResponseDto,
+  MFAStatusResponseDto,
+} from './dto/mfa.dto';
+import { ROLES } from '@/common/constants/roles';
 
 /**
  * Auth Service
@@ -923,6 +929,41 @@ export class AuthService {
       success: true,
       message: 'MFA disabled successfully',
       mfaEnabled: false,
+    };
+  }
+
+  /**
+   * Get MFA status for user
+   * @param userId Keycloak user ID
+   * @returns MFA status information
+   */
+  async getMFAStatus(userId: string): Promise<MFAStatusResponseDto> {
+    const criticalRoles = [ROLES.ADMIN, ROLES.PRACTITIONER];
+
+    // Get user from Keycloak to check roles
+    const user = await this.keycloakAdminService.findUserById(userId);
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found in Keycloak`);
+    }
+
+    // Get user roles
+    const userRoles = await this.keycloakAdminService.getUserRoles(userId);
+
+    // Check if user has critical role
+    const hasCriticalRole = criticalRoles.some((role) => userRoles.includes(role));
+
+    // Check MFA status
+    const mfaEnabled = await this.keycloakAdminService.userHasMFA(userId);
+
+    return {
+      mfaEnabled,
+      mfaRequired: hasCriticalRole,
+      message:
+        hasCriticalRole && !mfaEnabled
+          ? 'MFA is required for your role. Please configure MFA to access protected endpoints.'
+          : mfaEnabled
+            ? 'MFA is enabled and active'
+            : 'MFA is optional for your role',
     };
   }
 }

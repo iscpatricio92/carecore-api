@@ -19,6 +19,7 @@ import { User } from '../auth/interfaces/user.interface';
 import { ROLES } from '../../common/constants/roles';
 import { FHIR_RESOURCE_TYPES } from '../../common/constants/fhir-resource-types';
 import { AuditService } from '../audit/audit.service';
+import { ScopePermissionService } from '../auth/services/scope-permission.service';
 
 describe('FhirService', () => {
   let service: FhirService;
@@ -42,6 +43,11 @@ describe('FhirService', () => {
     logUpdate: jest.fn().mockResolvedValue(undefined),
     logDelete: jest.fn().mockResolvedValue(undefined),
     logAction: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const mockScopePermissionService = {
+    hasResourcePermission: jest.fn().mockReturnValue(false),
+    roleGrantsPermission: jest.fn().mockReturnValue(false),
   };
 
   // Mock repositories
@@ -90,6 +96,10 @@ describe('FhirService', () => {
         {
           provide: AuditService,
           useValue: mockAuditService,
+        },
+        {
+          provide: ScopePermissionService,
+          useValue: mockScopePermissionService,
         },
       ],
     }).compile();

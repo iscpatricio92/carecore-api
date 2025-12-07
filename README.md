@@ -362,12 +362,12 @@ El sistema ahora puede:
 **MFA (Multi-Factor Authentication):**
 - ✅ Configuración MFA en Keycloak (TOTP)
 - ✅ Endpoints de setup/verify/disable MFA
-- ⏳ Forzar MFA para roles críticos
+- ✅ Forzar MFA para roles críticos (admin, practitioner)
 
 **Scopes y Permisos:**
-- ⏳ Definir scopes en Keycloak
-- ⏳ ScopesGuard para validación
-- ⏳ Decorador @Scopes() para endpoints
+- ⏳ Definir scopes en Keycloak (guía creada - ver `docs/SCOPES_SETUP_GUIDE.md`)
+- ✅ ScopesGuard para validación
+- ✅ Decorador @Scopes() para endpoints
 - ⏳ Mapeo de scopes a permisos FHIR
 
 **Recursos para Integraciones Futuras:**

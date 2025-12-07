@@ -38,6 +38,7 @@ import { CurrentUser } from './decorators/current-user.decorator';
 import { User } from './interfaces/user.interface';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
+import { MFARequiredGuard } from './guards/mfa-required.guard';
 import { Roles } from './decorators/roles.decorator';
 import { ROLES } from '../../common/constants/roles';
 import {
@@ -57,6 +58,7 @@ import {
   VerifyMFAResponseDto,
   DisableMFADto,
   DisableMFAResponseDto,
+  MFAStatusResponseDto,
 } from './dto/mfa.dto';
 
 /**
@@ -637,7 +639,7 @@ export class AuthController {
    * List all practitioner verifications (admin only)
    */
   @Get('verify-practitioner')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, MFARequiredGuard)
   @Roles(ROLES.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
@@ -688,7 +690,7 @@ export class AuthController {
    * Get verification details by ID (admin only)
    */
   @Get('verify-practitioner/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, MFARequiredGuard)
   @Roles(ROLES.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
@@ -727,7 +729,7 @@ export class AuthController {
    */
   @Put('verify-practitioner/:id/review')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, MFARequiredGuard)
   @Roles(ROLES.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
@@ -906,6 +908,42 @@ export class AuthController {
         throw error;
       }
       throw new BadRequestException('Failed to disable MFA');
+    }
+  }
+
+  /**
+   * Get MFA status endpoint - Returns MFA status for the current user
+   */
+  @Get('mfa/status')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Get MFA status for current user',
+    description:
+      'Returns the MFA status for the authenticated user, including whether MFA is enabled and whether it is required based on their roles.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'MFA status retrieved successfully',
+    type: MFAStatusResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token required',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  async getMFAStatus(@CurrentUser() user: User): Promise<MFAStatusResponseDto> {
+    try {
+      return await this.authService.getMFAStatus(user.keycloakUserId);
+    } catch (error) {
+      this.logger.error({ error, userId: user.id }, 'Failed to get MFA status');
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException('Failed to get MFA status');
     }
   }
 }

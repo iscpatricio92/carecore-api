@@ -1,7 +1,31 @@
+// Mock @keycloak/keycloak-admin-client before importing services
+jest.mock('@keycloak/keycloak-admin-client', () => ({
+  __esModule: true,
+  default: jest.fn().mockImplementation(() => ({
+    auth: jest.fn(),
+    users: {
+      findOne: jest.fn(),
+      listRealmRoleMappings: jest.fn(),
+      addRealmRoleMappings: jest.fn(),
+      delRealmRoleMappings: jest.fn(),
+      getCredentials: jest.fn(),
+      deleteCredential: jest.fn(),
+    },
+    roles: {
+      find: jest.fn(),
+    },
+  })),
+}));
+
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
+import { Test, TestingModule } from '@nestjs/testing';
 
-import { createTestApp } from './helpers/test-module.factory';
+import { AppModule } from '../src/app.module';
+import { JwtStrategy } from '../src/modules/auth/strategies/jwt.strategy';
+import { MockJwtStrategy } from './helpers/mock-jwt-strategy';
+import { ConfigModule } from '@nestjs/config';
+import { KeycloakAdminService } from '../src/modules/auth/services/keycloak-admin.service';
 import {
   generatePatientToken,
   generatePractitionerToken,
@@ -11,14 +35,75 @@ import {
 describe('Authorization E2E', () => {
   let app: INestApplication;
 
+  const mockKeycloakAdminService = {
+    userHasMFA: jest.fn(),
+    findUserById: jest.fn(),
+    getUserRoles: jest.fn(),
+    addRoleToUser: jest.fn(),
+    removeRoleFromUser: jest.fn(),
+    updateUserRoles: jest.fn(),
+    userHasRole: jest.fn(),
+    generateTOTPSecret: jest.fn(),
+    verifyTOTPCode: jest.fn(),
+    verifyAndEnableTOTP: jest.fn(),
+    removeTOTPCredential: jest.fn(),
+  };
+
   beforeAll(async () => {
-    app = await createTestApp();
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    })
+      .overrideModule(ConfigModule)
+      .useModule(
+        ConfigModule.forRoot({
+          isGlobal: true,
+          envFilePath: ['.env.test', '.env.local'],
+          load: [
+            () => ({
+              NODE_ENV: 'test',
+              PORT: 3001,
+              DB_HOST: process.env.DB_HOST || 'localhost',
+              DB_PORT: parseInt(process.env.DB_PORT || '5432', 10),
+              DB_USER: process.env.DB_USER || 'test_user',
+              DB_PASSWORD: process.env.DB_PASSWORD || 'test_password',
+              DB_NAME: process.env.DB_NAME || 'test_db',
+              KEYCLOAK_URL: process.env.KEYCLOAK_URL || 'http://localhost:8080',
+              KEYCLOAK_REALM: process.env.KEYCLOAK_REALM || 'carecore',
+              KEYCLOAK_CLIENT_ID: process.env.KEYCLOAK_CLIENT_ID || 'carecore-api',
+              KEYCLOAK_CLIENT_SECRET: process.env.KEYCLOAK_CLIENT_SECRET || 'test-secret',
+              ENCRYPTION_KEY: process.env.ENCRYPTION_KEY || 'test-encryption-key-32-chars-long',
+            }),
+          ],
+        }),
+      )
+      .overrideProvider(JwtStrategy)
+      .useClass(MockJwtStrategy)
+      .overrideProvider(KeycloakAdminService)
+      .useValue(mockKeycloakAdminService)
+      .compile();
+
+    app = moduleFixture.createNestApplication();
+    app.setGlobalPrefix('api');
+
+    await app.init();
   });
 
   afterAll(async () => {
     if (app) {
       await app.close();
     }
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // Default: MFA enabled for admin and practitioner (critical roles)
+    mockKeycloakAdminService.userHasMFA.mockImplementation((userId: string) => {
+      // Admin and practitioner users should have MFA enabled by default in tests
+      if (userId.includes('admin') || userId.includes('practitioner')) {
+        return Promise.resolve(true);
+      }
+      return Promise.resolve(false);
+    });
   });
 
   describe('Role-based access control - Patients', () => {
@@ -51,9 +136,10 @@ describe('Authorization E2E', () => {
         .expect(403);
     });
 
-    it('should allow admin to create Practitioner', () => {
-      const token = generateAdminToken();
-      return request(app.getHttpServer())
+    it('should allow admin to create Practitioner', async () => {
+      mockKeycloakAdminService.userHasMFA.mockResolvedValue(true);
+      const token = generateAdminToken('admin-user-789');
+      await request(app.getHttpServer())
         .post('/api/fhir/Practitioner')
         .set('Authorization', `Bearer ${token}`)
         .send({
@@ -81,9 +167,10 @@ describe('Authorization E2E', () => {
         .expect(403);
     });
 
-    it('should allow practitioner to create Encounter', () => {
-      const token = generatePractitionerToken();
-      return request(app.getHttpServer())
+    it('should allow practitioner to create Encounter', async () => {
+      mockKeycloakAdminService.userHasMFA.mockResolvedValue(true);
+      const token = generatePractitionerToken('practitioner-user-456');
+      await request(app.getHttpServer())
         .post('/api/fhir/Encounter')
         .set('Authorization', `Bearer ${token}`)
         .send({
@@ -97,9 +184,10 @@ describe('Authorization E2E', () => {
         });
     });
 
-    it('should allow admin to create Encounter', () => {
-      const token = generateAdminToken();
-      return request(app.getHttpServer())
+    it('should allow admin to create Encounter', async () => {
+      mockKeycloakAdminService.userHasMFA.mockResolvedValue(true);
+      const token = generateAdminToken('admin-user-789');
+      await request(app.getHttpServer())
         .post('/api/fhir/Encounter')
         .set('Authorization', `Bearer ${token}`)
         .send({
