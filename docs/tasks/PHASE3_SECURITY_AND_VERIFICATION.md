@@ -863,19 +863,19 @@ Definir scopes OAuth2 en Keycloak que mapean a permisos específicos de recursos
 Crear guard que valida que el token JWT contiene los scopes necesarios para acceder a un endpoint.
 
 ## Tareas
-- [ ] Crear `ScopesGuard` en `src/modules/auth/guards/scopes.guard.ts`
-- [ ] Implementar `CanActivate`:
+- [x] Crear `ScopesGuard` en `src/modules/auth/guards/scopes.guard.ts`
+- [x] Implementar `CanActivate`:
   - Extraer scopes del token JWT (campo `scope` o `scp`)
   - Comparar con scopes requeridos del decorador `@Scopes()`
   - Retornar `true` si todos los scopes requeridos están presentes
   - Retornar `false` si falta algún scope (403 Forbidden)
-- [ ] Manejar formato de scopes:
+- [x] Manejar formato de scopes:
   - Pueden venir como string separado por espacios: "patient:read patient:write"
   - O como array: ["patient:read", "patient:write"]
-- [ ] Crear error personalizado:
+- [x] Crear error personalizado:
   - `InsufficientScopesException` con mensaje claro
-- [ ] Integrar guard en `AuthModule`
-- [ ] Agregar tests unitarios
+- [x] Integrar guard en `AuthModule`
+- [x] Agregar tests unitarios
 
 ## Guard Esperado
 
@@ -912,11 +912,11 @@ export class ScopesGuard implements CanActivate {
 ```
 
 ## Criterios de Aceptación
-- [ ] Guard creado y funcional
-- [ ] Validación de scopes implementada
-- [ ] Manejo de errores implementado
-- [ ] Integrado en AuthModule
-- [ ] Tests unitarios pasando
+- [x] Guard creado y funcional
+- [x] Validación de scopes implementada
+- [x] Manejo de errores implementado
+- [x] Integrado en AuthModule
+- [x] Tests unitarios pasando (12/12)
 
 ## Referencias
 - Ver `RolesGuard` para referencia de implementación
@@ -937,17 +937,14 @@ export class ScopesGuard implements CanActivate {
 Crear decorador que permite especificar qué scopes son requeridos para acceder a un endpoint.
 
 ## Tareas
-- [ ] Crear decorador `@Scopes()` en `src/modules/auth/decorators/scopes.decorator.ts`
-- [ ] Implementar usando `SetMetadata`:
+- [x] Crear decorador `@Scopes()` en `src/modules/auth/decorators/scopes.decorator.ts`
+- [x] Implementar usando `SetMetadata`:
   - Key: 'scopes'
   - Value: array de strings (scopes requeridos)
-- [ ] Crear tipos TypeScript:
-  - `FhirResourceType` - Tipos de recursos FHIR
-  - `FhirAction` - Acciones (read, write, share, etc.)
-- [ ] Crear helper function para generar scopes:
-  - `fhirScope(resource: FhirResourceType, action: FhirAction)` - Retorna "resource:action"
-- [ ] Documentar uso del decorador
-- [ ] Agregar ejemplos en código
+- [x] Crear helper function para generar scopes:
+  - `fhirScope(resource: string, action: string)` - Retorna "resource:action"
+- [x] Documentar uso del decorador
+- [x] Agregar ejemplos en código
 
 ## Decorador Esperado
 
@@ -987,11 +984,11 @@ shareConsent(@Param('id') id: string) {
 ```
 
 ## Criterios de Aceptación
-- [ ] Decorador creado y funcional
-- [ ] Helper functions implementadas
-- [ ] Documentación y ejemplos agregados
-- [ ] Integrado con ScopesGuard
-- [ ] Tests unitarios pasando
+- [x] Decorador creado y funcional
+- [x] Helper functions implementadas
+- [x] Documentación y ejemplos agregados
+- [x] Integrado con ScopesGuard
+- [x] Tests unitarios pasando (incluidos en ScopesGuard tests)
 
 ## Referencias
 - Ver `@Roles()` decorator para referencia

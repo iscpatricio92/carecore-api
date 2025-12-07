@@ -125,6 +125,7 @@ describe('JwtStrategy', () => {
         realm_access: {
           roles: ['patient', 'user'],
         },
+        scope: 'patient:read patient:write document:read',
         iss: validIssuer,
         exp: Math.floor(Date.now() / 1000) + 3600,
         iat: Math.floor(Date.now() / 1000),
@@ -140,6 +141,7 @@ describe('JwtStrategy', () => {
       expect(user.name).toBe('Test User');
       expect(user.givenName).toBe('Test');
       expect(user.familyName).toBe('User');
+      expect(user.scopes).toEqual(['patient:read', 'patient:write', 'document:read']);
     });
 
     it('should use sub as username if preferred_username is missing', async () => {
@@ -168,6 +170,83 @@ describe('JwtStrategy', () => {
       const user = await strategy.validate(payload);
 
       expect(user.roles).toEqual([]);
+      expect(user.scopes).toEqual([]);
+    });
+
+    it('should extract scopes from scope field', async () => {
+      const payload: jwt.JwtPayload = {
+        sub: 'user-123',
+        preferred_username: 'testuser',
+        scope: 'patient:read patient:write consent:read',
+        iss: validIssuer,
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        iat: Math.floor(Date.now() / 1000),
+      };
+
+      const user = await strategy.validate(payload);
+
+      expect(user.scopes).toEqual(['patient:read', 'patient:write', 'consent:read']);
+    });
+
+    it('should extract scopes from scp field if scope is not present', async () => {
+      const payload: jwt.JwtPayload = {
+        sub: 'user-123',
+        preferred_username: 'testuser',
+        scp: 'practitioner:read encounter:read',
+        iss: validIssuer,
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        iat: Math.floor(Date.now() / 1000),
+      };
+
+      const user = await strategy.validate(payload);
+
+      expect(user.scopes).toEqual(['practitioner:read', 'encounter:read']);
+    });
+
+    it('should prefer scope field over scp field', async () => {
+      const payload: jwt.JwtPayload = {
+        sub: 'user-123',
+        preferred_username: 'testuser',
+        scope: 'patient:read',
+        scp: 'practitioner:read',
+        iss: validIssuer,
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        iat: Math.floor(Date.now() / 1000),
+      };
+
+      const user = await strategy.validate(payload);
+
+      expect(user.scopes).toEqual(['patient:read']);
+    });
+
+    it('should handle empty scope string', async () => {
+      const payload: jwt.JwtPayload = {
+        sub: 'user-123',
+        preferred_username: 'testuser',
+        scope: '',
+        iss: validIssuer,
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        iat: Math.floor(Date.now() / 1000),
+      };
+
+      const user = await strategy.validate(payload);
+
+      expect(user.scopes).toEqual([]);
+    });
+
+    it('should handle scope string with extra spaces', async () => {
+      const payload: jwt.JwtPayload = {
+        sub: 'user-123',
+        preferred_username: 'testuser',
+        scope: '  patient:read   patient:write  ',
+        iss: validIssuer,
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        iat: Math.floor(Date.now() / 1000),
+      };
+
+      const user = await strategy.validate(payload);
+
+      expect(user.scopes).toEqual(['patient:read', 'patient:write']);
     });
 
     it('should throw UnauthorizedException for invalid issuer', async () => {

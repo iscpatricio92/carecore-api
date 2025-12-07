@@ -8,6 +8,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { MFARequiredGuard } from './guards/mfa-required.guard';
+import { ScopesGuard } from './guards/scopes.guard';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { DocumentStorageService } from './services/document-storage.service';
@@ -42,6 +43,7 @@ import { PractitionerVerificationEntity } from '../../entities/practitioner-veri
     JwtAuthGuard,
     RolesGuard,
     MFARequiredGuard,
+    ScopesGuard,
     AuthService,
     DocumentStorageService,
     KeycloakAdminService,
@@ -52,6 +54,7 @@ import { PractitionerVerificationEntity } from '../../entities/practitioner-veri
     JwtAuthGuard,
     RolesGuard,
     MFARequiredGuard,
+    ScopesGuard,
     AuthService,
     KeycloakAdminService, // Export KeycloakAdminService for MFARequiredGuard in other modules
   ],

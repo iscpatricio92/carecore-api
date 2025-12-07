@@ -52,4 +52,11 @@ export interface User {
    * User's last name
    */
   familyName?: string;
+
+  /**
+   * OAuth2 scopes assigned to the user
+   * Extracted from the 'scope' claim in the JWT token
+   * Format: space-separated string (e.g., "patient:read patient:write")
+   */
+  scopes?: string[];
 }

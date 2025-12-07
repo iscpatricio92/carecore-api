@@ -366,8 +366,8 @@ El sistema ahora puede:
 
 **Scopes y Permisos:**
 - ⏳ Definir scopes en Keycloak (guía creada - ver `docs/SCOPES_SETUP_GUIDE.md`)
-- ⏳ ScopesGuard para validación
-- ⏳ Decorador @Scopes() para endpoints
+- ✅ ScopesGuard para validación
+- ✅ Decorador @Scopes() para endpoints
 - ⏳ Mapeo de scopes a permisos FHIR
 
 **Recursos para Integraciones Futuras:**
