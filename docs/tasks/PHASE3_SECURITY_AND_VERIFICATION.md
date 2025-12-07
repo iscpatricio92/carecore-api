@@ -433,7 +433,7 @@ Cuando un practitioner es verificado, actualizar automáticamente su rol en Keyc
 
 ---
 
-### Tarea 6: Configurar MFA en Keycloak (TOTP) ⏳ EN PROGRESO
+### Tarea 6: Configurar MFA en Keycloak (TOTP) ✅
 
 **Título:** `feat(auth): configurar MFA TOTP en Keycloak realm`
 
@@ -444,25 +444,25 @@ Configurar Multi-Factor Authentication usando TOTP (Time-based One-Time Password
 
 ## Tareas
 - [x] Crear guía detallada de configuración MFA (`docs/MFA_SETUP_GUIDE.md`)
-- [ ] Acceder a admin console de Keycloak
-- [ ] Navegar a Authentication > Flows
-- [ ] Crear o modificar flow de autenticación:
+- [x] Acceder a admin console de Keycloak
+- [x] Navegar a Authentication > Flows
+- [x] Crear o modificar flow de autenticación:
   - Agregar step "OTP Form" después de "Username Password Form"
-- [ ] Configurar TOTP:
+- [x] Configurar TOTP:
   - Habilitar TOTP como método de autenticación
   - Configurar algoritmo: SHA1
   - Configurar dígitos: 6
   - Configurar período: 30 segundos
   - Configurar look ahead window: 1
-- [ ] Crear Authentication Flow para MFA:
+- [x] Crear Authentication Flow para MFA:
   - Flow name: "Browser with MFA"
   - Basado en "Browser" flow
   - Agregar "OTP Form" como step requerido
-- [ ] Configurar Conditional OTP (opcional):
+- [x] Configurar Conditional OTP (opcional):
   - Hacer MFA condicional basado en roles
   - Roles críticos (admin, practitioner) requieren MFA obligatorio
-- [ ] Exportar configuración del realm (para versionado)
-- [ ] Documentar configuración en `keycloak/README.md`
+- [x] Exportar configuración del realm (para versionado)
+- [x] Documentar configuración en `keycloak/README.md`
 
 ## Configuración Esperada
 
@@ -478,11 +478,11 @@ Configurar Multi-Factor Authentication usando TOTP (Time-based One-Time Password
 2. **Browser with MFA:** Para roles críticos o usuarios que habilitaron MFA
 
 ## Criterios de Aceptación
-- [ ] MFA configurado en Keycloak
-- [ ] TOTP funcionando correctamente
-- [ ] Flujos de autenticación creados
-- [ ] Configuración exportada y versionada
-- [ ] Documentación actualizada
+- [x] MFA configurado en Keycloak
+- [x] TOTP funcionando correctamente
+- [x] Flujos de autenticación creados
+- [x] Configuración exportada y versionada
+- [x] Documentación actualizada
 
 ## Referencias
 - [Keycloak Authentication Flows](https://www.keycloak.org/docs/latest/server_admin/#_authentication-flows)
@@ -493,7 +493,7 @@ Configurar Multi-Factor Authentication usando TOTP (Time-based One-Time Password
 
 ---
 
-### Tarea 7: Crear endpoint POST /auth/mfa/setup - Setup MFA
+### Tarea 7: Crear endpoint POST /auth/mfa/setup - Setup MFA ✅
 
 **Título:** `feat(auth): crear endpoint para configurar MFA para usuarios`
 
@@ -503,20 +503,20 @@ Configurar Multi-Factor Authentication usando TOTP (Time-based One-Time Password
 Crear endpoint que permite a los usuarios configurar MFA en su cuenta.
 
 ## Tareas
-- [ ] Crear método `setupMFA()` en `AuthService`
-- [ ] Integrar con Keycloak Admin API:
+- [x] Crear método `setupMFA()` en `AuthService`
+- [x] Integrar con Keycloak Admin API:
   - Llamar a endpoint de Keycloak para generar secret TOTP
   - Obtener QR code para escanear con app autenticadora
-- [ ] Crear DTO `SetupMFAResponseDto` con:
+- [x] Crear DTO `SetupMFAResponseDto` con:
   - `secret` (string) - Secret para TOTP
   - `qrCode` (string) - URL o base64 del QR code
   - `manualEntryKey` (string) - Clave para entrada manual
-- [ ] Crear endpoint `POST /api/auth/mfa/setup`
-- [ ] Proteger endpoint con `@UseGuards(JwtAuthGuard)`
-- [ ] Validar que el usuario no tenga MFA ya configurado
-- [ ] Generar QR code usando librería (ej: `qrcode`)
-- [ ] Retornar secret y QR code
-- [ ] Agregar documentación Swagger
+- [x] Crear endpoint `POST /api/auth/mfa/setup`
+- [x] Proteger endpoint con `@UseGuards(JwtAuthGuard)`
+- [x] Validar que el usuario no tenga MFA ya configurado
+- [x] Generar QR code usando librería (ej: `qrcode`)
+- [x] Retornar secret y QR code
+- [x] Agregar documentación Swagger
 
 ## Endpoint Esperado
 
@@ -545,11 +545,11 @@ Authorization: Bearer <token>
 5. Usuario verifica con código (ver Tarea 8)
 
 ## Criterios de Aceptación
-- [ ] Endpoint creado y funcional
-- [ ] Secret TOTP generado correctamente
-- [ ] QR code generado y retornado
-- [ ] Integración con Keycloak funcionando
-- [ ] Documentación Swagger completa
+- [x] Endpoint creado y funcional
+- [x] Secret TOTP generado correctamente
+- [x] QR code generado y retornado
+- [x] Integración con Keycloak funcionando
+- [x] Documentación Swagger completa
 - [ ] Tests unitarios pasando
 
 ## Referencias
@@ -561,7 +561,7 @@ Authorization: Bearer <token>
 
 ---
 
-### Tarea 8: Crear endpoint POST /auth/mfa/verify - Verificar código
+### Tarea 8: Crear endpoint POST /auth/mfa/verify - Verificar código ✅
 
 **Título:** `feat(auth): crear endpoint para verificar código MFA y completar setup`
 
@@ -571,21 +571,21 @@ Authorization: Bearer <token>
 Crear endpoint que permite verificar el código TOTP durante el setup de MFA y habilitarlo permanentemente.
 
 ## Tareas
-- [ ] Crear DTO `VerifyMFADto` con:
+- [x] Crear DTO `VerifyMFADto` con:
   - `code` (string, required) - Código TOTP de 6 dígitos
-- [ ] Crear método `verifyMFASetup()` en `AuthService`
-- [ ] Implementar validación:
+- [x] Crear método `verifyMFASetup()` en `AuthService`
+- [x] Implementar validación:
   - Verificar que el código TOTP es válido
   - Validar contra el secret generado en setup
   - Considerar ventana de tiempo (look ahead)
-- [ ] Integrar con Keycloak:
+- [x] Integrar con Keycloak:
   - Habilitar MFA para el usuario en Keycloak
   - Configurar TOTP credential
-- [ ] Crear endpoint `POST /api/auth/mfa/verify`
-- [ ] Proteger endpoint con `@UseGuards(JwtAuthGuard)`
-- [ ] Retornar éxito si código es válido
-- [ ] Retornar error si código es inválido (con mensaje claro)
-- [ ] Agregar documentación Swagger
+- [x] Crear endpoint `POST /api/auth/mfa/verify`
+- [x] Proteger endpoint con `@UseGuards(JwtAuthGuard)`
+- [x] Retornar éxito si código es válido
+- [x] Retornar error si código es inválido (con mensaje claro)
+- [x] Agregar documentación Swagger
 
 ## Endpoint Esperado
 
@@ -620,12 +620,12 @@ Content-Type: application/json
 ```
 
 ## Criterios de Aceptación
-- [ ] Endpoint creado y funcional
-- [ ] Validación de código TOTP implementada
-- [ ] Integración con Keycloak funcionando
-- [ ] MFA se habilita correctamente
-- [ ] Manejo de errores implementado
-- [ ] Documentación Swagger completa
+- [x] Endpoint creado y funcional
+- [x] Validación de código TOTP implementada
+- [x] Integración con Keycloak funcionando
+- [x] MFA se habilita correctamente
+- [x] Manejo de errores implementado
+- [x] Documentación Swagger completa
 - [ ] Tests unitarios pasando
 
 ## Referencias
@@ -637,7 +637,7 @@ Content-Type: application/json
 
 ---
 
-### Tarea 9: Crear endpoint POST /auth/mfa/disable - Deshabilitar MFA
+### Tarea 9: Crear endpoint POST /auth/mfa/disable - Deshabilitar MFA ✅
 
 **Título:** `feat(auth): crear endpoint para deshabilitar MFA (requiere verificación)`
 
@@ -647,20 +647,20 @@ Content-Type: application/json
 Crear endpoint que permite a los usuarios deshabilitar MFA, requiriendo verificación con código TOTP actual.
 
 ## Tareas
-- [ ] Crear DTO `DisableMFADto` con:
+- [x] Crear DTO `DisableMFADto` con:
   - `code` (string, required) - Código TOTP actual para verificar
-- [ ] Crear método `disableMFA()` en `AuthService`
-- [ ] Implementar validación de seguridad:
+- [x] Crear método `disableMFA()` en `AuthService`
+- [x] Implementar validación de seguridad:
   - Requerir código TOTP válido para deshabilitar
   - Validar que el usuario tiene MFA habilitado
   - Para roles críticos: requerir aprobación de admin (opcional)
-- [ ] Integrar con Keycloak:
+- [x] Integrar con Keycloak:
   - Remover credential TOTP del usuario
   - Deshabilitar MFA requirement
-- [ ] Crear endpoint `POST /api/auth/mfa/disable`
-- [ ] Proteger endpoint con `@UseGuards(JwtAuthGuard)`
-- [ ] Agregar validación especial para roles críticos
-- [ ] Agregar documentación Swagger
+- [x] Crear endpoint `POST /api/auth/mfa/disable`
+- [x] Proteger endpoint con `@UseGuards(JwtAuthGuard)`
+- [x] Agregar validación especial para roles críticos
+- [x] Agregar documentación Swagger
 
 ## Endpoint Esperado
 
@@ -691,12 +691,12 @@ Content-Type: application/json
 - ⚠️ Registrar acción en audit log
 
 ## Criterios de Aceptación
-- [ ] Endpoint creado y funcional
-- [ ] Validación de código TOTP requerida
-- [ ] Integración con Keycloak funcionando
-- [ ] MFA se deshabilita correctamente
-- [ ] Validaciones de seguridad implementadas
-- [ ] Documentación Swagger completa
+- [x] Endpoint creado y funcional
+- [x] Validación de código TOTP requerida
+- [x] Integración con Keycloak funcionando
+- [x] MFA se deshabilita correctamente
+- [x] Validaciones de seguridad implementadas
+- [x] Documentación Swagger completa
 - [ ] Tests unitarios pasando
 
 ## Referencias
@@ -1078,7 +1078,7 @@ Crear sistema que mapea scopes OAuth2 a permisos específicos de recursos FHIR y
 | 3 | Implementar upload de documentos ✅ | 4-6 horas | Alta | `enhancement`, `auth`, `phase-3`, `security` |
 | 4 | Crear flujo de revisión manual (admin) ✅ | 4-6 horas | Alta | `enhancement`, `auth`, `phase-3`, `admin` |
 | 5 | Actualizar rol en Keycloak cuando se verifica ✅ | 3-4 horas | Alta | `enhancement`, `auth`, `phase-3`, `integration` |
-| 6 | Configurar MFA en Keycloak (TOTP) | 2-3 horas | Alta | `enhancement`, `auth`, `phase-3`, `security`, `keycloak` |
+| 6 | Configurar MFA en Keycloak (TOTP) ✅ | 2-3 horas | Alta | `enhancement`, `auth`, `phase-3`, `security`, `keycloak` |
 | 7 | Crear endpoint POST /auth/mfa/setup | 3-4 horas | Alta | `enhancement`, `auth`, `phase-3`, `security` |
 | 8 | Crear endpoint POST /auth/mfa/verify | 2-3 horas | Alta | `enhancement`, `auth`, `phase-3`, `security` |
 | 9 | Crear endpoint POST /auth/mfa/disable | 2-3 horas | Media | `enhancement`, `auth`, `phase-3`, `security` |

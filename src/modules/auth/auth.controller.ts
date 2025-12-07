@@ -51,6 +51,13 @@ import {
   ListVerificationsResponseDto,
   VerificationDetailResponseDto,
 } from './dto/review-verification.dto';
+import {
+  SetupMFAResponseDto,
+  VerifyMFADto,
+  VerifyMFAResponseDto,
+  DisableMFADto,
+  DisableMFAResponseDto,
+} from './dto/mfa.dto';
 
 /**
  * Authentication Controller
@@ -773,6 +780,132 @@ export class AuthController {
         throw error;
       }
       throw new BadRequestException('Failed to review verification');
+    }
+  }
+
+  /**
+   * Setup MFA endpoint - Generates TOTP secret and QR code for user
+   */
+  @Post('mfa/setup')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Setup MFA for user',
+    description:
+      'Generates a TOTP secret and QR code for the authenticated user to configure MFA. The user must scan the QR code with an authenticator app (e.g., Google Authenticator, Authy).',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'MFA setup data generated successfully',
+    type: SetupMFAResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'MFA is already configured for this user',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token required',
+  })
+  async setupMFA(@CurrentUser() user: User): Promise<SetupMFAResponseDto> {
+    try {
+      // Get user email from token or user object
+      const userEmail = user.email || user.username || 'user@example.com';
+
+      return await this.authService.setupMFA(user.keycloakUserId, userEmail);
+    } catch (error) {
+      this.logger.error({ error, userId: user.id }, 'Failed to setup MFA');
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException('Failed to setup MFA');
+    }
+  }
+
+  /**
+   * Verify MFA endpoint - Verifies TOTP code and enables MFA permanently
+   */
+  @Post('mfa/verify')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Verify MFA setup',
+    description:
+      'Verifies the TOTP code from the authenticator app and enables MFA permanently for the user. The code must be generated from the secret provided during setup.',
+  })
+  @ApiBody({
+    type: VerifyMFADto,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'MFA verified and enabled successfully',
+    type: VerifyMFAResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid TOTP code or MFA already enabled',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token required',
+  })
+  async verifyMFA(
+    @Body() dto: VerifyMFADto,
+    @CurrentUser() user: User,
+  ): Promise<VerifyMFAResponseDto> {
+    try {
+      return await this.authService.verifyMFASetup(user.keycloakUserId, dto.code);
+    } catch (error) {
+      this.logger.error({ error, userId: user.id }, 'Failed to verify MFA');
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException('Failed to verify MFA');
+    }
+  }
+
+  /**
+   * Disable MFA endpoint - Disables MFA for user (requires valid TOTP code)
+   */
+  @Post('mfa/disable')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Disable MFA for user',
+    description:
+      'Disables MFA for the authenticated user. Requires a valid TOTP code from the authenticator app for security verification.',
+  })
+  @ApiBody({
+    type: DisableMFADto,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'MFA disabled successfully',
+    type: DisableMFAResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid TOTP code or MFA not enabled',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token required',
+  })
+  async disableMFA(
+    @Body() dto: DisableMFADto,
+    @CurrentUser() user: User,
+  ): Promise<DisableMFAResponseDto> {
+    try {
+      return await this.authService.disableMFA(user.keycloakUserId, dto.code);
+    } catch (error) {
+      this.logger.error({ error, userId: user.id }, 'Failed to disable MFA');
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException('Failed to disable MFA');
     }
   }
 }

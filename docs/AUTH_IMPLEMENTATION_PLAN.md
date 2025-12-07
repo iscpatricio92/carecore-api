@@ -944,10 +944,10 @@ Fase 1.8: Documentar setup de Keycloak
 - [x] **3.3** Implementar upload de documentos
 - [x] **3.4** Crear flujo de revisión manual
 - [x] **3.5** Integrar actualización de roles
-- [ ] **3.6** Configurar MFA en Keycloak
-- [ ] **3.7** Implementar endpoint `/auth/mfa/setup`
-- [ ] **3.8** Implementar endpoint `/auth/mfa/verify`
-- [ ] **3.9** Implementar endpoint `/auth/mfa/disable`
+- [x] **3.6** Configurar MFA en Keycloak
+- [x] **3.7** Implementar endpoint `/auth/mfa/setup`
+- [x] **3.8** Implementar endpoint `/auth/mfa/verify`
+- [x] **3.9** Implementar endpoint `/auth/mfa/disable`
 - [ ] **3.10** Definir scopes en Keycloak
 - [ ] **3.11** Crear `ScopesGuard`
 - [ ] **3.12** Crear decorador `@Scopes()`

@@ -360,8 +360,8 @@ El sistema ahora puede:
 - ✅ Actualización automática de roles en Keycloak
 
 **MFA (Multi-Factor Authentication):**
-- ⏳ Configuración MFA en Keycloak (TOTP)
-- ⏳ Endpoints de setup/verify/disable MFA
+- ✅ Configuración MFA en Keycloak (TOTP)
+- ✅ Endpoints de setup/verify/disable MFA
 - ⏳ Forzar MFA para roles críticos
 
 **Scopes y Permisos:**

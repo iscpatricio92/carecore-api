@@ -35,15 +35,23 @@ describe('ConsentsService', () => {
     logAction: jest.fn().mockResolvedValue(undefined),
   };
 
-  const adminUser: User = { id: 'admin-1', username: 'admin', roles: [ROLES.ADMIN], email: '' };
+  const adminUser: User = {
+    id: 'admin-1',
+    keycloakUserId: 'admin-1',
+    username: 'admin',
+    roles: [ROLES.ADMIN],
+    email: '',
+  };
   const patientUser: User = {
     id: 'patient-1',
+    keycloakUserId: 'patient-1',
     username: 'patient',
     roles: [ROLES.PATIENT],
     email: '',
   };
   const practitionerUser: User = {
     id: 'pract-1',
+    keycloakUserId: 'pract-1',
     username: 'pract',
     roles: [ROLES.PRACTITIONER],
     email: '',
