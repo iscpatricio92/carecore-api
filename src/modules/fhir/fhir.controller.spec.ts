@@ -20,6 +20,7 @@ jest.mock('@keycloak/keycloak-admin-client', () => ({
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { PinoLogger } from 'nestjs-pino';
 import { FhirController } from './fhir.controller';
 import { FhirService } from './fhir.service';
 import { SmartFhirService } from './services/smart-fhir.service';
@@ -30,6 +31,7 @@ import {
 } from '../../common/dto/fhir-practitioner.dto';
 import { CreateEncounterDto, UpdateEncounterDto } from '../../common/dto/fhir-encounter.dto';
 import { SmartFhirAuthDto } from '../../common/dto/smart-fhir-auth.dto';
+import { SmartFhirTokenDto } from '../../common/dto/smart-fhir-token.dto';
 import { User } from '../auth/interfaces/user.interface';
 import { FHIR_RESOURCE_TYPES } from '../../common/constants/fhir-resource-types';
 import { MFARequiredGuard } from '../auth/guards/mfa-required.guard';
@@ -71,6 +73,9 @@ describe('FhirController', () => {
     generateStateToken: jest.fn(),
     buildAuthorizationUrl: jest.fn(),
     getCallbackUrl: jest.fn(),
+    validateTokenParams: jest.fn(),
+    exchangeCodeForTokens: jest.fn(),
+    decodeStateToken: jest.fn(),
   };
 
   const mockKeycloakAdminService = {
@@ -89,6 +94,14 @@ describe('FhirController', () => {
 
   const mockMFARequiredGuard = {
     canActivate: jest.fn().mockReturnValue(true),
+  };
+
+  const mockLogger = {
+    setContext: jest.fn(),
+    debug: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+    info: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -112,6 +125,10 @@ describe('FhirController', () => {
         {
           provide: MFARequiredGuard,
           useValue: mockMFARequiredGuard,
+        },
+        {
+          provide: PinoLogger,
+          useValue: mockLogger,
         },
       ],
     })
@@ -611,6 +628,200 @@ describe('FhirController', () => {
       const jsonCall = mockResponse.json.mock.calls[0][0];
       expect(jsonCall.resourceType).toBe('OperationOutcome');
       expect(mockResponse.redirect).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('token', () => {
+    const mockTokenParams: SmartFhirTokenDto = {
+      grant_type: 'authorization_code',
+      code: 'auth-code-123',
+      redirect_uri: 'https://app.com/callback',
+      client_id: 'app-123',
+      client_secret: 'secret-123',
+    };
+
+    const mockTokenResponse = {
+      access_token: 'access-token-123',
+      token_type: 'Bearer',
+      expires_in: 3600,
+      refresh_token: 'refresh-token-123',
+      scope: 'patient:read patient:write',
+      patient: '123',
+    };
+
+    const mockRequest = {
+      protocol: 'https',
+      get: jest.fn((header: string) => {
+        if (header === 'host') return 'api.example.com';
+        return undefined;
+      }),
+    };
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('should exchange authorization code for tokens successfully', async () => {
+      mockSmartFhirService.validateTokenParams.mockResolvedValue(undefined);
+      mockSmartFhirService.exchangeCodeForTokens.mockResolvedValue(mockTokenResponse);
+      mockSmartFhirService.getCallbackUrl.mockReturnValue('https://api.example.com/api/fhir/token');
+
+      const result = await controller.token(
+        mockTokenParams,
+        undefined,
+        undefined,
+        mockRequest as unknown as Request,
+      );
+
+      expect(mockSmartFhirService.validateTokenParams).toHaveBeenCalledWith(mockTokenParams);
+      expect(mockSmartFhirService.exchangeCodeForTokens).toHaveBeenCalledWith(
+        mockTokenParams,
+        'https://api.example.com/api/fhir/token',
+      );
+      expect(result).toEqual(mockTokenResponse);
+    });
+
+    it('should handle code and state from query parameters (Keycloak callback)', async () => {
+      const codeFromQuery = 'code-from-query';
+      const stateFromQuery = Buffer.from(
+        JSON.stringify({ state: 'abc123', clientRedirectUri: 'https://app.com/callback' }),
+      ).toString('base64url');
+
+      const decodedState = { state: 'abc123', clientRedirectUri: 'https://app.com/callback' };
+      mockSmartFhirService.decodeStateToken.mockReturnValue(decodedState);
+      mockSmartFhirService.validateTokenParams.mockResolvedValue(undefined);
+      mockSmartFhirService.exchangeCodeForTokens.mockResolvedValue(mockTokenResponse);
+      mockSmartFhirService.getCallbackUrl.mockReturnValue('https://api.example.com/api/fhir/token');
+
+      const paramsWithoutCode = { ...mockTokenParams, code: undefined, redirect_uri: undefined };
+      const result = await controller.token(
+        paramsWithoutCode,
+        codeFromQuery,
+        stateFromQuery,
+        mockRequest as unknown as Request,
+      );
+
+      expect(mockSmartFhirService.decodeStateToken).toHaveBeenCalledWith(stateFromQuery);
+      expect(mockSmartFhirService.validateTokenParams).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: codeFromQuery,
+          redirect_uri: 'https://app.com/callback',
+        }),
+      );
+      expect(result).toEqual(mockTokenResponse);
+    });
+
+    it('should handle refresh_token grant type', async () => {
+      const refreshParams: SmartFhirTokenDto = {
+        grant_type: 'refresh_token',
+        refresh_token: 'refresh-token-123',
+        client_id: 'app-123',
+        client_secret: 'secret-123',
+      };
+
+      mockSmartFhirService.validateTokenParams.mockResolvedValue(undefined);
+      mockSmartFhirService.exchangeCodeForTokens.mockResolvedValue(mockTokenResponse);
+      mockSmartFhirService.getCallbackUrl.mockReturnValue('https://api.example.com/api/fhir/token');
+
+      const result = await controller.token(
+        refreshParams,
+        undefined,
+        undefined,
+        mockRequest as unknown as Request,
+      );
+
+      expect(mockSmartFhirService.validateTokenParams).toHaveBeenCalledWith(refreshParams);
+      expect(result).toEqual(mockTokenResponse);
+    });
+
+    it('should return BadRequestException with OAuth2 error format on validation error', async () => {
+      const error = new BadRequestException({
+        error: 'invalid_request',
+        error_description: 'Missing required parameter: code',
+      });
+
+      mockSmartFhirService.validateTokenParams.mockRejectedValue(error);
+
+      await expect(
+        controller.token(mockTokenParams, undefined, undefined, mockRequest as unknown as Request),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should return UnauthorizedException with OAuth2 error format on client error', async () => {
+      const error = new UnauthorizedException({
+        error: 'invalid_client',
+        error_description: 'Client not found',
+      });
+
+      mockSmartFhirService.validateTokenParams.mockRejectedValue(error);
+
+      await expect(
+        controller.token(mockTokenParams, undefined, undefined, mockRequest as unknown as Request),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should convert non-OAuth2 errors to OAuth2 format', async () => {
+      // Create a BadRequestException with a plain string message (non-OAuth2 format)
+      // When BadRequestException is created with a string, getResponse() returns { message, statusCode }
+      // The controller should convert this to OAuth2 format
+      const error = new BadRequestException('Plain error message');
+      mockSmartFhirService.validateTokenParams.mockRejectedValue(error);
+
+      try {
+        await controller.token(
+          mockTokenParams,
+          undefined,
+          undefined,
+          mockRequest as unknown as Request,
+        );
+        fail('Should have thrown BadRequestException');
+      } catch (e) {
+        expect(e).toBeInstanceOf(BadRequestException);
+        const errorResponse = (e as BadRequestException).getResponse();
+        // The controller should convert non-OAuth2 errors to OAuth2 format
+        // The converted error should have 'error' and 'error_description' properties
+        expect(errorResponse).toHaveProperty('error');
+        expect(errorResponse).toHaveProperty('error_description');
+        const oauthError = errorResponse as { error: string; error_description: string };
+        expect(oauthError.error).toBe('invalid_request');
+        expect(oauthError.error_description).toBe('Plain error message');
+      }
+    });
+
+    it('should handle unexpected errors and return OAuth2 server_error', async () => {
+      const unexpectedError = new Error('Unexpected error');
+      mockSmartFhirService.validateTokenParams.mockRejectedValue(unexpectedError);
+
+      await expect(
+        controller.token(mockTokenParams, undefined, undefined, mockRequest as unknown as Request),
+      ).rejects.toThrow(BadRequestException);
+
+      try {
+        await controller.token(
+          mockTokenParams,
+          undefined,
+          undefined,
+          mockRequest as unknown as Request,
+        );
+      } catch (e) {
+        const errorResponse = (e as BadRequestException).getResponse();
+        expect(errorResponse).toHaveProperty('error', 'server_error');
+        expect(errorResponse).toHaveProperty('error_description');
+      }
+    });
+
+    it('should use default callback URL when request is not provided', async () => {
+      mockSmartFhirService.validateTokenParams.mockResolvedValue(undefined);
+      mockSmartFhirService.exchangeCodeForTokens.mockResolvedValue(mockTokenResponse);
+      mockSmartFhirService.getCallbackUrl.mockReturnValue('http://localhost:3000/api/fhir/token');
+
+      const result = await controller.token(mockTokenParams, undefined, undefined, undefined);
+
+      expect(mockSmartFhirService.exchangeCodeForTokens).toHaveBeenCalledWith(
+        mockTokenParams,
+        'http://localhost:3000/api/fhir/token',
+      );
+      expect(result).toEqual(mockTokenResponse);
     });
   });
 });

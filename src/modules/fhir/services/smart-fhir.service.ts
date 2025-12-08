@@ -5,6 +5,7 @@ import { randomBytes } from 'crypto';
 import { KeycloakAdminService } from '../../auth/services/keycloak-admin.service';
 import { FhirErrorService } from '../../../common/services/fhir-error.service';
 import { SmartFhirAuthDto } from '../../../common/dto/smart-fhir-auth.dto';
+import { SmartFhirTokenDto } from '../../../common/dto/smart-fhir-token.dto';
 
 /**
  * Service for handling SMART on FHIR authorization flows
@@ -189,5 +190,237 @@ export class SmartFhirService {
     const apiPrefix = this.configService.get<string>('API_PREFIX') || '/api';
 
     return `${protocol}://${host}${apiPrefix}/fhir/token`;
+  }
+
+  /**
+   * Decode state token to extract original state and client redirect URI
+   * @param encodedState Base64URL-encoded state token
+   * @returns Decoded state data
+   */
+  decodeStateToken(encodedState: string): { state: string; clientRedirectUri: string } | null {
+    try {
+      const decoded = Buffer.from(encodedState, 'base64url').toString('utf-8');
+      const stateData = JSON.parse(decoded);
+      return {
+        state: stateData.state,
+        clientRedirectUri: stateData.clientRedirectUri,
+      };
+    } catch (error) {
+      this.logger.warn({ error, encodedState }, 'Failed to decode state token');
+      return null;
+    }
+  }
+
+  /**
+   * Validate token request parameters
+   * @param params Token request parameters
+   * @throws BadRequestException if validation fails
+   */
+  async validateTokenParams(params: SmartFhirTokenDto): Promise<void> {
+    // Validate grant_type
+    if (!['authorization_code', 'refresh_token'].includes(params.grant_type)) {
+      throw new BadRequestException({
+        error: 'unsupported_grant_type',
+        error_description: 'Grant type must be "authorization_code" or "refresh_token"',
+      });
+    }
+
+    // Validate client exists
+    const client = await this.keycloakAdminService.findClientById(params.client_id);
+    if (!client) {
+      throw new UnauthorizedException({
+        error: 'invalid_client',
+        error_description: `Client "${params.client_id}" not found`,
+      });
+    }
+
+    // Validate grant_type specific parameters
+    if (params.grant_type === 'authorization_code') {
+      if (!params.code) {
+        throw new BadRequestException({
+          error: 'invalid_request',
+          error_description: 'code parameter is required for authorization_code grant',
+        });
+      }
+
+      if (!params.redirect_uri) {
+        throw new BadRequestException({
+          error: 'invalid_request',
+          error_description: 'redirect_uri parameter is required for authorization_code grant',
+        });
+      }
+
+      // Validate redirect_uri matches registered URIs
+      const isValidRedirectUri = await this.keycloakAdminService.validateRedirectUri(
+        params.client_id,
+        params.redirect_uri,
+      );
+
+      if (!isValidRedirectUri) {
+        throw new BadRequestException({
+          error: 'invalid_request',
+          error_description: `Redirect URI "${params.redirect_uri}" is not registered for client`,
+        });
+      }
+    } else if (params.grant_type === 'refresh_token') {
+      if (!params.refresh_token) {
+        throw new BadRequestException({
+          error: 'invalid_request',
+          error_description: 'refresh_token parameter is required for refresh_token grant',
+        });
+      }
+    }
+  }
+
+  /**
+   * Exchange authorization code for tokens with Keycloak
+   * @param params Token request parameters
+   * @param callbackUrl Our callback URL used in the authorization request
+   * @returns OAuth2 token response
+   */
+  async exchangeCodeForTokens(
+    params: SmartFhirTokenDto,
+    callbackUrl: string,
+  ): Promise<{
+    access_token: string;
+    token_type: string;
+    expires_in: number;
+    refresh_token?: string;
+    scope?: string;
+    patient?: string;
+  }> {
+    const keycloakUrl = this.configService.get<string>('KEYCLOAK_URL');
+    const keycloakRealm = this.configService.get<string>('KEYCLOAK_REALM') || 'carecore';
+
+    if (!keycloakUrl) {
+      throw new BadRequestException({
+        error: 'server_error',
+        error_description: 'Authorization server configuration error',
+      });
+    }
+
+    // Get client secret from Keycloak Admin API
+    const client = await this.keycloakAdminService.findClientById(params.client_id);
+    if (!client || !client.id) {
+      throw new UnauthorizedException({
+        error: 'invalid_client',
+        error_description: 'Client not found',
+      });
+    }
+
+    // For now, we'll use client_secret from params
+    // In production, you might want to retrieve it from Keycloak Admin API
+    const clientSecret = params.client_secret;
+
+    // Build token endpoint URL
+    const tokenUrl = `${keycloakUrl}/realms/${keycloakRealm}/protocol/openid-connect/token`;
+
+    // Prepare request body
+    const body = new URLSearchParams();
+    body.append('grant_type', params.grant_type);
+    body.append('client_id', params.client_id);
+
+    if (params.grant_type === 'authorization_code') {
+      body.append('code', params.code!);
+      body.append('redirect_uri', callbackUrl);
+      if (clientSecret) {
+        body.append('client_secret', clientSecret);
+      }
+    } else if (params.grant_type === 'refresh_token') {
+      body.append('refresh_token', params.refresh_token!);
+      if (clientSecret) {
+        body.append('client_secret', clientSecret);
+      }
+    }
+
+    try {
+      this.logger.debug(
+        { clientId: params.client_id, grantType: params.grant_type },
+        'Exchanging code for tokens with Keycloak',
+      );
+
+      const response = await fetch(tokenUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: body.toString(),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'unknown_error' }));
+        this.logger.error(
+          { status: response.status, error: errorData },
+          'Failed to exchange code for tokens',
+        );
+        throw new UnauthorizedException({
+          error: errorData.error || 'invalid_grant',
+          error_description: errorData.error_description || 'Failed to exchange authorization code',
+        });
+      }
+
+      const tokenData = await response.json();
+
+      if (!tokenData.access_token) {
+        throw new UnauthorizedException({
+          error: 'invalid_grant',
+          error_description: 'Token response missing access_token',
+        });
+      }
+
+      // Extract patient context from token if available (SMART on FHIR extension)
+      // The patient context is typically in the token claims or can be extracted from scopes
+      const patientContext = this.extractPatientContext(tokenData);
+
+      this.logger.debug({ clientId: params.client_id }, 'Successfully exchanged code for tokens');
+
+      return {
+        access_token: tokenData.access_token,
+        token_type: tokenData.token_type || 'Bearer',
+        expires_in: tokenData.expires_in || 3600,
+        refresh_token: tokenData.refresh_token,
+        scope: tokenData.scope,
+        patient: patientContext,
+      };
+    } catch (error) {
+      if (error instanceof UnauthorizedException || error instanceof BadRequestException) {
+        throw error;
+      }
+
+      this.logger.error({ error }, 'Error exchanging code for tokens');
+      throw new UnauthorizedException({
+        error: 'server_error',
+        error_description: 'Failed to exchange authorization code for tokens',
+      });
+    }
+  }
+
+  /**
+   * Extract patient context from token data (SMART on FHIR extension)
+   * @param tokenData Token response from Keycloak
+   * @returns Patient ID if available, undefined otherwise
+   */
+  private extractPatientContext(tokenData: {
+    access_token?: string;
+    scope?: string;
+  }): string | undefined {
+    // In SMART on FHIR, patient context can be:
+    // 1. In the token claims (decoded JWT)
+    // 2. Inferred from scopes (e.g., patient/123.*)
+    // 3. In the token response
+
+    // For now, we'll try to extract from scopes
+    // Scopes like "patient/123.read" indicate patient context
+    if (tokenData.scope) {
+      const patientScopeMatch = tokenData.scope.match(/patient\/([^.\s]+)/);
+      if (patientScopeMatch) {
+        return patientScopeMatch[1];
+      }
+    }
+
+    // TODO: Decode JWT and extract patient context from claims
+    // This would require JWT decoding and parsing
+
+    return undefined;
   }
 }

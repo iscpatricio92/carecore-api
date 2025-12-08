@@ -17,6 +17,7 @@ import { PinoLogger } from 'nestjs-pino';
 import { SmartFhirService } from './smart-fhir.service';
 import { KeycloakAdminService } from '../../auth/services/keycloak-admin.service';
 import { SmartFhirAuthDto } from '../../../common/dto/smart-fhir-auth.dto';
+import { SmartFhirTokenDto } from '../../../common/dto/smart-fhir-token.dto';
 
 describe('SmartFhirService', () => {
   let service: SmartFhirService;
@@ -301,6 +302,346 @@ describe('SmartFhirService', () => {
 
       const callbackUrl = service.getCallbackUrl(request);
       expect(callbackUrl).toBe('https://api.example.com/api/fhir/token');
+    });
+  });
+
+  describe('decodeStateToken', () => {
+    it('should decode valid state token', () => {
+      const stateData = { state: 'abc123', clientRedirectUri: 'https://app.com/callback' };
+      const encodedState = Buffer.from(JSON.stringify(stateData)).toString('base64url');
+
+      const decoded = service.decodeStateToken(encodedState);
+
+      expect(decoded).toEqual(stateData);
+    });
+
+    it('should return null for invalid base64url string', () => {
+      const invalidState = 'invalid-base64url-string!!!';
+
+      const decoded = service.decodeStateToken(invalidState);
+
+      expect(decoded).toBeNull();
+    });
+
+    it('should return null for invalid JSON in state token', () => {
+      const invalidJson = Buffer.from('not-json').toString('base64url');
+
+      const decoded = service.decodeStateToken(invalidJson);
+
+      expect(decoded).toBeNull();
+    });
+  });
+
+  describe('validateTokenParams', () => {
+    const validAuthCodeParams: SmartFhirTokenDto = {
+      grant_type: 'authorization_code',
+      code: 'auth-code-123',
+      redirect_uri: 'https://app.com/callback',
+      client_id: 'app-123',
+      client_secret: 'secret-123',
+    };
+
+    const validRefreshTokenParams: SmartFhirTokenDto = {
+      grant_type: 'refresh_token',
+      refresh_token: 'refresh-token-123',
+      client_id: 'app-123',
+      client_secret: 'secret-123',
+    };
+
+    it('should validate correct authorization_code parameters', async () => {
+      keycloakAdminService.findClientById.mockResolvedValue(mockClient);
+      keycloakAdminService.validateRedirectUri.mockResolvedValue(true);
+
+      await expect(service.validateTokenParams(validAuthCodeParams)).resolves.not.toThrow();
+    });
+
+    it('should validate correct refresh_token parameters', async () => {
+      keycloakAdminService.findClientById.mockResolvedValue(mockClient);
+
+      await expect(service.validateTokenParams(validRefreshTokenParams)).resolves.not.toThrow();
+    });
+
+    it('should throw BadRequestException for unsupported grant_type', async () => {
+      const invalidParams = {
+        ...validAuthCodeParams,
+        grant_type: 'invalid_grant' as 'authorization_code' | 'refresh_token',
+      };
+
+      await expect(service.validateTokenParams(invalidParams)).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw UnauthorizedException for non-existent client', async () => {
+      keycloakAdminService.findClientById.mockResolvedValue(null);
+
+      await expect(service.validateTokenParams(validAuthCodeParams)).rejects.toThrow(
+        UnauthorizedException,
+      );
+    });
+
+    it('should throw BadRequestException for missing code in authorization_code grant', async () => {
+      const paramsWithoutCode = { ...validAuthCodeParams, code: undefined };
+      keycloakAdminService.findClientById.mockResolvedValue(mockClient);
+
+      await expect(service.validateTokenParams(paramsWithoutCode)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should throw BadRequestException for missing redirect_uri in authorization_code grant', async () => {
+      const paramsWithoutRedirectUri = { ...validAuthCodeParams, redirect_uri: undefined };
+      keycloakAdminService.findClientById.mockResolvedValue(mockClient);
+
+      await expect(service.validateTokenParams(paramsWithoutRedirectUri)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should throw BadRequestException for invalid redirect_uri in authorization_code grant', async () => {
+      keycloakAdminService.findClientById.mockResolvedValue(mockClient);
+      keycloakAdminService.validateRedirectUri.mockResolvedValue(false);
+
+      await expect(service.validateTokenParams(validAuthCodeParams)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should throw BadRequestException for missing refresh_token in refresh_token grant', async () => {
+      const paramsWithoutRefreshToken = { ...validRefreshTokenParams, refresh_token: undefined };
+      keycloakAdminService.findClientById.mockResolvedValue(mockClient);
+
+      await expect(service.validateTokenParams(paramsWithoutRefreshToken)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+  });
+
+  describe('exchangeCodeForTokens', () => {
+    const validParams: SmartFhirTokenDto = {
+      grant_type: 'authorization_code',
+      code: 'auth-code-123',
+      redirect_uri: 'https://app.com/callback',
+      client_id: 'app-123',
+      client_secret: 'secret-123',
+    };
+
+    const mockTokenResponse = {
+      access_token: 'access-token-123',
+      token_type: 'Bearer',
+      expires_in: 3600,
+      refresh_token: 'refresh-token-123',
+      scope: 'patient:read patient:write',
+    };
+
+    beforeEach(() => {
+      // Mock fetch globally
+      global.fetch = jest.fn();
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('should exchange authorization code for tokens successfully', async () => {
+      keycloakAdminService.findClientById.mockResolvedValue(mockClient);
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => mockTokenResponse,
+      });
+
+      const result = await service.exchangeCodeForTokens(
+        validParams,
+        'http://localhost:3000/api/fhir/token',
+      );
+
+      expect(result).toEqual({
+        access_token: 'access-token-123',
+        token_type: 'Bearer',
+        expires_in: 3600,
+        refresh_token: 'refresh-token-123',
+        scope: 'patient:read patient:write',
+        patient: undefined,
+      });
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/protocol/openid-connect/token'),
+        expect.objectContaining({
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        }),
+      );
+    });
+
+    it('should extract patient context from scopes', async () => {
+      const tokenResponseWithPatientScope = {
+        ...mockTokenResponse,
+        scope: 'patient/123.read patient/123.write',
+      };
+
+      keycloakAdminService.findClientById.mockResolvedValue(mockClient);
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => tokenResponseWithPatientScope,
+      });
+
+      const result = await service.exchangeCodeForTokens(
+        validParams,
+        'http://localhost:3000/api/fhir/token',
+      );
+
+      expect(result.patient).toBe('123');
+    });
+
+    it('should handle refresh_token grant type', async () => {
+      const refreshParams: SmartFhirTokenDto = {
+        grant_type: 'refresh_token',
+        refresh_token: 'refresh-token-123',
+        client_id: 'app-123',
+        client_secret: 'secret-123',
+      };
+
+      keycloakAdminService.findClientById.mockResolvedValue(mockClient);
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => mockTokenResponse,
+      });
+
+      const result = await service.exchangeCodeForTokens(
+        refreshParams,
+        'http://localhost:3000/api/fhir/token',
+      );
+
+      expect(result.access_token).toBe('access-token-123');
+      expect(global.fetch).toHaveBeenCalled();
+    });
+
+    it('should throw UnauthorizedException when Keycloak returns error', async () => {
+      keycloakAdminService.findClientById.mockResolvedValue(mockClient);
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: false,
+        status: 400,
+        json: async () => ({
+          error: 'invalid_grant',
+          error_description: 'Invalid authorization code',
+        }),
+      });
+
+      await expect(
+        service.exchangeCodeForTokens(validParams, 'http://localhost:3000/api/fhir/token'),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should throw UnauthorizedException when token response missing access_token', async () => {
+      keycloakAdminService.findClientById.mockResolvedValue(mockClient);
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          token_type: 'Bearer',
+          expires_in: 3600,
+          // Missing access_token
+        }),
+      });
+
+      await expect(
+        service.exchangeCodeForTokens(validParams, 'http://localhost:3000/api/fhir/token'),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should throw BadRequestException when KEYCLOAK_URL is not configured', async () => {
+      configService.get.mockReturnValue(undefined);
+
+      await expect(
+        service.exchangeCodeForTokens(validParams, 'http://localhost:3000/api/fhir/token'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw UnauthorizedException when client not found', async () => {
+      keycloakAdminService.findClientById.mockResolvedValue(null);
+
+      await expect(
+        service.exchangeCodeForTokens(validParams, 'http://localhost:3000/api/fhir/token'),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should use default values for token_type and expires_in', async () => {
+      const tokenResponseWithoutDefaults = {
+        access_token: 'access-token-123',
+        // Missing token_type and expires_in
+      };
+
+      keycloakAdminService.findClientById.mockResolvedValue(mockClient);
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => tokenResponseWithoutDefaults,
+      });
+
+      const result = await service.exchangeCodeForTokens(
+        validParams,
+        'http://localhost:3000/api/fhir/token',
+      );
+
+      expect(result.token_type).toBe('Bearer');
+      expect(result.expires_in).toBe(3600);
+    });
+
+    it('should handle unexpected errors and throw UnauthorizedException with server_error', async () => {
+      keycloakAdminService.findClientById.mockResolvedValue(mockClient);
+      // Mock fetch to throw a generic Error (not UnauthorizedException or BadRequestException)
+      // This covers lines 389-395: catch block for unexpected errors
+      (global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
+
+      try {
+        await service.exchangeCodeForTokens(validParams, 'http://localhost:3000/api/fhir/token');
+        fail('Should have thrown UnauthorizedException');
+      } catch (error) {
+        expect(error).toBeInstanceOf(UnauthorizedException);
+        const errorResponse = (error as UnauthorizedException).getResponse();
+        expect(errorResponse).toHaveProperty('error', 'server_error');
+        expect(errorResponse).toHaveProperty(
+          'error_description',
+          'Failed to exchange authorization code for tokens',
+        );
+      }
+    });
+  });
+
+  describe('extractPatientContext', () => {
+    // Type helper to access private method for testing
+    type ServiceWithPrivateMethod = {
+      extractPatientContext: (tokenData: { scope?: string }) => string | undefined;
+    };
+
+    it('should extract patient ID from scope with patient context', () => {
+      const tokenData = {
+        scope: 'patient/123.read patient/123.write',
+      };
+
+      // Access private method via type casting
+      const serviceWithPrivate = service as unknown as ServiceWithPrivateMethod;
+      const result = serviceWithPrivate.extractPatientContext(tokenData);
+
+      expect(result).toBe('123');
+    });
+
+    it('should return undefined when no patient context in scope', () => {
+      const tokenData = {
+        scope: 'patient:read patient:write',
+      };
+
+      const serviceWithPrivate = service as unknown as ServiceWithPrivateMethod;
+      const result = serviceWithPrivate.extractPatientContext(tokenData);
+
+      expect(result).toBeUndefined();
+    });
+
+    it('should return undefined when scope is not provided', () => {
+      const tokenData: { scope?: string } = {};
+
+      const serviceWithPrivate = service as unknown as ServiceWithPrivateMethod;
+      const result = serviceWithPrivate.extractPatientContext(tokenData);
+
+      expect(result).toBeUndefined();
     });
   });
 });

@@ -28,6 +28,7 @@ import { Request, Response } from 'express';
 import { FhirService } from './fhir.service';
 import { SmartFhirService } from './services/smart-fhir.service';
 import { Public } from '../auth/decorators/public.decorator';
+import { PinoLogger } from 'nestjs-pino';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { ScopesGuard } from '../auth/guards/scopes.guard';
@@ -46,6 +47,7 @@ import {
 import { CreateEncounterDto, UpdateEncounterDto } from '../../common/dto/fhir-encounter.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { SmartFhirAuthDto } from '../../common/dto/smart-fhir-auth.dto';
+import { SmartFhirTokenDto } from '../../common/dto/smart-fhir-token.dto';
 import { Patient, Practitioner, Encounter } from '../../common/interfaces/fhir.interface';
 import { FhirErrorService } from '../../common/services/fhir-error.service';
 
@@ -56,7 +58,10 @@ export class FhirController {
   constructor(
     private readonly fhirService: FhirService,
     private readonly smartFhirService: SmartFhirService,
-  ) {}
+    private readonly logger: PinoLogger,
+  ) {
+    this.logger.setContext(FhirController.name);
+  }
 
   @Get('metadata')
   @Public()
@@ -161,6 +166,137 @@ export class FhirController {
         error instanceof Error ? error.message : 'Unknown error',
       );
       res.status(500).json(operationOutcome);
+    }
+  }
+
+  /**
+   * SMART on FHIR Token Endpoint
+   * Implements OAuth2 Token Exchange for SMART on FHIR applications
+   * This endpoint exchanges authorization codes for access tokens
+   */
+  @Post('token')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'SMART on FHIR Token Endpoint',
+    description:
+      'OAuth2 Token Exchange endpoint for SMART on FHIR applications. Exchanges authorization codes or refresh tokens for access tokens.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Token response with access_token, refresh_token, and metadata',
+    schema: {
+      type: 'object',
+      properties: {
+        access_token: { type: 'string', example: 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...' },
+        token_type: { type: 'string', example: 'Bearer' },
+        expires_in: { type: 'number', example: 3600 },
+        refresh_token: { type: 'string', example: 'refresh-token-xyz' },
+        scope: { type: 'string', example: 'patient:read patient:write' },
+        patient: { type: 'string', example: '123', description: 'Patient context (SMART on FHIR)' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request parameters - returns OAuth2 error response',
+    schema: {
+      type: 'object',
+      properties: {
+        error: { type: 'string', example: 'invalid_request' },
+        error_description: { type: 'string', example: 'Missing required parameter: code' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Invalid client or authorization code - returns OAuth2 error response',
+    schema: {
+      type: 'object',
+      properties: {
+        error: { type: 'string', example: 'invalid_client' },
+        error_description: { type: 'string', example: 'Client authentication failed' },
+      },
+    },
+  })
+  async token(
+    @Body() params: SmartFhirTokenDto,
+    @Query('code') codeFromQuery?: string,
+    @Query('state') stateFromQuery?: string,
+    @Req() req?: Request,
+  ): Promise<{
+    access_token: string;
+    token_type: string;
+    expires_in: number;
+    refresh_token?: string;
+    scope?: string;
+    patient?: string;
+  }> {
+    try {
+      // Handle both POST body and GET query parameters (for Keycloak callback)
+      // Keycloak redirects to this endpoint with code and state in query params
+      const tokenParams: SmartFhirTokenDto = {
+        grant_type: params.grant_type || 'authorization_code',
+        code: params.code || codeFromQuery,
+        redirect_uri: params.redirect_uri,
+        client_id: params.client_id,
+        client_secret: params.client_secret,
+        refresh_token: params.refresh_token,
+      };
+
+      // If code and state come from query params (Keycloak callback), decode state to get client redirect_uri
+      if (codeFromQuery && stateFromQuery && !tokenParams.redirect_uri) {
+        const stateData = this.smartFhirService.decodeStateToken(stateFromQuery);
+        if (stateData) {
+          tokenParams.code = codeFromQuery;
+          tokenParams.redirect_uri = stateData.clientRedirectUri;
+        }
+      }
+
+      // Validate token request parameters
+      await this.smartFhirService.validateTokenParams(tokenParams);
+
+      // Get our callback URL (where Keycloak redirected to)
+      const callbackUrl = req
+        ? this.smartFhirService.getCallbackUrl(req)
+        : 'http://localhost:3000/api/fhir/token';
+
+      // Exchange code for tokens
+      const tokenResponse = await this.smartFhirService.exchangeCodeForTokens(
+        tokenParams,
+        callbackUrl,
+      );
+
+      return tokenResponse;
+    } catch (error) {
+      // Handle OAuth2 errors (they already have the correct format)
+      if (error instanceof BadRequestException || error instanceof UnauthorizedException) {
+        const errorResponse = error.getResponse();
+        // If it's already an OAuth2 error format (has error_description), return it directly
+        if (
+          typeof errorResponse === 'object' &&
+          errorResponse !== null &&
+          'error_description' in errorResponse
+        ) {
+          throw error;
+        }
+        // Otherwise, convert to OAuth2 error format
+        const errorMessage =
+          typeof errorResponse === 'string'
+            ? errorResponse
+            : (errorResponse as { message?: string })?.message || 'Invalid request parameters';
+        throw new BadRequestException({
+          error: 'invalid_request',
+          error_description: errorMessage,
+        });
+      }
+
+      // Unexpected error - return generic OAuth2 error
+      this.logger.error({ error }, 'Unexpected error in token endpoint');
+      throw new BadRequestException({
+        error: 'server_error',
+        error_description: 'An unexpected error occurred during token exchange',
+      });
     }
   }
 
