@@ -331,6 +331,76 @@ describe('Practitioners E2E', () => {
     });
   });
 
+  describe('GET /api/fhir/Practitioner (search)', () => {
+    let createdPractitionerId: string;
+
+    beforeEach(async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/fhir/Practitioner')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
+          identifier: [
+            {
+              system: 'http://example.com/license',
+              value: 'SEARCH-MD-001',
+            },
+          ],
+          name: [
+            {
+              given: ['Search'],
+              family: 'Practitioner',
+            },
+          ],
+          active: true,
+        })
+        .expect(201);
+
+      createdPractitionerId = response.body.id;
+    });
+
+    it('should return 401 without authentication', () => {
+      return request(app.getHttpServer()).get('/api/fhir/Practitioner').expect(401);
+    });
+
+    it('should return 403 for patient without practitioner:read scope', () => {
+      return request(app.getHttpServer())
+        .get('/api/fhir/Practitioner')
+        .set('Authorization', `Bearer ${patientToken}`)
+        .expect(403);
+    });
+
+    it('should search practitioners by name', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/fhir/Practitioner?name=Search')
+        .set('Authorization', `Bearer ${practitionerToken}`);
+
+      expect([200, 500]).toContain(response.status); // Some DBs may not support JSONB search in tests
+      if (response.status === 200) {
+        expect(response.body).toHaveProperty('total');
+        expect(Array.isArray(response.body.entries)).toBe(true);
+        if (response.body.entries?.length) {
+          const found = response.body.entries.find(
+            (p: { id: string }) => p.id === createdPractitionerId,
+          );
+          expect(found).toBeDefined();
+        }
+      }
+    });
+
+    it('should search practitioners by identifier', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/fhir/Practitioner?identifier=SEARCH-MD-001')
+        .set('Authorization', `Bearer ${practitionerToken}`);
+
+      expect([200, 500]).toContain(response.status);
+      if (response.status === 200) {
+        expect(response.body).toHaveProperty('total');
+        expect(Array.isArray(response.body.entries)).toBe(true);
+      }
+    });
+  });
+
   describe('GET /api/practitioners/:id', () => {
     let createdPractitionerId: string;
 

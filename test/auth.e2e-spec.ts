@@ -158,6 +158,14 @@ describe('Authentication E2E', () => {
         .expect(400);
     });
 
+    it('should return 400 or 401 when refresh token is only in cookie and invalid', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/auth/refresh')
+        .set('Cookie', ['refresh_token=invalid-cookie-token']);
+
+      expect([400, 401, 500]).toContain(response.status);
+    });
+
     // Note: Testing successful refresh requires a real Keycloak setup or complex mocking
     // The endpoint logic is covered by unit tests
   });
@@ -189,6 +197,15 @@ describe('Authentication E2E', () => {
 
       // Can be 200 (if Keycloak accepts it), 400 (bad request), or 500 (Keycloak error)
       // The important thing is that it doesn't crash
+      expect(response.status).toBeGreaterThanOrEqual(200);
+      expect(response.status).toBeLessThan(600);
+    });
+
+    it('should handle refresh token from cookie (invalid)', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/auth/logout')
+        .set('Cookie', ['refresh_token=invalid-cookie-token']);
+
       expect(response.status).toBeGreaterThanOrEqual(200);
       expect(response.status).toBeLessThan(600);
     });

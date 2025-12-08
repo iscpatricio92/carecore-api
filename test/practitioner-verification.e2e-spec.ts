@@ -22,6 +22,7 @@ import * as request from 'supertest';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as fs from 'fs';
 import * as path from 'path';
+import { DocumentStorageService } from '../src/modules/auth/services/document-storage.service';
 
 import { AppModule } from '../src/app.module';
 import { JwtStrategy } from '../src/modules/auth/strategies/jwt.strategy';
@@ -41,6 +42,7 @@ describe('Practitioner Verification E2E', () => {
   let patientToken: string;
   let testPractitionerId: string;
   let createdVerificationId: string;
+  let documentStorageService: DocumentStorageService;
 
   const mockKeycloakAdminService = {
     userHasMFA: jest.fn(),
@@ -115,6 +117,7 @@ describe('Practitioner Verification E2E', () => {
     app.setGlobalPrefix('api');
 
     await app.init();
+    documentStorageService = app.get(DocumentStorageService);
 
     adminToken = generateAdminToken('admin-user-789');
     practitionerToken = generatePractitionerToken('practitioner-user-456');
@@ -667,6 +670,23 @@ describe('Practitioner Verification E2E', () => {
           expect(res.body).toHaveProperty('message');
           expect(res.body.message).toContain('already');
         });
+    });
+  });
+
+  describe('DocumentStorageService helpers (direct)', () => {
+    it('should build absolute path from relative path', () => {
+      const relativePath = path.join('practitioner-ext-test', 'file.pdf');
+      const fullPath = documentStorageService.getDocumentPath(relativePath);
+      expect(fullPath).toContain(relativePath);
+      expect(path.isAbsolute(fullPath)).toBe(true);
+    });
+
+    it('should not throw when deleting non-existent document', async () => {
+      await expect(
+        documentStorageService.deleteDocument(
+          path.join('practitioner-ext-test', 'non-existent.pdf'),
+        ),
+      ).resolves.not.toThrow();
     });
   });
 });
