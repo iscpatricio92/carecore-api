@@ -106,4 +106,36 @@ describe('ConsentsController', () => {
       expect(consentsService.remove).toHaveBeenCalledWith('consent-1', mockUser);
     });
   });
+
+  describe('shareWithPractitioner', () => {
+    it('should share consent with practitioner', async () => {
+      const shareDto = {
+        practitionerReference: 'Practitioner/practitioner-123',
+        days: 30,
+      };
+      const sharedConsent = {
+        ...mockConsent,
+        provision: [
+          {
+            actor: [{ reference: 'Practitioner/practitioner-123' }],
+            period: {
+              start: expect.any(String),
+              end: expect.any(String),
+            },
+          },
+        ],
+      };
+
+      consentsService.shareWithPractitioner = jest.fn().mockResolvedValue(sharedConsent);
+
+      const result = await controller.shareWithPractitioner('consent-1', shareDto, mockUser);
+
+      expect(result).toEqual(sharedConsent);
+      expect(consentsService.shareWithPractitioner).toHaveBeenCalledWith(
+        'consent-1',
+        shareDto,
+        mockUser,
+      );
+    });
+  });
 });

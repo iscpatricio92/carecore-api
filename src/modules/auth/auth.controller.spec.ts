@@ -1,5 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { HttpStatus, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import {
+  HttpStatus,
+  BadRequestException,
+  UnauthorizedException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { PinoLogger } from 'nestjs-pino';
@@ -26,6 +31,9 @@ import { AuthService } from './auth.service';
 import { User } from './interfaces/user.interface';
 import { MFARequiredGuard } from './guards/mfa-required.guard';
 import { KeycloakAdminService } from './services/keycloak-admin.service';
+import { DocumentType } from './dto/verify-practitioner.dto';
+import { ReviewStatus } from './dto/review-verification.dto';
+import { VerificationStatus } from '../../entities/practitioner-verification.entity';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -37,6 +45,14 @@ describe('AuthController', () => {
     refreshToken: jest.fn(),
     logout: jest.fn(),
     getUserInfo: jest.fn(),
+    requestVerification: jest.fn(),
+    listVerifications: jest.fn(),
+    getVerificationById: jest.fn(),
+    reviewVerification: jest.fn(),
+    setupMFA: jest.fn(),
+    verifyMFASetup: jest.fn(),
+    disableMFA: jest.fn(),
+    getMFAStatus: jest.fn(),
   };
 
   const mockConfigService = {
@@ -683,6 +699,375 @@ describe('AuthController', () => {
       const result = await controller.getUser(mockUser);
 
       expect(result).toEqual(mockUser);
+    });
+  });
+
+  describe('verifyPractitioner', () => {
+    it('should submit verification request successfully', async () => {
+      const dto = {
+        practitionerId: 'practitioner-123',
+        documentType: DocumentType.CEDULA,
+        additionalInfo: 'Test info',
+      };
+      const mockFile = {
+        buffer: Buffer.from('test'),
+        originalname: 'cedula.pdf',
+        mimetype: 'application/pdf',
+        size: 1024,
+      } as Express.Multer.File;
+
+      const expectedResult = {
+        verificationId: 'verification-123',
+        status: 'pending',
+        message: 'Verification request submitted successfully',
+        estimatedReviewTime: '2-3 business days',
+      };
+
+      mockAuthService.requestVerification.mockResolvedValue(expectedResult);
+
+      const result = await controller.verifyPractitioner(dto, mockFile, mockUser);
+
+      expect(result).toEqual(expectedResult);
+      expect(mockAuthService.requestVerification).toHaveBeenCalledWith(dto, mockFile, mockUser.id);
+    });
+
+    it('should throw BadRequestException on validation error', async () => {
+      const dto = {
+        practitionerId: 'practitioner-123',
+        documentType: DocumentType.CEDULA,
+      };
+      const mockFile = {
+        buffer: Buffer.from('test'),
+        originalname: 'cedula.pdf',
+        mimetype: 'application/pdf',
+        size: 1024,
+      } as Express.Multer.File;
+
+      mockAuthService.requestVerification.mockRejectedValue(
+        new BadRequestException('Invalid file format'),
+      );
+
+      await expect(controller.verifyPractitioner(dto, mockFile, mockUser)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException on generic error', async () => {
+      const dto = {
+        practitionerId: 'practitioner-123',
+        documentType: DocumentType.CEDULA,
+      };
+      const mockFile = {
+        buffer: Buffer.from('test'),
+        originalname: 'cedula.pdf',
+        mimetype: 'application/pdf',
+        size: 1024,
+      } as Express.Multer.File;
+
+      mockAuthService.requestVerification.mockRejectedValue(new Error('Network error'));
+
+      await expect(controller.verifyPractitioner(dto, mockFile, mockUser)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+  });
+
+  describe('listVerifications', () => {
+    it('should return list of verifications', async () => {
+      const query = { page: 1, limit: 10, status: VerificationStatus.PENDING };
+      const expectedResult = {
+        data: [
+          {
+            id: 'verification-123',
+            status: VerificationStatus.PENDING,
+            practitionerId: 'practitioner-123',
+            documentType: 'cedula' as const,
+            documentPath: 'path/to/doc.pdf',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+        total: 1,
+        page: 1,
+        limit: 10,
+        totalPages: 1,
+      };
+
+      mockAuthService.listVerifications.mockResolvedValue(expectedResult);
+
+      const result = await controller.listVerifications(query);
+
+      expect(result).toEqual(expectedResult);
+      expect(mockAuthService.listVerifications).toHaveBeenCalledWith(query);
+    });
+  });
+
+  describe('getVerification', () => {
+    it('should return verification details', async () => {
+      const verificationId = 'verification-123';
+      const expectedResult = {
+        id: verificationId,
+        status: VerificationStatus.PENDING,
+        practitionerId: 'practitioner-123',
+        documentType: 'cedula' as const,
+        documentPath: 'path/to/doc.pdf',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockAuthService.getVerificationById.mockResolvedValue(expectedResult);
+
+      const result = await controller.getVerification(verificationId);
+
+      expect(result).toEqual(expectedResult);
+      expect(mockAuthService.getVerificationById).toHaveBeenCalledWith(verificationId);
+    });
+  });
+
+  describe('reviewVerification', () => {
+    it('should review verification successfully', async () => {
+      const verificationId = 'verification-123';
+      const dto = {
+        status: ReviewStatus.APPROVED,
+      };
+      const expectedResult = {
+        verificationId,
+        status: 'approved' as const,
+        reviewedBy: mockUser.id,
+        reviewedAt: new Date().toISOString(),
+        message: 'Verification approved successfully',
+      };
+
+      mockAuthService.reviewVerification.mockResolvedValue(expectedResult);
+
+      const result = await controller.reviewVerification(verificationId, dto, mockUser);
+
+      expect(result).toEqual(expectedResult);
+      expect(mockAuthService.reviewVerification).toHaveBeenCalledWith(
+        verificationId,
+        dto,
+        mockUser.id,
+      );
+    });
+
+    it('should throw BadRequestException on validation error', async () => {
+      const verificationId = 'verification-123';
+      const dto = {
+        status: ReviewStatus.REJECTED,
+        rejectionReason: 'Invalid document',
+      };
+
+      mockAuthService.reviewVerification.mockRejectedValue(
+        new BadRequestException('Verification is not in pending status'),
+      );
+
+      await expect(controller.reviewVerification(verificationId, dto, mockUser)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException when verification not found', async () => {
+      const verificationId = 'non-existent';
+      const dto = {
+        status: ReviewStatus.APPROVED,
+      };
+
+      mockAuthService.reviewVerification.mockRejectedValue(
+        new NotFoundException('Verification not found'),
+      );
+
+      await expect(controller.reviewVerification(verificationId, dto, mockUser)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should throw BadRequestException on generic error', async () => {
+      const verificationId = 'verification-123';
+      const dto = {
+        status: ReviewStatus.APPROVED,
+      };
+
+      mockAuthService.reviewVerification.mockRejectedValue(new Error('Network error'));
+
+      await expect(controller.reviewVerification(verificationId, dto, mockUser)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+  });
+
+  describe('setupMFA', () => {
+    it('should setup MFA successfully', async () => {
+      const expectedResult = {
+        secret: 'JBSWY3DPEHPK3PXP',
+        qrCode: 'data:image/png;base64,iVBORw0KGgoAAAANS...',
+        backupCodes: ['12345678', '87654321'],
+      };
+
+      mockAuthService.setupMFA.mockResolvedValue(expectedResult);
+
+      const result = await controller.setupMFA(mockUser);
+
+      expect(result).toEqual(expectedResult);
+      expect(mockAuthService.setupMFA).toHaveBeenCalledWith(
+        mockUser.keycloakUserId,
+        mockUser.email || mockUser.username || 'user@example.com',
+      );
+    });
+
+    it('should throw BadRequestException when MFA already configured', async () => {
+      mockAuthService.setupMFA.mockRejectedValue(
+        new BadRequestException('MFA is already configured for this user'),
+      );
+
+      await expect(controller.setupMFA(mockUser)).rejects.toThrow(BadRequestException);
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException on generic error', async () => {
+      mockAuthService.setupMFA.mockRejectedValue(new Error('Network error'));
+
+      await expect(controller.setupMFA(mockUser)).rejects.toThrow(BadRequestException);
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should use username when email is not available', async () => {
+      const userWithoutEmail = { ...mockUser, email: undefined };
+      const expectedResult = {
+        secret: 'JBSWY3DPEHPK3PXP',
+        qrCode: 'data:image/png;base64,...',
+        backupCodes: [],
+      };
+
+      mockAuthService.setupMFA.mockResolvedValue(expectedResult);
+
+      await controller.setupMFA(userWithoutEmail);
+
+      expect(mockAuthService.setupMFA).toHaveBeenCalledWith(
+        userWithoutEmail.keycloakUserId,
+        userWithoutEmail.username,
+      );
+    });
+  });
+
+  describe('verifyMFA', () => {
+    it('should verify MFA successfully', async () => {
+      const dto = { code: '123456' };
+      const expectedResult = {
+        success: true,
+        message: 'MFA verified and enabled successfully',
+        mfaEnabled: true,
+      };
+
+      mockAuthService.verifyMFASetup.mockResolvedValue(expectedResult);
+
+      const result = await controller.verifyMFA(dto, mockUser);
+
+      expect(result).toEqual(expectedResult);
+      expect(mockAuthService.verifyMFASetup).toHaveBeenCalledWith(
+        mockUser.keycloakUserId,
+        dto.code,
+      );
+    });
+
+    it('should throw BadRequestException on invalid code', async () => {
+      const dto = { code: '000000' };
+
+      mockAuthService.verifyMFASetup.mockRejectedValue(
+        new BadRequestException('Invalid TOTP code'),
+      );
+
+      await expect(controller.verifyMFA(dto, mockUser)).rejects.toThrow(BadRequestException);
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException on generic error', async () => {
+      const dto = { code: '123456' };
+
+      mockAuthService.verifyMFASetup.mockRejectedValue(new Error('Network error'));
+
+      await expect(controller.verifyMFA(dto, mockUser)).rejects.toThrow(BadRequestException);
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+  });
+
+  describe('disableMFA', () => {
+    it('should disable MFA successfully', async () => {
+      const dto = { code: '123456' };
+      const expectedResult = {
+        success: true,
+        message: 'MFA disabled successfully',
+        mfaEnabled: false,
+      };
+
+      mockAuthService.disableMFA.mockResolvedValue(expectedResult);
+
+      const result = await controller.disableMFA(dto, mockUser);
+
+      expect(result).toEqual(expectedResult);
+      expect(mockAuthService.disableMFA).toHaveBeenCalledWith(mockUser.keycloakUserId, dto.code);
+    });
+
+    it('should throw BadRequestException on invalid code', async () => {
+      const dto = { code: '000000' };
+
+      mockAuthService.disableMFA.mockRejectedValue(new BadRequestException('Invalid TOTP code'));
+
+      await expect(controller.disableMFA(dto, mockUser)).rejects.toThrow(BadRequestException);
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException when MFA not enabled', async () => {
+      const dto = { code: '123456' };
+
+      mockAuthService.disableMFA.mockRejectedValue(
+        new BadRequestException('MFA is not enabled for this user'),
+      );
+
+      await expect(controller.disableMFA(dto, mockUser)).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException on generic error', async () => {
+      const dto = { code: '123456' };
+
+      mockAuthService.disableMFA.mockRejectedValue(new Error('Network error'));
+
+      await expect(controller.disableMFA(dto, mockUser)).rejects.toThrow(BadRequestException);
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+  });
+
+  describe('getMFAStatus', () => {
+    it('should return MFA status successfully', async () => {
+      const expectedResult = {
+        enabled: true,
+        required: false,
+        configured: true,
+      };
+
+      mockAuthService.getMFAStatus.mockResolvedValue(expectedResult);
+
+      const result = await controller.getMFAStatus(mockUser);
+
+      expect(result).toEqual(expectedResult);
+      expect(mockAuthService.getMFAStatus).toHaveBeenCalledWith(mockUser.keycloakUserId);
+    });
+
+    it('should throw NotFoundException when user not found', async () => {
+      mockAuthService.getMFAStatus.mockRejectedValue(new NotFoundException('User not found'));
+
+      await expect(controller.getMFAStatus(mockUser)).rejects.toThrow(NotFoundException);
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException on generic error', async () => {
+      mockAuthService.getMFAStatus.mockRejectedValue(new Error('Network error'));
+
+      await expect(controller.getMFAStatus(mockUser)).rejects.toThrow(BadRequestException);
+      expect(mockLogger.error).toHaveBeenCalled();
     });
   });
 });

@@ -293,4 +293,428 @@ describe('ConsentsService', () => {
       await expect(service.remove('consent-1', patientUser)).rejects.toThrow(ForbiddenException);
     });
   });
+
+  describe('shareWithPractitioner', () => {
+    const shareDto = {
+      practitionerReference: 'Practitioner/practitioner-123',
+      practitionerDisplay: 'Dr. Jane Smith',
+      days: 30,
+    };
+
+    it('should share consent with practitioner successfully', async () => {
+      const entity = consentEntityFactory({
+        status: 'active',
+        fhirResource: {
+          ...baseConsent,
+          dateTime: new Date().toISOString(),
+        },
+      });
+
+      consentRepository.findOne.mockResolvedValue(entity);
+      consentRepository.save.mockResolvedValue(entity);
+
+      const result = await service.shareWithPractitioner('consent-1', shareDto, adminUser);
+
+      expect(result.provision).toBeDefined();
+      expect(result.provision?.actor).toBeDefined();
+      expect(result.provision?.actor?.[0]?.reference?.reference).toBe(
+        'Practitioner/practitioner-123',
+      );
+      expect(result.meta?.versionId).toBe('2');
+      expect(consentRepository.save).toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException if consent not found', async () => {
+      consentRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.shareWithPractitioner('non-existent', shareDto, adminUser),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw ForbiddenException if user has no access', async () => {
+      const entity = consentEntityFactory({
+        patientReference: 'Patient/other-patient',
+      });
+
+      consentRepository.findOne.mockResolvedValue(entity);
+      patientRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.shareWithPractitioner('consent-1', shareDto, patientUser),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should merge with existing provision', async () => {
+      const existingProvision = {
+        type: 'permit' as const,
+        actor: [
+          {
+            reference: {
+              reference: 'Practitioner/practitioner-1',
+            },
+          },
+        ],
+      };
+
+      const entity = consentEntityFactory({
+        status: 'active',
+        fhirResource: {
+          ...baseConsent,
+          provision: existingProvision,
+          dateTime: new Date().toISOString(),
+        },
+      });
+
+      consentRepository.findOne.mockResolvedValue(entity);
+      consentRepository.save.mockResolvedValue(entity);
+
+      const result = await service.shareWithPractitioner('consent-1', shareDto, adminUser);
+
+      expect(result.provision?.actor?.length).toBeGreaterThan(1);
+      expect(consentRepository.save).toHaveBeenCalled();
+    });
+  });
+
+  describe('canAccessConsent', () => {
+    it('should allow admin to access any consent', async () => {
+      const entity = consentEntityFactory();
+      const canAccess = await (
+        service as unknown as {
+          canAccessConsent: (
+            user: User,
+            entity: ConsentEntity,
+            action?: string,
+          ) => Promise<boolean>;
+        }
+      ).canAccessConsent(adminUser, entity, 'read');
+
+      expect(canAccess).toBe(true);
+    });
+
+    it('should allow patient to access their own consent', async () => {
+      const patientEntity = {
+        patientId: 'p1',
+        keycloakUserId: 'patient-1',
+      };
+
+      const entity = consentEntityFactory({
+        patientReference: 'Patient/p1',
+      });
+
+      patientRepository.findOne.mockResolvedValue(patientEntity as PatientEntity);
+
+      const canAccess = await (
+        service as unknown as {
+          canAccessConsent: (
+            user: User,
+            entity: ConsentEntity,
+            action?: string,
+          ) => Promise<boolean>;
+        }
+      ).canAccessConsent(patientUser, entity, 'read');
+
+      expect(canAccess).toBe(true);
+    });
+
+    it('should deny patient access to other patient consent', async () => {
+      const patientEntity = {
+        patientId: 'p2',
+        keycloakUserId: 'other-patient',
+      };
+
+      const entity = consentEntityFactory({
+        patientReference: 'Patient/p2',
+      });
+
+      patientRepository.findOne.mockResolvedValue(patientEntity as PatientEntity);
+
+      const canAccess = await (
+        service as unknown as {
+          canAccessConsent: (
+            user: User,
+            entity: ConsentEntity,
+            action?: string,
+          ) => Promise<boolean>;
+        }
+      ).canAccessConsent(patientUser, entity, 'read');
+
+      expect(canAccess).toBe(false);
+    });
+
+    it('should allow practitioner to access active consents', async () => {
+      const entity = consentEntityFactory({
+        status: 'active',
+      });
+
+      const canAccess = await (
+        service as unknown as {
+          canAccessConsent: (
+            user: User,
+            entity: ConsentEntity,
+            action?: string,
+          ) => Promise<boolean>;
+        }
+      ).canAccessConsent(practitionerUser, entity, 'read');
+
+      expect(canAccess).toBe(true);
+    });
+
+    it('should deny practitioner access to inactive consents', async () => {
+      const entity = consentEntityFactory({
+        status: 'inactive',
+      });
+
+      const canAccess = await (
+        service as unknown as {
+          canAccessConsent: (
+            user: User,
+            entity: ConsentEntity,
+            action?: string,
+          ) => Promise<boolean>;
+        }
+      ).canAccessConsent(practitionerUser, entity, 'read');
+
+      expect(canAccess).toBe(false);
+    });
+
+    it('should allow access if role grants permission', async () => {
+      const entity = consentEntityFactory();
+      mockScopePermissionService.roleGrantsPermission.mockReturnValue(true);
+
+      const canAccess = await (
+        service as unknown as {
+          canAccessConsent: (
+            user: User,
+            entity: ConsentEntity,
+            action?: string,
+          ) => Promise<boolean>;
+        }
+      ).canAccessConsent(practitionerUser, entity, 'read');
+
+      expect(canAccess).toBe(true);
+    });
+
+    it('should allow access if user has scope permission for read', async () => {
+      const entity = consentEntityFactory();
+      mockScopePermissionService.roleGrantsPermission.mockReturnValue(false);
+      mockScopePermissionService.hasResourcePermission.mockReturnValue(true);
+
+      const canAccess = await (
+        service as unknown as {
+          canAccessConsent: (
+            user: User,
+            entity: ConsentEntity,
+            action?: string,
+          ) => Promise<boolean>;
+        }
+      ).canAccessConsent(practitionerUser, entity, 'read');
+
+      expect(canAccess).toBe(true);
+    });
+
+    it('should require ownership for write operations with scope permission', async () => {
+      const patientEntity = {
+        patientId: 'p1',
+        keycloakUserId: 'patient-1',
+      };
+
+      const entity = consentEntityFactory({
+        patientReference: 'Patient/p1',
+      });
+
+      mockScopePermissionService.roleGrantsPermission.mockReturnValue(false);
+      mockScopePermissionService.hasResourcePermission.mockReturnValue(true);
+      patientRepository.findOne.mockResolvedValue(patientEntity as PatientEntity);
+
+      const canAccess = await (
+        service as unknown as {
+          canAccessConsent: (
+            user: User,
+            entity: ConsentEntity,
+            action?: string,
+          ) => Promise<boolean>;
+        }
+      ).canAccessConsent(patientUser, entity, 'write');
+
+      expect(canAccess).toBe(true);
+    });
+  });
+
+  describe('validatePatientOwnership', () => {
+    it('should allow admin to create consent for any patient', async () => {
+      await expect(
+        (
+          service as unknown as {
+            validatePatientOwnership: (user: User, patientReference?: string) => Promise<void>;
+          }
+        ).validatePatientOwnership(adminUser, 'Patient/p1'),
+      ).resolves.not.toThrow();
+    });
+
+    it('should allow patient to create consent for themselves', async () => {
+      const patientEntity = {
+        patientId: 'p1',
+        keycloakUserId: 'patient-1',
+      };
+
+      patientRepository.findOne.mockResolvedValue(patientEntity as PatientEntity);
+
+      await expect(
+        (
+          service as unknown as {
+            validatePatientOwnership: (user: User, patientReference?: string) => Promise<void>;
+          }
+        ).validatePatientOwnership(patientUser, 'Patient/p1'),
+      ).resolves.not.toThrow();
+    });
+
+    it('should throw ForbiddenException if patient reference is missing', async () => {
+      await expect(
+        (
+          service as unknown as {
+            validatePatientOwnership: (user: User, patientReference?: string) => Promise<void>;
+          }
+        ).validatePatientOwnership(patientUser),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should throw ForbiddenException if patient reference format is invalid', async () => {
+      // An empty string after removing "Patient/" prefix is considered invalid
+      await expect(
+        (
+          service as unknown as {
+            validatePatientOwnership: (user: User, patientReference?: string) => Promise<void>;
+          }
+        ).validatePatientOwnership(patientUser, 'Patient/'),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should throw NotFoundException if patient not found', async () => {
+      patientRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        (
+          service as unknown as {
+            validatePatientOwnership: (user: User, patientReference?: string) => Promise<void>;
+          }
+        ).validatePatientOwnership(patientUser, 'Patient/p1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw ForbiddenException if patient does not belong to user', async () => {
+      const patientEntity = {
+        patientId: 'p1',
+        keycloakUserId: 'other-patient',
+      };
+
+      patientRepository.findOne.mockResolvedValue(patientEntity as PatientEntity);
+
+      await expect(
+        (
+          service as unknown as {
+            validatePatientOwnership: (user: User, patientReference?: string) => Promise<void>;
+          }
+        ).validatePatientOwnership(patientUser, 'Patient/p1'),
+      ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  describe('create with scope permissions', () => {
+    it('should allow creation with consent:write scope', async () => {
+      const userWithScope: User = {
+        id: 'user-1',
+        keycloakUserId: 'user-1',
+        username: 'user',
+        roles: [],
+        scopes: ['consent:write'],
+        email: '',
+      };
+
+      const dto: CreateConsentDto = {
+        status: 'active',
+        patient: { reference: 'Patient/p1' },
+        scope: { coding: [] },
+        category: [{ coding: [] }],
+      };
+
+      const patientEntity = {
+        patientId: 'p1',
+        keycloakUserId: 'user-1',
+      };
+
+      mockScopePermissionService.hasResourcePermission.mockReturnValue(true);
+      patientRepository.findOne.mockResolvedValue(patientEntity as PatientEntity);
+      consentRepository.save.mockResolvedValue(consentEntityFactory());
+
+      const result = await service.create(dto, userWithScope);
+
+      expect(result).toBeDefined();
+      expect(mockScopePermissionService.hasResourcePermission).toHaveBeenCalled();
+    });
+
+    it('should throw ForbiddenException if no role or scope permission', async () => {
+      const userWithoutPermission: User = {
+        id: 'user-1',
+        keycloakUserId: 'user-1',
+        username: 'user',
+        roles: [],
+        scopes: [],
+        email: '',
+      };
+
+      const dto: CreateConsentDto = {
+        status: 'active',
+        patient: { reference: 'Patient/p1' },
+        scope: { coding: [] },
+        category: [{ coding: [] }],
+      };
+
+      mockScopePermissionService.hasResourcePermission.mockReturnValue(false);
+
+      await expect(service.create(dto, userWithoutPermission)).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  describe('validateExpiredConsents', () => {
+    it('should mark expired consents as inactive in findAll', async () => {
+      const expiredDate = new Date();
+      expiredDate.setDate(expiredDate.getDate() - 1); // Yesterday
+
+      const expiredEntity = consentEntityFactory({
+        status: 'active',
+        fhirResource: {
+          ...baseConsent,
+          status: 'active',
+          provision: {
+            type: 'permit' as const,
+            period: {
+              start: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), // 10 days ago
+              end: expiredDate.toISOString(),
+            },
+          },
+        },
+      });
+
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(1),
+        getMany: jest.fn().mockResolvedValue([expiredEntity]),
+      };
+
+      consentRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as unknown as ReturnType<typeof consentRepository.createQueryBuilder>,
+      );
+      consentRepository.save.mockResolvedValue(expiredEntity);
+
+      await service.findAll(adminUser);
+
+      expect(consentRepository.save).toHaveBeenCalled();
+      expect(expiredEntity.status).toBe('inactive');
+    });
+  });
 });

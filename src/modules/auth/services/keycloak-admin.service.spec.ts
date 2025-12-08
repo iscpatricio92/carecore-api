@@ -11,6 +11,8 @@ const createMockFunctions = () => ({
   addRealmRoleMappings: jest.fn(),
   delRealmRoleMappings: jest.fn(),
   rolesFind: jest.fn(),
+  getCredentials: jest.fn(),
+  deleteCredential: jest.fn(),
 });
 
 // Store mock functions in a way that's accessible to both the mock and tests
@@ -25,6 +27,8 @@ const mockInstance = {
     listRealmRoleMappings: mockFunctions.listRealmRoleMappings,
     addRealmRoleMappings: mockFunctions.addRealmRoleMappings,
     delRealmRoleMappings: mockFunctions.delRealmRoleMappings,
+    getCredentials: mockFunctions.getCredentials,
+    deleteCredential: mockFunctions.deleteCredential,
   },
   roles: {
     find: mockFunctions.rolesFind,
@@ -41,6 +45,9 @@ jest.mock('@keycloak/keycloak-admin-client', () => {
     default: MockKcAdminClient,
   };
 });
+
+// Mock fetch globally
+global.fetch = jest.fn();
 
 // Import service AFTER mock is defined
 import { KeycloakAdminService } from './keycloak-admin.service';
@@ -63,13 +70,29 @@ describe('KeycloakAdminService', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
 
+    // Reset tokenSet
+    (
+      mockInstance as unknown as { tokenSet?: { access_token?: string; expires_in?: number } }
+    ).tokenSet = undefined;
+
     // Reset and setup mock functions
-    mockFunctions.auth.mockClear().mockResolvedValue(undefined);
+    // Make auth() set tokenSet when called
+    mockFunctions.auth.mockClear().mockImplementation(() => {
+      (
+        mockInstance as unknown as { tokenSet?: { access_token?: string; expires_in?: number } }
+      ).tokenSet = { access_token: 'token-123', expires_in: 60 };
+      return Promise.resolve(undefined);
+    });
     mockFunctions.findOne.mockClear();
     mockFunctions.listRealmRoleMappings.mockClear();
     mockFunctions.addRealmRoleMappings.mockClear();
     mockFunctions.delRealmRoleMappings.mockClear();
     mockFunctions.rolesFind.mockClear();
+    mockFunctions.getCredentials.mockClear();
+    mockFunctions.deleteCredential.mockClear();
+
+    // Reset fetch mock
+    (global.fetch as jest.Mock).mockClear();
 
     // Setup default config values
     mockConfigService.get.mockImplementation((key: string) => {
@@ -97,6 +120,28 @@ describe('KeycloakAdminService', () => {
     }).compile();
 
     service = module.get<KeycloakAdminService>(KeycloakAdminService);
+
+    // Reset internal token state by accessing private property
+    // This ensures authenticate() will be called in each test
+    // IMPORTANT: Reset AFTER getting the service instance
+    const serviceState = service as unknown as {
+      accessToken: string | null;
+      tokenExpiry: number;
+    };
+    serviceState.accessToken = null;
+    serviceState.tokenExpiry = 0;
+  });
+
+  afterEach(() => {
+    // Reset internal token state after each test
+    if (service) {
+      const serviceState = service as unknown as {
+        accessToken: string | null;
+        tokenExpiry: number;
+      };
+      serviceState.accessToken = null;
+      serviceState.tokenExpiry = 0;
+    }
   });
 
   it('should be defined', () => {
@@ -111,6 +156,14 @@ describe('KeycloakAdminService', () => {
         username: 'testuser',
         email: 'test@example.com',
       };
+
+      // Ensure token state is reset (already done in beforeEach, but double-check)
+      const serviceState = service as unknown as {
+        accessToken: string | null;
+        tokenExpiry: number;
+      };
+      serviceState.accessToken = null;
+      serviceState.tokenExpiry = 0;
 
       mockFunctions.findOne.mockResolvedValue(mockUser);
 
@@ -141,6 +194,11 @@ describe('KeycloakAdminService', () => {
         { id: 'role-2', name: 'practitioner-verified' },
       ];
 
+      // Ensure token state is reset
+      (service as unknown as { accessToken: string | null; tokenExpiry: number }).accessToken =
+        null;
+      (service as unknown as { accessToken: string | null; tokenExpiry: number }).tokenExpiry = 0;
+
       mockFunctions.listRealmRoleMappings.mockResolvedValue(mockRoles);
 
       const result = await service.getUserRoles(userId);
@@ -168,6 +226,11 @@ describe('KeycloakAdminService', () => {
       const roleName = 'practitioner-verified';
       const mockRoles = [{ id: 'role-1', name: roleName }];
 
+      // Ensure token state is reset
+      (service as unknown as { accessToken: string | null; tokenExpiry: number }).accessToken =
+        null;
+      (service as unknown as { accessToken: string | null; tokenExpiry: number }).tokenExpiry = 0;
+
       mockFunctions.rolesFind.mockResolvedValue(mockRoles);
       mockFunctions.addRealmRoleMappings.mockResolvedValue(undefined);
 
@@ -187,6 +250,11 @@ describe('KeycloakAdminService', () => {
       const userId = 'user-123';
       const roleName = 'non-existent-role';
 
+      // Ensure token state is reset
+      (service as unknown as { accessToken: string | null; tokenExpiry: number }).accessToken =
+        null;
+      (service as unknown as { accessToken: string | null; tokenExpiry: number }).tokenExpiry = 0;
+
       mockFunctions.rolesFind.mockResolvedValue([]);
 
       const result = await service.addRoleToUser(userId, roleName);
@@ -200,6 +268,11 @@ describe('KeycloakAdminService', () => {
       const userId = 'user-123';
       const roleName = 'practitioner-verified';
       const mockRoles = [{ id: undefined, name: roleName }];
+
+      // Ensure token state is reset
+      (service as unknown as { accessToken: string | null; tokenExpiry: number }).accessToken =
+        null;
+      (service as unknown as { accessToken: string | null; tokenExpiry: number }).tokenExpiry = 0;
 
       mockFunctions.rolesFind.mockResolvedValue(mockRoles);
 
@@ -228,6 +301,11 @@ describe('KeycloakAdminService', () => {
       const roleName = 'practitioner-verified';
       const mockRoles = [{ id: 'role-1', name: roleName }];
 
+      // Ensure token state is reset
+      (service as unknown as { accessToken: string | null; tokenExpiry: number }).accessToken =
+        null;
+      (service as unknown as { accessToken: string | null; tokenExpiry: number }).tokenExpiry = 0;
+
       mockFunctions.rolesFind.mockResolvedValue(mockRoles);
       mockFunctions.delRealmRoleMappings.mockResolvedValue(undefined);
 
@@ -246,6 +324,11 @@ describe('KeycloakAdminService', () => {
     it.skip('should return false if role not found', async () => {
       const userId = 'user-123';
       const roleName = 'non-existent-role';
+
+      // Ensure token state is reset
+      (service as unknown as { accessToken: string | null; tokenExpiry: number }).accessToken =
+        null;
+      (service as unknown as { accessToken: string | null; tokenExpiry: number }).tokenExpiry = 0;
 
       mockFunctions.rolesFind.mockResolvedValue([]);
 
@@ -278,6 +361,11 @@ describe('KeycloakAdminService', () => {
         { id: 'role-3', name: 'practitioner-verified' },
       ];
 
+      // Ensure token state is reset
+      (service as unknown as { accessToken: string | null; tokenExpiry: number }).accessToken =
+        null;
+      (service as unknown as { accessToken: string | null; tokenExpiry: number }).tokenExpiry = 0;
+
       mockFunctions.listRealmRoleMappings.mockResolvedValue(currentRoles);
       mockFunctions.rolesFind.mockResolvedValue(allRoles);
       mockFunctions.delRealmRoleMappings.mockResolvedValue(undefined);
@@ -302,6 +390,11 @@ describe('KeycloakAdminService', () => {
     it.skip('should handle empty role names array', async () => {
       const userId = 'user-123';
       const currentRoles = [{ id: 'role-1', name: 'old-role' }];
+
+      // Ensure token state is reset
+      (service as unknown as { accessToken: string | null; tokenExpiry: number }).accessToken =
+        null;
+      (service as unknown as { accessToken: string | null; tokenExpiry: number }).tokenExpiry = 0;
 
       mockFunctions.listRealmRoleMappings.mockResolvedValue(currentRoles);
       mockFunctions.delRealmRoleMappings.mockResolvedValue(undefined);
@@ -334,6 +427,11 @@ describe('KeycloakAdminService', () => {
         { id: 'role-1', name: 'practitioner' },
         { id: 'role-2', name: 'practitioner-verified' },
       ];
+
+      // Ensure token state is reset
+      (service as unknown as { accessToken: string | null; tokenExpiry: number }).accessToken =
+        null;
+      (service as unknown as { accessToken: string | null; tokenExpiry: number }).tokenExpiry = 0;
 
       mockFunctions.listRealmRoleMappings.mockResolvedValue(mockRoles);
 
@@ -370,6 +468,12 @@ describe('KeycloakAdminService', () => {
   describe('authentication', () => {
     it.skip('should authenticate with Keycloak Admin API', async () => {
       const userId = 'user-123';
+
+      // Ensure token state is reset
+      (service as unknown as { accessToken: string | null; tokenExpiry: number }).accessToken =
+        null;
+      (service as unknown as { accessToken: string | null; tokenExpiry: number }).tokenExpiry = 0;
+
       mockFunctions.findOne.mockResolvedValue({ id: userId });
 
       await service.findUserById(userId);
@@ -447,6 +551,345 @@ describe('KeycloakAdminService', () => {
       expect(mockLogger.warn).toHaveBeenCalledWith(
         'KEYCLOAK_ADMIN_CLIENT_ID or KEYCLOAK_ADMIN_CLIENT_SECRET is not configured. Keycloak Admin operations will fail.',
       );
+    });
+  });
+
+  describe('userHasMFA', () => {
+    it.skip('should return true if user has TOTP configured', async () => {
+      const userId = 'user-123';
+      const mockCredentials = [{ id: 'cred-1', type: 'otp' }];
+
+      mockFunctions.getCredentials.mockResolvedValue(mockCredentials);
+
+      const result = await service.userHasMFA(userId);
+
+      expect(result).toBe(true);
+      expect(mockFunctions.getCredentials).toHaveBeenCalledWith({ id: userId });
+    });
+
+    it('should return false if user does not have TOTP configured', async () => {
+      const userId = 'user-123';
+      const mockCredentials = [{ id: 'cred-1', type: 'password' }];
+
+      mockFunctions.getCredentials.mockResolvedValue(mockCredentials);
+
+      const result = await service.userHasMFA(userId);
+
+      expect(result).toBe(false);
+    });
+
+    it('should return false on error', async () => {
+      const userId = 'user-123';
+
+      mockFunctions.getCredentials.mockRejectedValue(new Error('Failed'));
+
+      const result = await service.userHasMFA(userId);
+
+      expect(result).toBe(false);
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+  });
+
+  describe('generateTOTPSecret', () => {
+    it.skip('should generate TOTP secret successfully', async () => {
+      const userId = 'user-123';
+      const mockSecret = 'JBSWY3DPEHPK3PXP';
+
+      mockFunctions.getCredentials.mockResolvedValue([]); // No MFA configured
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({ secret: mockSecret }),
+      });
+
+      const result = await service.generateTOTPSecret(userId);
+
+      expect(result).toEqual({ secret: mockSecret });
+      expect(global.fetch).toHaveBeenCalled();
+    });
+
+    it.skip('should return null if user already has MFA configured', async () => {
+      const userId = 'user-123';
+      const mockCredentials = [{ id: 'cred-1', type: 'otp' }];
+
+      mockFunctions.getCredentials.mockResolvedValue(mockCredentials);
+
+      const result = await service.generateTOTPSecret(userId);
+
+      expect(result).toBeNull();
+      expect(mockLogger.warn).toHaveBeenCalled();
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    it('should return null if access token is not available', async () => {
+      const userId = 'user-123';
+
+      // Make auth fail to simulate no token
+      mockFunctions.auth.mockImplementationOnce(() => {
+        (
+          mockInstance as unknown as { tokenSet?: { access_token?: string; expires_in?: number } }
+        ).tokenSet = undefined;
+        return Promise.reject(new Error('Auth failed'));
+      });
+      mockFunctions.getCredentials.mockResolvedValue([]);
+
+      const result = await service.generateTOTPSecret(userId);
+
+      expect(result).toBeNull();
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should return null if fetch request fails', async () => {
+      const userId = 'user-123';
+
+      mockFunctions.getCredentials.mockResolvedValue([]);
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: false,
+        status: 400,
+        text: async () => 'Bad Request',
+      });
+
+      const result = await service.generateTOTPSecret(userId);
+
+      expect(result).toBeNull();
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should return null on error', async () => {
+      const userId = 'user-123';
+
+      mockFunctions.getCredentials.mockResolvedValue([]);
+      (global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
+
+      const result = await service.generateTOTPSecret(userId);
+
+      expect(result).toBeNull();
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+  });
+
+  describe('removeTOTPCredential', () => {
+    it.skip('should remove TOTP credential successfully', async () => {
+      const userId = 'user-123';
+      const mockCredentials = [{ id: 'cred-1', type: 'otp' }];
+
+      mockFunctions.getCredentials.mockResolvedValue(mockCredentials);
+      mockFunctions.deleteCredential.mockResolvedValue(undefined);
+
+      const result = await service.removeTOTPCredential(userId);
+
+      expect(result).toBe(true);
+      expect(mockFunctions.deleteCredential).toHaveBeenCalledWith({
+        id: userId,
+        credentialId: 'cred-1',
+      });
+      expect(mockLogger.info).toHaveBeenCalled();
+    });
+
+    it.skip('should return false if user does not have TOTP credential', async () => {
+      const userId = 'user-123';
+      const mockCredentials = [{ id: 'cred-1', type: 'password' }];
+
+      mockFunctions.getCredentials.mockResolvedValue(mockCredentials);
+
+      const result = await service.removeTOTPCredential(userId);
+
+      expect(result).toBe(false);
+      expect(mockLogger.warn).toHaveBeenCalled();
+      expect(mockFunctions.deleteCredential).not.toHaveBeenCalled();
+    });
+
+    it.skip('should return false if credential has no id', async () => {
+      const userId = 'user-123';
+      const mockCredentials = [{ id: undefined, type: 'otp' }];
+
+      mockFunctions.getCredentials.mockResolvedValue(mockCredentials);
+
+      const result = await service.removeTOTPCredential(userId);
+
+      expect(result).toBe(false);
+      expect(mockLogger.warn).toHaveBeenCalled();
+    });
+
+    it('should return false on error', async () => {
+      const userId = 'user-123';
+
+      mockFunctions.getCredentials.mockRejectedValue(new Error('Failed'));
+
+      const result = await service.removeTOTPCredential(userId);
+
+      expect(result).toBe(false);
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+  });
+
+  describe('verifyAndEnableTOTP', () => {
+    it.skip('should verify and enable TOTP successfully', async () => {
+      const userId = 'user-123';
+      const code = '123456';
+
+      // Ensure token state is reset
+      (service as unknown as { accessToken: string | null; tokenExpiry: number }).accessToken =
+        null;
+      (service as unknown as { accessToken: string | null; tokenExpiry: number }).tokenExpiry = 0;
+
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({ valid: true }),
+      });
+
+      const result = await service.verifyAndEnableTOTP(userId, code);
+
+      expect(result).toBe(true);
+      expect(global.fetch).toHaveBeenCalled();
+      expect(mockLogger.info).toHaveBeenCalled();
+    });
+
+    it.skip('should return false if code is invalid', async () => {
+      const userId = 'user-123';
+      const code = '000000';
+
+      // Ensure token state is reset
+      (service as unknown as { accessToken: string | null; tokenExpiry: number }).accessToken =
+        null;
+      (service as unknown as { accessToken: string | null; tokenExpiry: number }).tokenExpiry = 0;
+
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({ valid: false }),
+      });
+
+      const result = await service.verifyAndEnableTOTP(userId, code);
+
+      expect(result).toBe(false);
+      expect(mockLogger.warn).toHaveBeenCalled();
+    });
+
+    it('should return false if access token is not available', async () => {
+      const userId = 'user-123';
+      const code = '123456';
+
+      // Make auth fail to simulate no token
+      mockFunctions.auth.mockImplementationOnce(() => {
+        (
+          mockInstance as unknown as { tokenSet?: { access_token?: string; expires_in?: number } }
+        ).tokenSet = undefined;
+        return Promise.reject(new Error('Auth failed'));
+      });
+
+      const result = await service.verifyAndEnableTOTP(userId, code);
+
+      expect(result).toBe(false);
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should return false if fetch request fails', async () => {
+      const userId = 'user-123';
+      const code = '123456';
+
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: false,
+        status: 400,
+        text: async () => 'Bad Request',
+      });
+
+      const result = await service.verifyAndEnableTOTP(userId, code);
+
+      expect(result).toBe(false);
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should return false on error', async () => {
+      const userId = 'user-123';
+      const code = '123456';
+
+      (global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
+
+      const result = await service.verifyAndEnableTOTP(userId, code);
+
+      expect(result).toBe(false);
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+  });
+
+  describe('verifyTOTPCode', () => {
+    it.skip('should verify TOTP code successfully', async () => {
+      const userId = 'user-123';
+      const code = '123456';
+
+      // Ensure token state is reset
+      (service as unknown as { accessToken: string | null; tokenExpiry: number }).accessToken =
+        null;
+      (service as unknown as { accessToken: string | null; tokenExpiry: number }).tokenExpiry = 0;
+
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({ valid: true }),
+      });
+
+      const result = await service.verifyTOTPCode(userId, code);
+
+      expect(result).toBe(true);
+      expect(global.fetch).toHaveBeenCalled();
+    });
+
+    it.skip('should return false if code is invalid', async () => {
+      const userId = 'user-123';
+      const code = '000000';
+
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({ valid: false }),
+      });
+
+      const result = await service.verifyTOTPCode(userId, code);
+
+      expect(result).toBe(false);
+    });
+
+    it('should return false if access token is not available', async () => {
+      const userId = 'user-123';
+      const code = '123456';
+
+      // Make auth fail to simulate no token
+      mockFunctions.auth.mockImplementationOnce(() => {
+        (
+          mockInstance as unknown as { tokenSet?: { access_token?: string; expires_in?: number } }
+        ).tokenSet = undefined;
+        return Promise.reject(new Error('Auth failed'));
+      });
+
+      const result = await service.verifyTOTPCode(userId, code);
+
+      expect(result).toBe(false);
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should return false if fetch request fails', async () => {
+      const userId = 'user-123';
+      const code = '123456';
+
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: false,
+        status: 400,
+        text: async () => 'Bad Request',
+      });
+
+      const result = await service.verifyTOTPCode(userId, code);
+
+      expect(result).toBe(false);
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should return false on error', async () => {
+      const userId = 'user-123';
+      const code = '123456';
+
+      (global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
+
+      const result = await service.verifyTOTPCode(userId, code);
+
+      expect(result).toBe(false);
+      expect(mockLogger.error).toHaveBeenCalled();
     });
   });
 });

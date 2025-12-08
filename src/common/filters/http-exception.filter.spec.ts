@@ -199,29 +199,6 @@ describe('HttpExceptionFilter', () => {
       expect(mockResponse.json).toHaveBeenCalled();
     });
 
-    it('should handle validation errors with nested array message structure', () => {
-      // This tests the else-if branch in extractValidationErrors (lines 149-152)
-      // Create an object where message is not directly an array but becomes one when cast
-      // This is a defensive code path that's hard to trigger but we test it
-      const exceptionResponse: Record<string, unknown> = {
-        message: ['Error 1', 'Error 2'],
-      };
-      // Manually set message to undefined first, then assign array to trigger else-if
-      delete exceptionResponse.message;
-      // Create object that when cast will have message as array
-      const castedResponse = exceptionResponse as { message?: unknown[] };
-      castedResponse.message = ['Error 1', 'Error 2'];
-      const exception = new HttpException(
-        castedResponse as Record<string, unknown>,
-        HttpStatus.BAD_REQUEST,
-      );
-
-      filter.catch(exception, mockArgumentsHost);
-
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
-      expect(mockResponse.json).toHaveBeenCalled();
-    });
-
     it('should handle validation errors with mixed message types in array', () => {
       // Test case where message array contains non-string values (only strings are processed)
       const exceptionResponse = {

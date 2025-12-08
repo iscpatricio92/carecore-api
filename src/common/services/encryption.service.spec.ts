@@ -108,6 +108,42 @@ describe('EncryptionService', () => {
 
       await expect(testService.encrypt('test data')).rejects.toThrow('Encryption failed');
     });
+
+    it('should throw error if encryption returns no result', async () => {
+      mockConfigService.get.mockReturnValue('test-key');
+      const module = await Test.createTestingModule({
+        providers: [
+          EncryptionService,
+          { provide: DataSource, useValue: mockDataSource },
+          { provide: ConfigService, useValue: mockConfigService },
+        ],
+      }).compile();
+      const testService = module.get<EncryptionService>(EncryptionService);
+
+      mockDataSource.query.mockResolvedValue([]);
+
+      await expect(testService.encrypt('test data')).rejects.toThrow(
+        'Encryption failed: no result returned',
+      );
+    });
+
+    it('should throw error if encryption result has no encrypted field', async () => {
+      mockConfigService.get.mockReturnValue('test-key');
+      const module = await Test.createTestingModule({
+        providers: [
+          EncryptionService,
+          { provide: DataSource, useValue: mockDataSource },
+          { provide: ConfigService, useValue: mockConfigService },
+        ],
+      }).compile();
+      const testService = module.get<EncryptionService>(EncryptionService);
+
+      mockDataSource.query.mockResolvedValue([{}]);
+
+      await expect(testService.encrypt('test data')).rejects.toThrow(
+        'Encryption failed: no result returned',
+      );
+    });
   });
 
   describe('decrypt', () => {
@@ -224,6 +260,12 @@ describe('EncryptionService', () => {
         expect.stringContaining('gen_random_bytes'),
         [64],
       );
+    });
+
+    it('should throw error if key generation fails', async () => {
+      mockDataSource.query.mockRejectedValue(new Error('Database error'));
+
+      await expect(service.generateRandomKey()).rejects.toThrow('Failed to generate random key');
     });
   });
 });
