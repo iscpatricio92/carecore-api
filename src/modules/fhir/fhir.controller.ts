@@ -10,6 +10,10 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  Req,
+  Res,
+  BadRequestException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -19,8 +23,10 @@ import {
   ApiQuery,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { Request, Response } from 'express';
 
 import { FhirService } from './fhir.service';
+import { SmartFhirService } from './services/smart-fhir.service';
 import { Public } from '../auth/decorators/public.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -39,13 +45,18 @@ import {
 } from '../../common/dto/fhir-practitioner.dto';
 import { CreateEncounterDto, UpdateEncounterDto } from '../../common/dto/fhir-encounter.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
+import { SmartFhirAuthDto } from '../../common/dto/smart-fhir-auth.dto';
 import { Patient, Practitioner, Encounter } from '../../common/interfaces/fhir.interface';
+import { FhirErrorService } from '../../common/services/fhir-error.service';
 
 @ApiTags('FHIR')
 @Controller('fhir')
 @UseGuards(JwtAuthGuard) // Protect all FHIR endpoints by default
 export class FhirController {
-  constructor(private readonly fhirService: FhirService) {}
+  constructor(
+    private readonly fhirService: FhirService,
+    private readonly smartFhirService: SmartFhirService,
+  ) {}
 
   @Get('metadata')
   @Public()
@@ -53,6 +64,104 @@ export class FhirController {
   @ApiResponse({ status: 200, description: 'CapabilityStatement returned successfully' })
   getMetadata() {
     return this.fhirService.getCapabilityStatement();
+  }
+
+  /**
+   * SMART on FHIR Authorization Endpoint
+   * Implements OAuth2 Authorization Code Flow for SMART on FHIR applications
+   * This endpoint validates OAuth2 parameters and redirects to Keycloak for user authentication
+   */
+  @Get('auth')
+  @Public()
+  @ApiOperation({
+    summary: 'SMART on FHIR Authorization Endpoint',
+    description:
+      'OAuth2 Authorization Code Flow endpoint for SMART on FHIR applications. Validates client credentials and redirects to Keycloak for user authentication.',
+  })
+  @ApiQuery({
+    name: 'client_id',
+    required: true,
+    description: 'Client ID of the SMART on FHIR application',
+    example: 'app-123',
+  })
+  @ApiQuery({
+    name: 'response_type',
+    required: true,
+    description: 'Must be "code" for Authorization Code flow',
+    example: 'code',
+  })
+  @ApiQuery({
+    name: 'redirect_uri',
+    required: true,
+    description: 'Redirect URI where the authorization code will be sent',
+    example: 'https://app.com/callback',
+  })
+  @ApiQuery({
+    name: 'scope',
+    required: true,
+    description: 'Space-separated list of scopes (e.g., "patient:read patient:write")',
+    example: 'patient:read patient:write',
+  })
+  @ApiQuery({
+    name: 'state',
+    required: false,
+    description: 'CSRF protection token',
+    example: 'abc123xyz',
+  })
+  @ApiQuery({
+    name: 'aud',
+    required: false,
+    description: 'Audience - URL of the FHIR server (SMART on FHIR extension)',
+    example: 'https://fhir.example.com',
+  })
+  @ApiResponse({
+    status: 302,
+    description: 'Redirect to Keycloak for authentication',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request parameters - returns FHIR OperationOutcome',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Client not found or unauthorized - returns FHIR OperationOutcome',
+  })
+  async authorize(
+    @Query() params: SmartFhirAuthDto,
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    try {
+      // Validate OAuth2 parameters
+      await this.smartFhirService.validateAuthParams(params);
+
+      // Get our callback URL where Keycloak will redirect after authentication
+      const callbackUrl = this.smartFhirService.getCallbackUrl(req);
+
+      // Generate state token if not provided (for CSRF protection)
+      const stateToken = params.state || this.smartFhirService.generateStateToken();
+
+      // Build Keycloak authorization URL
+      const authUrl = this.smartFhirService.buildAuthorizationUrl(params, stateToken, callbackUrl);
+
+      // Redirect to Keycloak for authentication
+      res.redirect(authUrl);
+    } catch (error) {
+      // Handle errors and return FHIR OperationOutcome
+      if (error instanceof BadRequestException || error instanceof UnauthorizedException) {
+        const operationOutcome = error.getResponse();
+        res.status(error.getStatus()).json(operationOutcome);
+        return;
+      }
+
+      // Unexpected error - return generic OperationOutcome
+      const operationOutcome = FhirErrorService.createOperationOutcome(
+        500,
+        'An unexpected error occurred during authorization.',
+        error instanceof Error ? error.message : 'Unknown error',
+      );
+      res.status(500).json(operationOutcome);
+    }
   }
 
   // Patient endpoints

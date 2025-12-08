@@ -514,4 +514,85 @@ export class KeycloakAdminService {
       return false;
     }
   }
+
+  /**
+   * Find a client by client ID
+   * @param clientId Client ID to find
+   * @returns Client representation from Keycloak, or null if not found
+   */
+  async findClientById(clientId: string): Promise<{
+    id?: string;
+    clientId?: string;
+    redirectUris?: string[];
+    standardFlowEnabled?: boolean;
+  } | null> {
+    try {
+      await this.authenticate();
+
+      const clients = await this.kcAdminClient.clients.find({
+        clientId: clientId,
+      });
+
+      const client = clients.find((c) => c.clientId === clientId);
+      if (!client || !client.id) {
+        return null;
+      }
+
+      // Get full client details including redirect URIs
+      const clientDetails = await this.kcAdminClient.clients.findOne({
+        id: client.id,
+      });
+
+      if (!clientDetails) {
+        return null;
+      }
+
+      return {
+        id: clientDetails.id,
+        clientId: clientDetails.clientId,
+        redirectUris: clientDetails.redirectUris || [],
+        standardFlowEnabled: clientDetails.standardFlowEnabled,
+      };
+    } catch (error) {
+      this.logger.error({ error, clientId }, 'Failed to find client in Keycloak');
+      return null;
+    }
+  }
+
+  /**
+   * Validate that a redirect URI is registered for a client
+   * @param clientId Client ID
+   * @param redirectUri Redirect URI to validate
+   * @returns True if redirect URI is valid for the client, false otherwise
+   */
+  async validateRedirectUri(clientId: string, redirectUri: string): Promise<boolean> {
+    try {
+      const client = await this.findClientById(clientId);
+      if (!client) {
+        return false;
+      }
+
+      const redirectUris = client.redirectUris || [];
+
+      // Check exact match first
+      if (redirectUris.includes(redirectUri)) {
+        return true;
+      }
+
+      // Check wildcard patterns (e.g., https://app.com/callback/*)
+      for (const registeredUri of redirectUris) {
+        if (registeredUri.endsWith('/*')) {
+          const baseUri = registeredUri.slice(0, -2);
+          if (redirectUri.startsWith(baseUri)) {
+            return true;
+          }
+        }
+      }
+
+      return false;
+    } catch (error) {
+      this.logger.error({ error, clientId, redirectUri }, 'Failed to validate redirect URI');
+      return false;
+    }
+  }
 }

@@ -18,14 +18,18 @@ jest.mock('@keycloak/keycloak-admin-client', () => ({
 }));
 
 import { Test, TestingModule } from '@nestjs/testing';
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { Request, Response } from 'express';
 import { FhirController } from './fhir.controller';
 import { FhirService } from './fhir.service';
+import { SmartFhirService } from './services/smart-fhir.service';
 import { CreatePatientDto, UpdatePatientDto } from '../../common/dto/fhir-patient.dto';
 import {
   CreatePractitionerDto,
   UpdatePractitionerDto,
 } from '../../common/dto/fhir-practitioner.dto';
 import { CreateEncounterDto, UpdateEncounterDto } from '../../common/dto/fhir-encounter.dto';
+import { SmartFhirAuthDto } from '../../common/dto/smart-fhir-auth.dto';
 import { User } from '../auth/interfaces/user.interface';
 import { FHIR_RESOURCE_TYPES } from '../../common/constants/fhir-resource-types';
 import { MFARequiredGuard } from '../auth/guards/mfa-required.guard';
@@ -62,6 +66,13 @@ describe('FhirController', () => {
     deleteEncounter: jest.fn(),
   };
 
+  const mockSmartFhirService = {
+    validateAuthParams: jest.fn(),
+    generateStateToken: jest.fn(),
+    buildAuthorizationUrl: jest.fn(),
+    getCallbackUrl: jest.fn(),
+  };
+
   const mockKeycloakAdminService = {
     userHasMFA: jest.fn(),
     findUserById: jest.fn(),
@@ -89,6 +100,10 @@ describe('FhirController', () => {
         {
           provide: FhirService,
           useValue: mockFhirService,
+        },
+        {
+          provide: SmartFhirService,
+          useValue: mockSmartFhirService,
         },
         {
           provide: KeycloakAdminService,
@@ -469,6 +484,133 @@ describe('FhirController', () => {
       await controller.deleteEncounter(encounterId);
 
       expect(service.deleteEncounter).toHaveBeenCalledWith(encounterId);
+    });
+  });
+
+  describe('authorize', () => {
+    const mockAuthParams: SmartFhirAuthDto = {
+      client_id: 'app-123',
+      response_type: 'code',
+      redirect_uri: 'https://app.com/callback',
+      scope: 'patient:read patient:write',
+      state: 'abc123',
+    };
+
+    const mockRequest = {
+      protocol: 'https',
+      get: jest.fn((header: string) => {
+        if (header === 'host') return 'api.example.com';
+        return undefined;
+      }),
+    };
+
+    let mockResponse: {
+      redirect: jest.Mock;
+      status: jest.Mock;
+      json: jest.Mock;
+    };
+
+    beforeEach(() => {
+      mockResponse = {
+        redirect: jest.fn(),
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn().mockReturnThis(),
+      };
+    });
+
+    it('should redirect to Keycloak authorization URL on valid request', async () => {
+      const callbackUrl = 'https://api.example.com/api/fhir/token';
+      const authUrl = 'https://keycloak.example.com/auth?client_id=app-123';
+
+      mockSmartFhirService.validateAuthParams.mockResolvedValue(undefined);
+      mockSmartFhirService.getCallbackUrl.mockReturnValue(callbackUrl);
+      mockSmartFhirService.generateStateToken.mockReturnValue('state123');
+      mockSmartFhirService.buildAuthorizationUrl.mockReturnValue(authUrl);
+
+      await controller.authorize(
+        mockAuthParams,
+        mockRequest as unknown as Request,
+        mockResponse as unknown as Response,
+      );
+
+      expect(mockSmartFhirService.validateAuthParams).toHaveBeenCalledWith(mockAuthParams);
+      expect(mockSmartFhirService.getCallbackUrl).toHaveBeenCalledWith(mockRequest);
+      expect(mockSmartFhirService.buildAuthorizationUrl).toHaveBeenCalled();
+      expect(mockResponse.redirect).toHaveBeenCalledWith(authUrl);
+    });
+
+    it('should generate state token if not provided', async () => {
+      const paramsWithoutState = { ...mockAuthParams, state: undefined };
+      const callbackUrl = 'https://api.example.com/api/fhir/token';
+      const authUrl = 'https://keycloak.example.com/auth';
+
+      mockSmartFhirService.validateAuthParams.mockResolvedValue(undefined);
+      mockSmartFhirService.getCallbackUrl.mockReturnValue(callbackUrl);
+      mockSmartFhirService.generateStateToken.mockReturnValue('generated-state');
+      mockSmartFhirService.buildAuthorizationUrl.mockReturnValue(authUrl);
+
+      await controller.authorize(
+        paramsWithoutState,
+        mockRequest as unknown as Request,
+        mockResponse as unknown as Response,
+      );
+
+      expect(mockSmartFhirService.generateStateToken).toHaveBeenCalled();
+    });
+
+    it('should return BadRequestException with OperationOutcome on validation error', async () => {
+      const error = new BadRequestException({
+        resourceType: 'OperationOutcome',
+        issue: [{ severity: 'error', code: 'invalid', details: { text: 'Invalid parameters' } }],
+      });
+
+      mockSmartFhirService.validateAuthParams.mockRejectedValue(error);
+
+      await controller.authorize(
+        mockAuthParams,
+        mockRequest as unknown as Request,
+        mockResponse as unknown as Response,
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(400);
+      expect(mockResponse.json).toHaveBeenCalledWith(error.getResponse());
+      expect(mockResponse.redirect).not.toHaveBeenCalled();
+    });
+
+    it('should return UnauthorizedException with OperationOutcome on client not found', async () => {
+      const error = new UnauthorizedException({
+        resourceType: 'OperationOutcome',
+        issue: [{ severity: 'error', code: 'security', details: { text: 'Client not found' } }],
+      });
+
+      mockSmartFhirService.validateAuthParams.mockRejectedValue(error);
+
+      await controller.authorize(
+        mockAuthParams,
+        mockRequest as unknown as Request,
+        mockResponse as unknown as Response,
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(401);
+      expect(mockResponse.json).toHaveBeenCalledWith(error.getResponse());
+      expect(mockResponse.redirect).not.toHaveBeenCalled();
+    });
+
+    it('should return 500 with OperationOutcome on unexpected error', async () => {
+      const unexpectedError = new Error('Unexpected error');
+      mockSmartFhirService.validateAuthParams.mockRejectedValue(unexpectedError);
+
+      await controller.authorize(
+        mockAuthParams,
+        mockRequest as unknown as Request,
+        mockResponse as unknown as Response,
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(500);
+      expect(mockResponse.json).toHaveBeenCalled();
+      const jsonCall = mockResponse.json.mock.calls[0][0];
+      expect(jsonCall.resourceType).toBe('OperationOutcome');
+      expect(mockResponse.redirect).not.toHaveBeenCalled();
     });
   });
 });
