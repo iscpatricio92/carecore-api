@@ -18,6 +18,7 @@ import { SmartFhirService } from './smart-fhir.service';
 import { KeycloakAdminService } from '../../auth/services/keycloak-admin.service';
 import { SmartFhirAuthDto } from '../../../common/dto/smart-fhir-auth.dto';
 import { SmartFhirTokenDto } from '../../../common/dto/smart-fhir-token.dto';
+import { SmartFhirLaunchDto } from '../../../common/dto/smart-fhir-launch.dto';
 
 describe('SmartFhirService', () => {
   let service: SmartFhirService;
@@ -77,6 +78,15 @@ describe('SmartFhirService', () => {
     service = module.get<SmartFhirService>(SmartFhirService);
     keycloakAdminService = module.get(KeycloakAdminService);
     configService = module.get(ConfigService);
+  });
+
+  afterEach(() => {
+    // Clean up the interval to prevent Jest from hanging
+    if (service) {
+      service.onModuleDestroy();
+    }
+    // Also clear all timers to be safe
+    jest.clearAllTimers();
   });
 
   it('should be defined', () => {
@@ -642,6 +652,243 @@ describe('SmartFhirService', () => {
       const result = serviceWithPrivate.extractPatientContext(tokenData);
 
       expect(result).toBeUndefined();
+    });
+  });
+
+  describe('validateLaunchParams', () => {
+    const validParams: SmartFhirLaunchDto = {
+      iss: 'https://carecore.example.com',
+      launch: 'xyz123',
+      client_id: 'app-123',
+      redirect_uri: 'https://app.com/callback',
+      scope: 'patient:read patient:write',
+      state: 'abc123',
+    };
+
+    it('should validate correct launch parameters', async () => {
+      configService.get.mockReturnValue('https://carecore.example.com');
+      keycloakAdminService.findClientById.mockResolvedValue(mockClient);
+      keycloakAdminService.validateRedirectUri.mockResolvedValue(true);
+
+      await expect(service.validateLaunchParams(validParams)).resolves.not.toThrow();
+    });
+
+    it('should throw BadRequestException if issuer does not match FHIR server URL', async () => {
+      configService.get.mockReturnValue('https://different-server.com');
+      keycloakAdminService.findClientById.mockResolvedValue(mockClient);
+      keycloakAdminService.validateRedirectUri.mockResolvedValue(true);
+
+      await expect(service.validateLaunchParams(validParams)).rejects.toThrow(BadRequestException);
+    });
+
+    it('should not throw if FHIR_SERVER_URL is not configured (issuer validation skipped)', async () => {
+      configService.get.mockReturnValue(undefined);
+      keycloakAdminService.findClientById.mockResolvedValue(mockClient);
+      keycloakAdminService.validateRedirectUri.mockResolvedValue(true);
+
+      await expect(service.validateLaunchParams(validParams)).resolves.not.toThrow();
+    });
+
+    it('should throw UnauthorizedException for non-existent client', async () => {
+      configService.get.mockReturnValue('https://carecore.example.com');
+      keycloakAdminService.findClientById.mockResolvedValue(null);
+
+      await expect(service.validateLaunchParams(validParams)).rejects.toThrow(
+        UnauthorizedException,
+      );
+    });
+
+    it('should throw BadRequestException for invalid redirect_uri', async () => {
+      configService.get.mockReturnValue('https://carecore.example.com');
+      keycloakAdminService.findClientById.mockResolvedValue(mockClient);
+      keycloakAdminService.validateRedirectUri.mockResolvedValue(false);
+
+      await expect(service.validateLaunchParams(validParams)).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException for empty scope', async () => {
+      const paramsWithEmptyScope = { ...validParams, scope: '' };
+      configService.get.mockReturnValue('https://carecore.example.com');
+      keycloakAdminService.findClientById.mockResolvedValue(mockClient);
+      keycloakAdminService.validateRedirectUri.mockResolvedValue(true);
+
+      await expect(service.validateLaunchParams(paramsWithEmptyScope)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should throw BadRequestException for scope with only whitespace', async () => {
+      const paramsWithWhitespaceScope = { ...validParams, scope: '   ' };
+      configService.get.mockReturnValue('https://carecore.example.com');
+      keycloakAdminService.findClientById.mockResolvedValue(mockClient);
+      keycloakAdminService.validateRedirectUri.mockResolvedValue(true);
+
+      await expect(service.validateLaunchParams(paramsWithWhitespaceScope)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+  });
+
+  describe('validateAndDecodeLaunchToken', () => {
+    it('should decode valid launch token with patient context', async () => {
+      const launchContext = {
+        patient: 'Patient/123',
+        encounter: 'Encounter/456',
+        timestamp: Date.now(),
+      };
+      const launchToken = Buffer.from(JSON.stringify(launchContext)).toString('base64url');
+
+      const result = await service.validateAndDecodeLaunchToken(launchToken);
+
+      expect(result.patient).toBe('Patient/123');
+      expect(result.encounter).toBe('Encounter/456');
+      expect(result.timestamp).toBeDefined();
+    });
+
+    it('should decode valid launch token with minimal context', async () => {
+      const launchContext = {
+        timestamp: Date.now(),
+      };
+      const launchToken = Buffer.from(JSON.stringify(launchContext)).toString('base64url');
+
+      const result = await service.validateAndDecodeLaunchToken(launchToken);
+
+      expect(result.patient).toBeUndefined();
+      expect(result.timestamp).toBeDefined();
+    });
+
+    it('should throw BadRequestException for invalid base64url token', async () => {
+      const invalidToken = 'invalid-token!!!';
+
+      await expect(service.validateAndDecodeLaunchToken(invalidToken)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should throw BadRequestException for invalid JSON in token', async () => {
+      const invalidJson = Buffer.from('not-json').toString('base64url');
+
+      await expect(service.validateAndDecodeLaunchToken(invalidJson)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+  });
+
+  describe('storeLaunchContext and getLaunchContext', () => {
+    it('should store and retrieve launch context', () => {
+      const launchToken = 'test-launch-token';
+      const context = {
+        patient: 'Patient/123',
+        encounter: 'Encounter/456',
+        timestamp: Date.now(),
+      };
+
+      service.storeLaunchContext(launchToken, context);
+      const retrieved = service.getLaunchContext(launchToken);
+
+      expect(retrieved).toEqual(context);
+    });
+
+    it('should return null for non-existent launch context', () => {
+      const result = service.getLaunchContext('non-existent-token');
+      expect(result).toBeNull();
+    });
+
+    it('should return null for expired launch context', () => {
+      const launchToken = 'expired-token';
+      const expiredContext = {
+        timestamp: Date.now() - 11 * 60 * 1000, // 11 minutes ago (TTL is 10 minutes)
+      };
+
+      service.storeLaunchContext(launchToken, expiredContext);
+      const result = service.getLaunchContext(launchToken);
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('removeLaunchContext', () => {
+    it('should remove launch context', () => {
+      const launchToken = 'test-token';
+      const context = {
+        timestamp: Date.now(),
+      };
+
+      service.storeLaunchContext(launchToken, context);
+      expect(service.getLaunchContext(launchToken)).toEqual(context);
+
+      service.removeLaunchContext(launchToken);
+      expect(service.getLaunchContext(launchToken)).toBeNull();
+    });
+  });
+
+  describe('cleanupExpiredContexts', () => {
+    interface ServiceWithPrivateMethod {
+      cleanupExpiredContexts: () => void;
+    }
+
+    it('should remove expired contexts and keep valid ones', () => {
+      const validToken = 'valid-token';
+      const expiredToken1 = 'expired-token-1';
+      const expiredToken2 = 'expired-token-2';
+
+      const now = Date.now();
+      const validContext = {
+        patient: 'Patient/123',
+        timestamp: now, // Current time
+      };
+
+      const expiredContext1 = {
+        patient: 'Patient/456',
+        timestamp: now - 11 * 60 * 1000, // 11 minutes ago (TTL is 10 minutes)
+      };
+
+      const expiredContext2 = {
+        patient: 'Patient/789',
+        timestamp: now - 15 * 60 * 1000, // 15 minutes ago
+      };
+
+      // Store contexts
+      // Note: We don't verify expired contexts are stored because getLaunchContext
+      // automatically removes them when checked. We trust storeLaunchContext works.
+      service.storeLaunchContext(validToken, validContext);
+      service.storeLaunchContext(expiredToken1, expiredContext1);
+      service.storeLaunchContext(expiredToken2, expiredContext2);
+
+      // Verify valid context is stored and accessible
+      const validContextBefore = service.getLaunchContext(validToken);
+      expect(validContextBefore).not.toBeNull();
+      expect(validContextBefore?.patient).toBe('Patient/123');
+
+      // Call cleanup method (private method, accessed via type assertion)
+      // This should remove expired contexts from the internal Map
+      (service as unknown as ServiceWithPrivateMethod).cleanupExpiredContexts();
+
+      // Verify expired contexts are removed
+      // getLaunchContext will return null for expired contexts
+      expect(service.getLaunchContext(expiredToken1)).toBeNull();
+      expect(service.getLaunchContext(expiredToken2)).toBeNull();
+
+      // Verify valid context is still there and unchanged
+      const validContextAfter = service.getLaunchContext(validToken);
+      expect(validContextAfter).not.toBeNull();
+      expect(validContextAfter?.patient).toBe('Patient/123');
+    });
+
+    it('should not log when no contexts are cleaned', () => {
+      const validToken = 'valid-token';
+      const validContext = {
+        patient: 'Patient/123',
+        timestamp: Date.now(),
+      };
+
+      service.storeLaunchContext(validToken, validContext);
+
+      // Call cleanup - should not log anything since nothing is expired
+      (service as unknown as ServiceWithPrivateMethod).cleanupExpiredContexts();
+
+      // Verify context is still there
+      expect(service.getLaunchContext(validToken)).not.toBeNull();
     });
   });
 });

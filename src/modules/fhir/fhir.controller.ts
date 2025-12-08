@@ -48,6 +48,7 @@ import { CreateEncounterDto, UpdateEncounterDto } from '../../common/dto/fhir-en
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { SmartFhirAuthDto } from '../../common/dto/smart-fhir-auth.dto';
 import { SmartFhirTokenDto } from '../../common/dto/smart-fhir-token.dto';
+import { SmartFhirLaunchDto } from '../../common/dto/smart-fhir-launch.dto';
 import { Patient, Practitioner, Encounter } from '../../common/interfaces/fhir.interface';
 import { FhirErrorService } from '../../common/services/fhir-error.service';
 
@@ -69,6 +70,131 @@ export class FhirController {
   @ApiResponse({ status: 200, description: 'CapabilityStatement returned successfully' })
   getMetadata() {
     return this.fhirService.getCapabilityStatement();
+  }
+
+  /**
+   * SMART on FHIR Launch Endpoint
+   * Handles the launch sequence when an application is launched from a clinical context (EHR)
+   * Validates launch token, extracts context, and redirects to authorization flow
+   */
+  @Get('authorize')
+  @Public()
+  @ApiOperation({
+    summary: 'SMART on FHIR Launch Endpoint',
+    description:
+      'Handles the launch sequence for SMART on FHIR applications. Validates launch token, extracts clinical context (patient, encounter, etc.), and redirects to the authorization flow.',
+  })
+  @ApiQuery({
+    name: 'iss',
+    required: true,
+    description: 'Issuer - URL of the FHIR server',
+    example: 'https://carecore.example.com',
+  })
+  @ApiQuery({
+    name: 'launch',
+    required: true,
+    description: 'Launch context token - opaque token provided by the EHR',
+    example: 'xyz123',
+  })
+  @ApiQuery({
+    name: 'client_id',
+    required: true,
+    description: 'Client ID of the SMART on FHIR application',
+    example: 'app-123',
+  })
+  @ApiQuery({
+    name: 'redirect_uri',
+    required: true,
+    description: 'Redirect URI where the authorization code will be sent',
+    example: 'https://app.com/callback',
+  })
+  @ApiQuery({
+    name: 'scope',
+    required: true,
+    description: 'Space-separated list of scopes (e.g., "patient:read patient:write")',
+    example: 'patient:read patient:write',
+  })
+  @ApiQuery({
+    name: 'state',
+    required: false,
+    description: 'CSRF protection token',
+    example: 'abc123xyz',
+  })
+  @ApiResponse({
+    status: 302,
+    description: 'Redirect to authorization endpoint with launch context',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request parameters - returns FHIR OperationOutcome',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Client not found or unauthorized - returns FHIR OperationOutcome',
+  })
+  async launch(
+    @Query() params: SmartFhirLaunchDto,
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    try {
+      // Validate launch parameters
+      await this.smartFhirService.validateLaunchParams(params);
+
+      // Validate and decode launch token to extract context
+      const launchContext = await this.smartFhirService.validateAndDecodeLaunchToken(params.launch);
+
+      // Store launch context temporarily (will be retrieved during token exchange)
+      this.smartFhirService.storeLaunchContext(params.launch, launchContext);
+
+      // Build authorization URL with launch context
+      // We'll encode the launch token in the state parameter to retrieve context later
+      const stateToken = this.smartFhirService.generateStateToken();
+      const stateData = {
+        state: params.state || stateToken,
+        clientRedirectUri: params.redirect_uri,
+        launchToken: params.launch, // Include launch token in state to retrieve context later
+      };
+      const encodedState = Buffer.from(JSON.stringify(stateData)).toString('base64url');
+
+      // Build authorization parameters
+      const authParams: SmartFhirAuthDto = {
+        client_id: params.client_id,
+        response_type: 'code',
+        redirect_uri: params.redirect_uri,
+        scope: params.scope,
+        state: encodedState,
+        aud: params.iss,
+      };
+
+      // Get callback URL
+      const callbackUrl = this.smartFhirService.getCallbackUrl(req);
+
+      // Build Keycloak authorization URL
+      const authUrl = this.smartFhirService.buildAuthorizationUrl(
+        authParams,
+        encodedState,
+        callbackUrl,
+      );
+
+      // Redirect to authorization endpoint
+      res.redirect(authUrl);
+    } catch (error) {
+      // Handle errors and return FHIR OperationOutcome
+      if (error instanceof BadRequestException || error instanceof UnauthorizedException) {
+        const operationOutcome = error.getResponse();
+        res.status(error.getStatus()).json(operationOutcome);
+        return;
+      }
+
+      // Unexpected error - return generic OperationOutcome
+      const operationOutcome = FhirErrorService.createOperationOutcome(
+        500,
+        'An unexpected error occurred during launch sequence.',
+        error instanceof Error ? error.message : 'Unknown error',
+      );
+      res.status(500).json(operationOutcome);
+    }
   }
 
   /**
@@ -245,11 +371,22 @@ export class FhirController {
       };
 
       // If code and state come from query params (Keycloak callback), decode state to get client redirect_uri
+      // Also check if launch token is present to retrieve launch context
+      let launchContext = null;
       if (codeFromQuery && stateFromQuery && !tokenParams.redirect_uri) {
         const stateData = this.smartFhirService.decodeStateToken(stateFromQuery);
         if (stateData) {
           tokenParams.code = codeFromQuery;
           tokenParams.redirect_uri = stateData.clientRedirectUri;
+
+          // If launch token is present in state, retrieve launch context
+          if ('launchToken' in stateData && typeof stateData.launchToken === 'string') {
+            launchContext = this.smartFhirService.getLaunchContext(stateData.launchToken);
+            // Remove launch context after use (one-time use)
+            if (launchContext) {
+              this.smartFhirService.removeLaunchContext(stateData.launchToken);
+            }
+          }
         }
       }
 
@@ -266,6 +403,12 @@ export class FhirController {
         tokenParams,
         callbackUrl,
       );
+
+      // If launch context is available, include patient context in token response
+      // Launch context takes precedence over context extracted from scopes
+      if (launchContext?.patient) {
+        tokenResponse.patient = launchContext.patient;
+      }
 
       return tokenResponse;
     } catch (error) {

@@ -6,19 +6,54 @@ import { KeycloakAdminService } from '../../auth/services/keycloak-admin.service
 import { FhirErrorService } from '../../../common/services/fhir-error.service';
 import { SmartFhirAuthDto } from '../../../common/dto/smart-fhir-auth.dto';
 import { SmartFhirTokenDto } from '../../../common/dto/smart-fhir-token.dto';
+import { SmartFhirLaunchDto } from '../../../common/dto/smart-fhir-launch.dto';
 
 /**
  * Service for handling SMART on FHIR authorization flows
  * Implements OAuth2 Authorization Code Flow for SMART on FHIR applications
  */
+/**
+ * Launch context stored temporarily
+ */
+interface LaunchContext {
+  patient?: string;
+  encounter?: string;
+  practitioner?: string;
+  needPatientBanner?: boolean;
+  needSmartStyleResponse?: boolean;
+  timestamp: number;
+}
+
 @Injectable()
 export class SmartFhirService {
+  // In-memory storage for launch contexts (key: launch token, value: context)
+  // In production, consider using Redis or a distributed cache
+  private readonly launchContexts = new Map<string, LaunchContext>();
+
+  // TTL for launch contexts: 10 minutes (600000 ms)
+  private readonly LAUNCH_CONTEXT_TTL = 10 * 60 * 1000;
+
+  // Store interval ID so we can clear it if needed (e.g., in tests)
+  private cleanupIntervalId?: NodeJS.Timeout;
+
   constructor(
     private readonly configService: ConfigService,
     private readonly logger: PinoLogger,
     private readonly keycloakAdminService: KeycloakAdminService,
   ) {
     this.logger.setContext(SmartFhirService.name);
+    // Clean up expired contexts every 5 minutes
+    this.cleanupIntervalId = setInterval(() => this.cleanupExpiredContexts(), 5 * 60 * 1000);
+  }
+
+  /**
+   * Clean up the interval (useful for testing)
+   */
+  onModuleDestroy(): void {
+    if (this.cleanupIntervalId) {
+      clearInterval(this.cleanupIntervalId);
+      this.cleanupIntervalId = undefined;
+    }
   }
 
   /**
@@ -422,5 +457,173 @@ export class SmartFhirService {
     // This would require JWT decoding and parsing
 
     return undefined;
+  }
+
+  /**
+   * Validate launch sequence parameters
+   * @param params Launch parameters
+   * @throws BadRequestException if validation fails
+   */
+  async validateLaunchParams(params: SmartFhirLaunchDto): Promise<void> {
+    // Validate issuer matches our FHIR server URL
+    const fhirServerUrl = this.configService.get<string>('FHIR_SERVER_URL');
+    if (fhirServerUrl && params.iss !== fhirServerUrl) {
+      throw new BadRequestException(
+        FhirErrorService.createOperationOutcome(
+          400,
+          `Issuer "${params.iss}" does not match the FHIR server URL.`,
+          undefined,
+          ['iss'],
+        ),
+      );
+    }
+
+    // Validate client exists
+    const client = await this.keycloakAdminService.findClientById(params.client_id);
+    if (!client) {
+      throw new UnauthorizedException(
+        FhirErrorService.createOperationOutcome(
+          401,
+          `Client "${params.client_id}" not found or not configured.`,
+          'The client_id provided does not exist in the authorization server.',
+          ['client_id'],
+        ),
+      );
+    }
+
+    // Validate redirect_uri is registered for the client
+    const isValidRedirectUri = await this.keycloakAdminService.validateRedirectUri(
+      params.client_id,
+      params.redirect_uri,
+    );
+
+    if (!isValidRedirectUri) {
+      throw new BadRequestException(
+        FhirErrorService.createOperationOutcome(
+          400,
+          `Redirect URI "${params.redirect_uri}" is not registered for client "${params.client_id}".`,
+          'The redirect_uri must be one of the valid redirect URIs configured for the client.',
+          ['redirect_uri'],
+        ),
+      );
+    }
+
+    // Validate scope format
+    if (!params.scope || params.scope.trim().length === 0) {
+      throw new BadRequestException(
+        FhirErrorService.createOperationOutcome(
+          400,
+          'Scope parameter is required and cannot be empty.',
+          undefined,
+          ['scope'],
+        ),
+      );
+    }
+  }
+
+  /**
+   * Validate and decode launch token
+   * In a real implementation, this would verify the token signature and expiration
+   * For now, we'll use a simple validation and extract context from the token
+   * @param launchToken Launch token from EHR
+   * @returns Launch context (patient, encounter, etc.)
+   */
+  async validateAndDecodeLaunchToken(launchToken: string): Promise<LaunchContext> {
+    try {
+      // In a real implementation, the launch token would be:
+      // 1. A JWT signed by the EHR
+      // 2. Or an opaque token that we exchange with the EHR for context
+      // For now, we'll decode it as base64url JSON (simplified approach)
+      // In production, you should verify the signature and expiration
+
+      const decoded = Buffer.from(launchToken, 'base64url').toString('utf-8');
+      const context = JSON.parse(decoded) as LaunchContext;
+
+      // Validate required fields and set timestamp
+      const launchContext: LaunchContext = {
+        patient: context.patient,
+        encounter: context.encounter,
+        practitioner: context.practitioner,
+        needPatientBanner: context.needPatientBanner,
+        needSmartStyleResponse: context.needSmartStyleResponse,
+        timestamp: Date.now(),
+      };
+
+      this.logger.debug({ launchToken, context: launchContext }, 'Launch token decoded');
+
+      return launchContext;
+    } catch (error) {
+      this.logger.warn({ error, launchToken }, 'Failed to decode launch token');
+      throw new BadRequestException(
+        FhirErrorService.createOperationOutcome(
+          400,
+          'Invalid launch token format.',
+          'The launch token provided is not in a valid format.',
+          ['launch'],
+        ),
+      );
+    }
+  }
+
+  /**
+   * Store launch context temporarily
+   * @param launchToken Launch token (used as key)
+   * @param context Launch context to store
+   */
+  storeLaunchContext(launchToken: string, context: LaunchContext): void {
+    this.launchContexts.set(launchToken, context);
+    this.logger.debug({ launchToken, context }, 'Launch context stored');
+  }
+
+  /**
+   * Retrieve launch context by token
+   * @param launchToken Launch token
+   * @returns Launch context or null if not found/expired
+   */
+  getLaunchContext(launchToken: string): LaunchContext | null {
+    const context = this.launchContexts.get(launchToken);
+
+    if (!context) {
+      return null;
+    }
+
+    // Check if context has expired
+    const age = Date.now() - context.timestamp;
+    if (age > this.LAUNCH_CONTEXT_TTL) {
+      this.launchContexts.delete(launchToken);
+      this.logger.debug({ launchToken, age }, 'Launch context expired');
+      return null;
+    }
+
+    return context;
+  }
+
+  /**
+   * Remove launch context (after use)
+   * @param launchToken Launch token
+   */
+  removeLaunchContext(launchToken: string): void {
+    this.launchContexts.delete(launchToken);
+    this.logger.debug({ launchToken }, 'Launch context removed');
+  }
+
+  /**
+   * Clean up expired launch contexts
+   */
+  private cleanupExpiredContexts(): void {
+    const now = Date.now();
+    let cleaned = 0;
+
+    for (const [token, context] of this.launchContexts.entries()) {
+      const age = now - context.timestamp;
+      if (age > this.LAUNCH_CONTEXT_TTL) {
+        this.launchContexts.delete(token);
+        cleaned++;
+      }
+    }
+
+    if (cleaned > 0) {
+      this.logger.debug({ cleaned }, 'Cleaned up expired launch contexts');
+    }
   }
 }

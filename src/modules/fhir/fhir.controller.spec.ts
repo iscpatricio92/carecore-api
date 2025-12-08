@@ -32,6 +32,7 @@ import {
 import { CreateEncounterDto, UpdateEncounterDto } from '../../common/dto/fhir-encounter.dto';
 import { SmartFhirAuthDto } from '../../common/dto/smart-fhir-auth.dto';
 import { SmartFhirTokenDto } from '../../common/dto/smart-fhir-token.dto';
+import { SmartFhirLaunchDto } from '../../common/dto/smart-fhir-launch.dto';
 import { User } from '../auth/interfaces/user.interface';
 import { FHIR_RESOURCE_TYPES } from '../../common/constants/fhir-resource-types';
 import { MFARequiredGuard } from '../auth/guards/mfa-required.guard';
@@ -76,6 +77,11 @@ describe('FhirController', () => {
     validateTokenParams: jest.fn(),
     exchangeCodeForTokens: jest.fn(),
     decodeStateToken: jest.fn(),
+    validateLaunchParams: jest.fn(),
+    validateAndDecodeLaunchToken: jest.fn(),
+    storeLaunchContext: jest.fn(),
+    getLaunchContext: jest.fn(),
+    removeLaunchContext: jest.fn(),
   };
 
   const mockKeycloakAdminService = {
@@ -711,6 +717,191 @@ describe('FhirController', () => {
       expect(result).toEqual(mockTokenResponse);
     });
 
+    it('should retrieve and remove launch context when launchToken is present in state', async () => {
+      const codeFromQuery = 'code-from-query';
+      const launchToken = 'launch-token-xyz';
+      const stateFromQuery = Buffer.from(
+        JSON.stringify({
+          state: 'abc123',
+          clientRedirectUri: 'https://app.com/callback',
+          launchToken: launchToken,
+        }),
+      ).toString('base64url');
+
+      const decodedState = {
+        state: 'abc123',
+        clientRedirectUri: 'https://app.com/callback',
+        launchToken: launchToken,
+      };
+
+      const mockLaunchContext = {
+        patient: 'Patient/999',
+        encounter: 'Encounter/888',
+        timestamp: Date.now(),
+      };
+
+      mockSmartFhirService.decodeStateToken.mockReturnValue(decodedState);
+      mockSmartFhirService.getLaunchContext.mockReturnValue(mockLaunchContext);
+      mockSmartFhirService.validateTokenParams.mockResolvedValue(undefined);
+      mockSmartFhirService.exchangeCodeForTokens.mockResolvedValue(mockTokenResponse);
+      mockSmartFhirService.getCallbackUrl.mockReturnValue('https://api.example.com/api/fhir/token');
+
+      const paramsWithoutCode = { ...mockTokenParams, code: undefined, redirect_uri: undefined };
+      await controller.token(
+        paramsWithoutCode,
+        codeFromQuery,
+        stateFromQuery,
+        mockRequest as unknown as Request,
+      );
+
+      // Verify launch context was retrieved
+      expect(mockSmartFhirService.getLaunchContext).toHaveBeenCalledWith(launchToken);
+      // Verify launch context was removed after use (one-time use)
+      expect(mockSmartFhirService.removeLaunchContext).toHaveBeenCalledWith(launchToken);
+    });
+
+    it('should not remove launch context when getLaunchContext returns null', async () => {
+      const codeFromQuery = 'code-from-query';
+      const launchToken = 'launch-token-xyz';
+      const stateFromQuery = Buffer.from(
+        JSON.stringify({
+          state: 'abc123',
+          clientRedirectUri: 'https://app.com/callback',
+          launchToken: launchToken,
+        }),
+      ).toString('base64url');
+
+      const decodedState = {
+        state: 'abc123',
+        clientRedirectUri: 'https://app.com/callback',
+        launchToken: launchToken,
+      };
+
+      // getLaunchContext returns null (context expired or not found)
+      mockSmartFhirService.decodeStateToken.mockReturnValue(decodedState);
+      mockSmartFhirService.getLaunchContext.mockReturnValue(null);
+      mockSmartFhirService.validateTokenParams.mockResolvedValue(undefined);
+      mockSmartFhirService.exchangeCodeForTokens.mockResolvedValue(mockTokenResponse);
+      mockSmartFhirService.getCallbackUrl.mockReturnValue('https://api.example.com/api/fhir/token');
+
+      const paramsWithoutCode = { ...mockTokenParams, code: undefined, redirect_uri: undefined };
+      await controller.token(
+        paramsWithoutCode,
+        codeFromQuery,
+        stateFromQuery,
+        mockRequest as unknown as Request,
+      );
+
+      // Verify launch context was retrieved
+      expect(mockSmartFhirService.getLaunchContext).toHaveBeenCalledWith(launchToken);
+      // Verify launch context was NOT removed since it was null
+      expect(mockSmartFhirService.removeLaunchContext).not.toHaveBeenCalled();
+    });
+
+    it('should include patient from launch context in token response', async () => {
+      const codeFromQuery = 'code-from-query';
+      const launchToken = 'launch-token-xyz';
+      const stateFromQuery = Buffer.from(
+        JSON.stringify({
+          state: 'abc123',
+          clientRedirectUri: 'https://app.com/callback',
+          launchToken: launchToken,
+        }),
+      ).toString('base64url');
+
+      const decodedState = {
+        state: 'abc123',
+        clientRedirectUri: 'https://app.com/callback',
+        launchToken: launchToken,
+      };
+
+      const mockLaunchContext = {
+        patient: 'Patient/999',
+        encounter: 'Encounter/888',
+        timestamp: Date.now(),
+      };
+
+      // Token response without patient (from scopes)
+      const tokenResponseWithoutPatient = {
+        access_token: 'access-token-123',
+        token_type: 'Bearer',
+        expires_in: 3600,
+        refresh_token: 'refresh-token-123',
+        scope: 'patient:read patient:write',
+      };
+
+      mockSmartFhirService.decodeStateToken.mockReturnValue(decodedState);
+      mockSmartFhirService.getLaunchContext.mockReturnValue(mockLaunchContext);
+      mockSmartFhirService.validateTokenParams.mockResolvedValue(undefined);
+      mockSmartFhirService.exchangeCodeForTokens.mockResolvedValue(tokenResponseWithoutPatient);
+      mockSmartFhirService.getCallbackUrl.mockReturnValue('https://api.example.com/api/fhir/token');
+
+      const paramsWithoutCode = { ...mockTokenParams, code: undefined, redirect_uri: undefined };
+      const result = await controller.token(
+        paramsWithoutCode,
+        codeFromQuery,
+        stateFromQuery,
+        mockRequest as unknown as Request,
+      );
+
+      // Verify patient from launch context is included in response
+      expect(result.patient).toBe('Patient/999');
+      expect(result).toEqual({
+        ...tokenResponseWithoutPatient,
+        patient: 'Patient/999',
+      });
+    });
+
+    it('should not include patient if launch context has no patient', async () => {
+      const codeFromQuery = 'code-from-query';
+      const launchToken = 'launch-token-xyz';
+      const stateFromQuery = Buffer.from(
+        JSON.stringify({
+          state: 'abc123',
+          clientRedirectUri: 'https://app.com/callback',
+          launchToken: launchToken,
+        }),
+      ).toString('base64url');
+
+      const decodedState = {
+        state: 'abc123',
+        clientRedirectUri: 'https://app.com/callback',
+        launchToken: launchToken,
+      };
+
+      // Launch context without patient
+      const mockLaunchContext = {
+        encounter: 'Encounter/888',
+        timestamp: Date.now(),
+      };
+
+      const tokenResponseWithoutPatient = {
+        access_token: 'access-token-123',
+        token_type: 'Bearer',
+        expires_in: 3600,
+        refresh_token: 'refresh-token-123',
+        scope: 'patient:read patient:write',
+        patient: '123', // Patient from scopes
+      };
+
+      mockSmartFhirService.decodeStateToken.mockReturnValue(decodedState);
+      mockSmartFhirService.getLaunchContext.mockReturnValue(mockLaunchContext);
+      mockSmartFhirService.validateTokenParams.mockResolvedValue(undefined);
+      mockSmartFhirService.exchangeCodeForTokens.mockResolvedValue(tokenResponseWithoutPatient);
+      mockSmartFhirService.getCallbackUrl.mockReturnValue('https://api.example.com/api/fhir/token');
+
+      const paramsWithoutCode = { ...mockTokenParams, code: undefined, redirect_uri: undefined };
+      const result = await controller.token(
+        paramsWithoutCode,
+        codeFromQuery,
+        stateFromQuery,
+        mockRequest as unknown as Request,
+      );
+
+      // Verify patient from token response (scopes) is preserved since launch context has no patient
+      expect(result.patient).toBe('123');
+    });
+
     it('should handle refresh_token grant type', async () => {
       const refreshParams: SmartFhirTokenDto = {
         grant_type: 'refresh_token',
@@ -822,6 +1013,149 @@ describe('FhirController', () => {
         'http://localhost:3000/api/fhir/token',
       );
       expect(result).toEqual(mockTokenResponse);
+    });
+  });
+
+  describe('launch', () => {
+    const mockLaunchParams: SmartFhirLaunchDto = {
+      iss: 'https://carecore.example.com',
+      launch: 'xyz123',
+      client_id: 'app-123',
+      redirect_uri: 'https://app.com/callback',
+      scope: 'patient:read patient:write',
+      state: 'abc123',
+    };
+
+    const mockLaunchContext = {
+      patient: 'Patient/123',
+      encounter: 'Encounter/456',
+      timestamp: Date.now(),
+    };
+
+    const mockRequest = {
+      protocol: 'https',
+      get: jest.fn((header: string) => {
+        if (header === 'host') return 'api.example.com';
+        return undefined;
+      }),
+    };
+
+    let mockResponse: {
+      redirect: jest.Mock;
+      status: jest.Mock;
+      json: jest.Mock;
+    };
+
+    beforeEach(() => {
+      mockResponse = {
+        redirect: jest.fn(),
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn().mockReturnThis(),
+      };
+      jest.clearAllMocks();
+      mockSmartFhirService.getCallbackUrl.mockReturnValue('https://api.example.com/api/fhir/token');
+      mockSmartFhirService.generateStateToken.mockReturnValue('generated-state-token');
+      mockSmartFhirService.buildAuthorizationUrl.mockReturnValue(
+        'https://keycloak.example.com/auth?client_id=app-123',
+      );
+    });
+
+    it('should redirect to authorization endpoint with launch context', async () => {
+      mockSmartFhirService.validateLaunchParams.mockResolvedValue(undefined);
+      mockSmartFhirService.validateAndDecodeLaunchToken.mockResolvedValue(mockLaunchContext);
+      mockSmartFhirService.storeLaunchContext.mockImplementation(() => {});
+
+      await controller.launch(
+        mockLaunchParams,
+        mockRequest as unknown as Request,
+        mockResponse as unknown as Response,
+      );
+
+      expect(mockSmartFhirService.validateLaunchParams).toHaveBeenCalledWith(mockLaunchParams);
+      expect(mockSmartFhirService.validateAndDecodeLaunchToken).toHaveBeenCalledWith('xyz123');
+      expect(mockSmartFhirService.storeLaunchContext).toHaveBeenCalledWith(
+        'xyz123',
+        mockLaunchContext,
+      );
+      expect(mockSmartFhirService.buildAuthorizationUrl).toHaveBeenCalled();
+      expect(mockResponse.redirect).toHaveBeenCalledWith(
+        'https://keycloak.example.com/auth?client_id=app-123',
+      );
+    });
+
+    it('should include launch token in state parameter', async () => {
+      mockSmartFhirService.validateLaunchParams.mockResolvedValue(undefined);
+      mockSmartFhirService.validateAndDecodeLaunchToken.mockResolvedValue(mockLaunchContext);
+      mockSmartFhirService.storeLaunchContext.mockImplementation(() => {});
+
+      await controller.launch(
+        mockLaunchParams,
+        mockRequest as unknown as Request,
+        mockResponse as unknown as Response,
+      );
+
+      // Verify that buildAuthorizationUrl was called with state containing launch token
+      expect(mockSmartFhirService.buildAuthorizationUrl).toHaveBeenCalled();
+      const callArgs = mockSmartFhirService.buildAuthorizationUrl.mock.calls[0];
+      const stateParam = callArgs[1]; // Second argument is the state token
+
+      // Decode state to verify it contains launch token
+      const decodedState = JSON.parse(Buffer.from(stateParam, 'base64url').toString('utf-8'));
+      expect(decodedState.launchToken).toBe('xyz123');
+      expect(decodedState.clientRedirectUri).toBe('https://app.com/callback');
+    });
+
+    it('should return BadRequestException with OperationOutcome on validation error', async () => {
+      const error = new BadRequestException({
+        resourceType: 'OperationOutcome',
+        issue: [{ severity: 'error', code: 'invalid', diagnostics: 'Invalid launch token' }],
+      });
+      mockSmartFhirService.validateLaunchParams.mockRejectedValue(error);
+
+      await controller.launch(
+        mockLaunchParams,
+        mockRequest as unknown as Request,
+        mockResponse as unknown as Response,
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(400);
+      expect(mockResponse.json).toHaveBeenCalledWith(error.getResponse());
+      expect(mockResponse.redirect).not.toHaveBeenCalled();
+    });
+
+    it('should return UnauthorizedException with OperationOutcome on client error', async () => {
+      const error = new UnauthorizedException({
+        resourceType: 'OperationOutcome',
+        issue: [{ severity: 'error', code: 'invalid', diagnostics: 'Client not found' }],
+      });
+      mockSmartFhirService.validateLaunchParams.mockRejectedValue(error);
+
+      await controller.launch(
+        mockLaunchParams,
+        mockRequest as unknown as Request,
+        mockResponse as unknown as Response,
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(401);
+      expect(mockResponse.json).toHaveBeenCalledWith(error.getResponse());
+      expect(mockResponse.redirect).not.toHaveBeenCalled();
+    });
+
+    it('should return generic OperationOutcome on unexpected error', async () => {
+      const unexpectedError = new Error('Unexpected error');
+      mockSmartFhirService.validateLaunchParams.mockRejectedValue(unexpectedError);
+
+      await controller.launch(
+        mockLaunchParams,
+        mockRequest as unknown as Request,
+        mockResponse as unknown as Response,
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(500);
+      expect(mockResponse.json).toHaveBeenCalled();
+      const jsonCall = mockResponse.json.mock.calls[0][0];
+      expect(jsonCall).toHaveProperty('resourceType', 'OperationOutcome');
+      expect(mockResponse.redirect).not.toHaveBeenCalled();
     });
   });
 });
