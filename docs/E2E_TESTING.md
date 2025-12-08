@@ -25,6 +25,15 @@ npm run test:all
 npm run test:all:cov
 ```
 
+## Pruebas de Integración (nuevo)
+- Config: `jest.integration.js`
+- Scripts:
+  - `npm run test:integration`
+  - `npm run test:integration:cov` (reporte en `coverage-integration/`)
+- Ubicación sugerida de tests: `test/integration/**/*.int-spec.ts` (o sufijo `.int-spec.ts` en cualquier ruta).
+- Setup global: `test/integration/setup.ts` (timeout 15s, espacio para mocks globales de Keycloak/JWKS/fetch/fs).
+- Uso: orientar a lógica de negocio y dependencias externas sin levantar HTTP completo; reutilizar helpers/mocks de E2E cuando aplique.
+
 ## Test Structure
 ```
 test/

@@ -7,10 +7,8 @@ npx lint-staged
 # Check formatting (fail if files are not formatted)
 npm run format:check
 
-# Run unit tests with coverage
+# Run unit tests with coverage (rápido)
 npm run test:cov
 
-# Run E2E tests (fast, ~2-3 seconds)
-# These tests verify authentication, authorization, and protected endpoints
-npm run test:e2e
+# Nota: integración y E2E se ejecutan en CI para evitar ralentizar commits locales.
 

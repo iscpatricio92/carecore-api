@@ -164,7 +164,18 @@ jobs:
           DB_SYNCHRONIZE: 'true'
         run: npm test
 
-      - name: Run E2E tests
+      - name: Run integration tests (coverage)
+        env:
+          NODE_ENV: test
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: test_user
+          DB_PASSWORD: test_password
+          DB_NAME: test_db
+          DB_SYNCHRONIZE: 'true'
+        run: npm run test:integration:cov
+
+      - name: Run E2E tests (coverage)
         env:
           NODE_ENV: test
           DB_TYPE: postgres
@@ -184,35 +195,33 @@ jobs:
           KEYCLOAK_CLIENT_SECRET: test-secret
           # Encryption key for tests (32+ characters) - TEST ONLY, NOT for production
           ENCRYPTION_KEY: test-encryption-key-32-chars-long-for-e2e-tests
-        run: npm run test:e2e
+        run: npm run test:e2e:cov
 
-      - name: Generate coverage report
-        if: always()
-        run: npm run test:cov
-
-      - name: Parse coverage summary
+      - name: Parse coverage summary (unit, integration, e2e)
         if: always() && github.event_name == 'pull_request'
         id: coverage
         run: |
-          if [ -f "coverage/coverage-summary.json" ]; then
-            # Extraer todas las métricas de coverage
-            LINES=$(node -p "Math.round(require('./coverage/coverage-summary.json').total.lines.pct)")
-            STATEMENTS=$(node -p "Math.round(require('./coverage/coverage-summary.json').total.statements.pct)")
-            FUNCTIONS=$(node -p "Math.round(require('./coverage/coverage-summary.json').total.functions.pct)")
-            BRANCHES=$(node -p "Math.round(require('./coverage/coverage-summary.json').total.branches.pct)")
+          parse() {
+            FILE=$1
+            PREFIX=$2
+            if [ -f "$FILE" ]; then
+              LINES=$(node -p "Math.round(require('./'$FILE).total.lines.pct || 0)")
+              STATEMENTS=$(node -p "Math.round(require('./'$FILE).total.statements.pct || 0)")
+              FUNCTIONS=$(node -p "Math.round(require('./'$FILE).total.functions.pct || 0)")
+              BRANCHES=$(node -p "Math.round(require('./'$FILE).total.branches.pct || 0)")
+            else
+              LINES=0; STATEMENTS=0; FUNCTIONS=0; BRANCHES=0
+            fi
+            echo "${PREFIX}_lines=$LINES" >> $GITHUB_OUTPUT
+            echo "${PREFIX}_statements=$STATEMENTS" >> $GITHUB_OUTPUT
+            echo "${PREFIX}_functions=$FUNCTIONS" >> $GITHUB_OUTPUT
+            echo "${PREFIX}_branches=$BRANCHES" >> $GITHUB_OUTPUT
+            echo "Parsed ${PREFIX}: L=$LINES S=$STATEMENTS F=$FUNCTIONS B=$BRANCHES"
+          }
 
-            echo "lines=$LINES" >> $GITHUB_OUTPUT
-            echo "statements=$STATEMENTS" >> $GITHUB_OUTPUT
-            echo "functions=$FUNCTIONS" >> $GITHUB_OUTPUT
-            echo "branches=$BRANCHES" >> $GITHUB_OUTPUT
-            echo "✅ Coverage parsed: Lines=$LINES%, Statements=$STATEMENTS%, Functions=$FUNCTIONS%, Branches=$BRANCHES%"
-          else
-            echo "lines=0" >> $GITHUB_OUTPUT
-            echo "statements=0" >> $GITHUB_OUTPUT
-            echo "functions=0" >> $GITHUB_OUTPUT
-            echo "branches=0" >> $GITHUB_OUTPUT
-            echo "⚠️  Coverage file not found"
-          fi
+          parse "coverage/coverage-summary.json" "unit"
+          parse "coverage-integration/coverage-summary.json" "integration"
+          parse "coverage-e2e/coverage-summary.json" "e2e"
 
       - name: Comment PR with coverage
         if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
@@ -220,43 +229,38 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN_PAT || secrets.GITHUB_TOKEN }}
           script: |
-            const lines = parseInt('${{ steps.coverage.outputs.lines }}') || 0;
-            const statements = parseInt('${{ steps.coverage.outputs.statements }}') || 0;
-            const functions = parseInt('${{ steps.coverage.outputs.functions }}') || 0;
-            const branches = parseInt('${{ steps.coverage.outputs.branches }}') || 0;
-
-            // Calcular coverage promedio
-            const avgCoverage = Math.round((lines + statements + functions + branches) / 4);
-
-            // Función para determinar estado según coverage
-            const getCoverageStatus = (coverage) => {
-              if (coverage >= 80) return { emoji: '✅', color: '🟢', status: 'Excellent', message: 'Excellent coverage! Keep up the good work!' };
-              if (coverage >= 60) return { emoji: '⚠️', color: '🟡', status: 'Good', message: 'Coverage is good but could be improved. Consider adding more tests.' };
-              if (coverage >= 40) return { emoji: '⚠️', color: '🟠', status: 'Fair', message: 'Coverage is fair. Please add more tests to improve coverage.' };
-              return { emoji: '❌', color: '🔴', status: 'Poor', message: 'Coverage is below recommended threshold (60%). Please add tests before merging.' };
-            };
-
             const getStatusIcon = (value) => value >= 80 ? '✅' : value >= 60 ? '⚠️' : '❌';
 
-            const status = getCoverageStatus(avgCoverage);
+            const unit = {
+              lines: parseInt('${{ steps.coverage.outputs.unit_lines }}') || 0,
+              statements: parseInt('${{ steps.coverage.outputs.unit_statements }}') || 0,
+              functions: parseInt('${{ steps.coverage.outputs.unit_functions }}') || 0,
+              branches: parseInt('${{ steps.coverage.outputs.unit_branches }}') || 0,
+            };
+            const integration = {
+              lines: parseInt('${{ steps.coverage.outputs.integration_lines }}') || 0,
+              statements: parseInt('${{ steps.coverage.outputs.integration_statements }}') || 0,
+              functions: parseInt('${{ steps.coverage.outputs.integration_functions }}') || 0,
+              branches: parseInt('${{ steps.coverage.outputs.integration_branches }}') || 0,
+            };
+            const e2e = {
+              lines: parseInt('${{ steps.coverage.outputs.e2e_lines }}') || 0,
+              statements: parseInt('${{ steps.coverage.outputs.e2e_statements }}') || 0,
+              functions: parseInt('${{ steps.coverage.outputs.e2e_functions }}') || 0,
+              branches: parseInt('${{ steps.coverage.outputs.e2e_branches }}') || 0,
+            };
 
-            const body = `## ${status.emoji} Test Coverage Report
+            const body = `## 🧪 Cobertura de Tests (Unit + Integration + E2E)
 
-            ${status.color} **Overall Coverage: ${avgCoverage}%** (${status.status})
-
-            | Metric | Coverage | Status |
-            |--------|----------|--------|
-            | 📊 Lines | ${lines}% | ${getStatusIcon(lines)} |
-            | 📝 Statements | ${statements}% | ${getStatusIcon(statements)} |
-            | 🔧 Functions | ${functions}% | ${getStatusIcon(functions)} |
-            | 🌿 Branches | ${branches}% | ${getStatusIcon(branches)} |
-
-            ${status.message}
+            | Suite | Lines | Statements | Functions | Branches |
+            |-------|-------|------------|-----------|----------|
+            | Unit | ${unit.lines}% ${getStatusIcon(unit.lines)} | ${unit.statements}% ${getStatusIcon(unit.statements)} | ${unit.functions}% ${getStatusIcon(unit.functions)} | ${unit.branches}% ${getStatusIcon(unit.branches)} |
+            | Integration | ${integration.lines}% ${getStatusIcon(integration.lines)} | ${integration.statements}% ${getStatusIcon(integration.statements)} | ${integration.functions}% ${getStatusIcon(integration.functions)} | ${integration.branches}% ${getStatusIcon(integration.branches)} |
+            | E2E | ${e2e.lines}% ${getStatusIcon(e2e.lines)} | ${e2e.statements}% ${getStatusIcon(e2e.statements)} | ${e2e.functions}% ${getStatusIcon(e2e.functions)} | ${e2e.branches}% ${getStatusIcon(e2e.branches)} |
 
             ---
-            *This comment is automatically generated by CI. It updates on every push to this PR.*`;
+            _Comentario automático de CI. Se actualiza en cada push al PR._`;
 
-            // Buscar comentario existente del bot
             const comments = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -265,25 +269,23 @@ jobs:
 
             const botComment = comments.data.find(comment =>
               comment.user.type === 'Bot' &&
-              comment.body.includes('Test Coverage Report')
+              comment.body.includes('Cobertura de Tests')
             );
 
             if (botComment) {
-              // Actualizar comentario existente
               await github.rest.issues.updateComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 comment_id: botComment.id,
-                body: body
+                body: body,
               });
               console.log('✅ Coverage comment updated');
             } else {
-              // Crear nuevo comentario
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
-                body: body
+                body: body,
               });
               console.log('✅ Coverage comment created');
             }

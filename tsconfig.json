@@ -25,6 +25,6 @@
       "@/modules/*": ["src/modules/*"]
     }
   },
-  "include": ["src/**/*", "scripts/**/*", "test/**/*"],
+  "include": ["src/**/*", "scripts/**/*", "test/**/*", "jest.integration.js"],
   "exclude": ["node_modules", "dist"]
 }
