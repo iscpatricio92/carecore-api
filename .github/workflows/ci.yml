@@ -162,7 +162,7 @@ jobs:
           DB_PASSWORD: test_password
           DB_NAME: test_db
           DB_SYNCHRONIZE: 'true'
-        run: npm test
+        run: npm run test:cov
 
       - name: Run integration tests (coverage)
         env:
