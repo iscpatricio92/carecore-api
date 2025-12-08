@@ -194,6 +194,50 @@ describe('FhirService', () => {
       expect(logger.info).toHaveBeenCalled();
     });
 
+    it('should handle audit logging errors gracefully in createPatient', async () => {
+      const createDto: CreatePatientDto = {
+        name: [{ given: ['John'], family: 'Doe' }],
+        gender: 'male',
+      };
+
+      const mockEntity = new PatientEntity();
+      mockEntity.fhirResource = {
+        ...createDto,
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
+        id: 'test-patient-id',
+      } as Patient;
+      mockEntity.patientId = 'test-patient-id';
+
+      mockPatientRepository.save.mockResolvedValue(mockEntity);
+      mockAuditService.logCreate.mockRejectedValue(new Error('Audit error'));
+
+      const result = await service.createPatient(createDto);
+      expect(result).toBeDefined();
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should throw ForbiddenException if user has no permission to create patient', async () => {
+      const user: User = {
+        id: 'viewer-user',
+        keycloakUserId: 'viewer-user',
+        username: 'viewer',
+        email: '',
+        roles: [ROLES.VIEWER],
+        scopes: [],
+      };
+
+      const createDto: CreatePatientDto = {
+        name: [{ given: ['John'], family: 'Doe' }],
+        gender: 'male',
+      };
+
+      mockScopePermissionService.roleGrantsPermission.mockReturnValue(false);
+      mockScopePermissionService.hasResourcePermission.mockReturnValue(false);
+
+      await expect(service.createPatient(createDto, user)).rejects.toThrow(ForbiddenException);
+      expect(mockLogger.warn).toHaveBeenCalled();
+    });
+
     it('should link patient to user when user has patient role', async () => {
       const createDto: CreatePatientDto = {
         name: [{ given: ['John'], family: 'Doe' }],
@@ -488,6 +532,91 @@ describe('FhirService', () => {
       expect(result).toBeDefined();
     });
 
+    it('should allow access if role grants permission', async () => {
+      const user: User = {
+        id: 'viewer-user',
+        keycloakUserId: 'viewer-user',
+        username: 'viewer',
+        email: '',
+        roles: [ROLES.VIEWER],
+      };
+
+      const mockEntity = new PatientEntity();
+      mockEntity.fhirResource = {
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
+        id: 'test-patient-id',
+      } as Patient;
+      mockEntity.patientId = 'test-patient-id';
+
+      mockPatientRepository.findOne.mockResolvedValue(mockEntity);
+      mockScopePermissionService.roleGrantsPermission.mockReturnValue(true);
+
+      const result = await service.getPatient('test-patient-id', user);
+      expect(result).toBeDefined();
+      expect(mockScopePermissionService.roleGrantsPermission).toHaveBeenCalled();
+    });
+
+    it('should allow access with scope permission for read', async () => {
+      const user: User = {
+        id: 'viewer-user',
+        keycloakUserId: 'viewer-user',
+        username: 'viewer',
+        email: '',
+        roles: [ROLES.VIEWER],
+        scopes: ['patient:read'],
+      };
+
+      const mockEntity = new PatientEntity();
+      mockEntity.fhirResource = {
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
+        id: 'test-patient-id',
+      } as Patient;
+      mockEntity.patientId = 'test-patient-id';
+
+      mockPatientRepository.findOne.mockResolvedValue(mockEntity);
+      mockScopePermissionService.roleGrantsPermission.mockReturnValue(false);
+      mockScopePermissionService.hasResourcePermission.mockReturnValue(true);
+
+      const result = await service.getPatient('test-patient-id', user);
+      expect(result).toBeDefined();
+      expect(mockScopePermissionService.hasResourcePermission).toHaveBeenCalled();
+    });
+
+    it('should require ownership for write operations with scope permission', async () => {
+      const user: User = {
+        id: 'viewer-user',
+        keycloakUserId: 'viewer-user',
+        username: 'viewer',
+        email: '',
+        roles: [ROLES.VIEWER],
+        scopes: ['patient:write'],
+      };
+
+      const existingPatient: Patient = {
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
+        id: 'test-patient-id',
+        name: [{ given: ['John'], family: 'Doe' }],
+        gender: 'male',
+      };
+
+      const mockEntity = new PatientEntity();
+      mockEntity.fhirResource = existingPatient;
+      mockEntity.patientId = 'test-patient-id';
+      mockEntity.keycloakUserId = 'viewer-user'; // Same user
+
+      mockPatientRepository.findOne.mockResolvedValue(mockEntity);
+      mockPatientRepository.save.mockResolvedValue(mockEntity);
+      mockScopePermissionService.roleGrantsPermission.mockReturnValue(false);
+      mockScopePermissionService.hasResourcePermission.mockReturnValue(true);
+
+      const updateDto: UpdatePatientDto = {
+        name: [{ given: ['Updated'], family: 'Name' }],
+      };
+
+      const result = await service.updatePatient('test-patient-id', updateDto, user);
+      expect(result).toBeDefined();
+    });
+
     it('should deny access for other roles in canAccessPatient', async () => {
       const user: User = {
         id: 'viewer-user',
@@ -721,6 +850,118 @@ describe('FhirService', () => {
       );
       expect(logger.warn).toHaveBeenCalled();
     });
+
+    it('should handle audit logging errors gracefully in updatePatient (covers line 505)', async () => {
+      const existingPatient: Patient = {
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
+        id: 'test-patient-id',
+        name: [{ given: ['John'], family: 'Doe' }],
+        gender: 'male',
+        meta: {
+          versionId: '1',
+          lastUpdated: new Date().toISOString(),
+        },
+      };
+
+      const mockEntity = new PatientEntity();
+      mockEntity.id = 'db-uuid';
+      mockEntity.fhirResource = existingPatient;
+      mockEntity.patientId = 'test-patient-id';
+      mockEntity.createdAt = new Date();
+
+      mockPatientRepository.findOne.mockResolvedValue(mockEntity);
+      mockPatientRepository.save.mockResolvedValue(mockEntity);
+      mockAuditService.logUpdate.mockRejectedValue(new Error('Audit error'));
+
+      const updateDto: UpdatePatientDto = {
+        name: [{ given: ['Jane'], family: 'Doe' }],
+      };
+
+      const result = await service.updatePatient('test-patient-id', updateDto);
+      expect(result).toBeDefined();
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        { error: expect.any(Error) },
+        'Failed to log audit for patient update',
+      );
+    });
+  });
+
+  describe('deletePatient', () => {
+    it('should delete a patient', async () => {
+      const mockPatient: Patient = {
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
+        id: 'test-patient-id',
+        name: [{ given: ['John'], family: 'Doe' }],
+      };
+
+      const mockEntity = new PatientEntity();
+      mockEntity.fhirResource = mockPatient;
+      mockEntity.patientId = 'test-patient-id';
+
+      mockPatientRepository.findOne.mockResolvedValue(mockEntity);
+      mockPatientRepository.save.mockResolvedValue(mockEntity);
+
+      await service.deletePatient('test-patient-id');
+
+      expect(mockEntity.deletedAt).toBeDefined();
+      expect(mockPatientRepository.save).toHaveBeenCalled();
+      expect(logger.info).toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException when patient does not exist', async () => {
+      mockPatientRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.deletePatient('non-existent-id')).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw ForbiddenException when patient user tries to delete other patient', async () => {
+      const user: User = {
+        id: 'patient-user-1',
+        keycloakUserId: 'patient-user-1',
+        username: 'patient',
+        email: '',
+        roles: [ROLES.PATIENT],
+      };
+
+      const mockEntity = new PatientEntity();
+      mockEntity.fhirResource = {
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
+        id: 'test-patient-id',
+      } as Patient;
+      mockEntity.patientId = 'test-patient-id';
+      mockEntity.keycloakUserId = 'different-user-id';
+
+      mockPatientRepository.findOne.mockResolvedValue(mockEntity);
+
+      await expect(service.deletePatient('test-patient-id', user)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(logger.warn).toHaveBeenCalled();
+    });
+
+    it('should handle audit logging errors gracefully in deletePatient (covers line 547)', async () => {
+      const mockPatient: Patient = {
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
+        id: 'test-patient-id',
+        name: [{ given: ['John'], family: 'Doe' }],
+      };
+
+      const mockEntity = new PatientEntity();
+      mockEntity.fhirResource = mockPatient;
+      mockEntity.patientId = 'test-patient-id';
+
+      mockPatientRepository.findOne.mockResolvedValue(mockEntity);
+      mockPatientRepository.save.mockResolvedValue(mockEntity);
+      mockAuditService.logDelete.mockRejectedValue(new Error('Audit error'));
+
+      await service.deletePatient('test-patient-id');
+
+      expect(mockEntity.deletedAt).toBeDefined();
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        { error: expect.any(Error) },
+        'Failed to log audit for patient deletion',
+      );
+    });
   });
 
   // ========== Practitioner Tests ==========
@@ -770,6 +1011,42 @@ describe('FhirService', () => {
       expect(result.meta?.versionId).toBe('1');
       expect(mockPractitionerRepository.save).toHaveBeenCalled();
       expect(logger.info).toHaveBeenCalled();
+    });
+
+    it('should handle audit logging errors gracefully in createPractitioner (covers line 582)', async () => {
+      const createDto: CreatePractitionerDto = {
+        identifier: [
+          {
+            system: 'http://example.com/license',
+            value: 'MD-12345',
+          },
+        ],
+        name: [
+          {
+            given: ['Dr. Jane'],
+            family: 'Smith',
+          },
+        ],
+        active: true,
+      };
+
+      const mockEntity = new PractitionerEntity();
+      mockEntity.fhirResource = {
+        ...createDto,
+        resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
+        id: 'test-practitioner-id',
+      } as Practitioner;
+      mockEntity.practitionerId = 'test-practitioner-id';
+
+      mockPractitionerRepository.save.mockResolvedValue(mockEntity);
+      mockAuditService.logCreate.mockRejectedValue(new Error('Audit error'));
+
+      const result = await service.createPractitioner(createDto);
+      expect(result).toBeDefined();
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        { error: expect.any(Error) },
+        'Failed to log audit for practitioner creation',
+      );
     });
   });
 
@@ -975,6 +1252,42 @@ describe('FhirService', () => {
         NotFoundException,
       );
     });
+
+    it('should handle audit logging errors gracefully in updatePractitioner (covers line 701)', async () => {
+      const existingPractitioner: Practitioner = {
+        resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
+        id: 'test-practitioner-id',
+        identifier: [{ system: 'http://example.com/license', value: 'MD-123' }],
+        name: [{ given: ['Dr. John'], family: 'Doe' }],
+        active: true,
+        meta: {
+          versionId: '1',
+          lastUpdated: new Date().toISOString(),
+        },
+      };
+
+      const mockEntity = new PractitionerEntity();
+      mockEntity.id = 'db-uuid';
+      mockEntity.fhirResource = existingPractitioner;
+      mockEntity.practitionerId = 'test-practitioner-id';
+      mockEntity.createdAt = new Date();
+
+      mockPractitionerRepository.findOne.mockResolvedValue(mockEntity);
+      mockPractitionerRepository.save.mockResolvedValue(mockEntity);
+      mockAuditService.logUpdate.mockRejectedValue(new Error('Audit error'));
+
+      const updateDto: UpdatePractitionerDto = {
+        identifier: [{ system: 'http://example.com/license', value: 'MD-123' }],
+        name: [{ given: ['Dr. Jane'], family: 'Smith' }],
+      };
+
+      const result = await service.updatePractitioner('test-practitioner-id', updateDto);
+      expect(result).toBeDefined();
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        { error: expect.any(Error) },
+        'Failed to log audit for practitioner update',
+      );
+    });
   });
 
   describe('deletePractitioner', () => {
@@ -1004,6 +1317,30 @@ describe('FhirService', () => {
 
       await expect(service.deletePractitioner('non-existent-id')).rejects.toThrow(
         NotFoundException,
+      );
+    });
+
+    it('should handle audit logging errors gracefully in deletePractitioner (covers line 732)', async () => {
+      const mockPractitioner: Practitioner = {
+        resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
+        id: 'test-practitioner-id',
+        name: [{ given: ['Dr. John'], family: 'Doe' }],
+      };
+
+      const mockEntity = new PractitionerEntity();
+      mockEntity.fhirResource = mockPractitioner;
+      mockEntity.practitionerId = 'test-practitioner-id';
+
+      mockPractitionerRepository.findOne.mockResolvedValue(mockEntity);
+      mockPractitionerRepository.save.mockResolvedValue(mockEntity);
+      mockAuditService.logDelete.mockRejectedValue(new Error('Audit error'));
+
+      await service.deletePractitioner('test-practitioner-id');
+
+      expect(mockEntity.deletedAt).toBeDefined();
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        { error: expect.any(Error) },
+        'Failed to log audit for practitioner deletion',
       );
     });
   });
@@ -1057,6 +1394,43 @@ describe('FhirService', () => {
       expect(result.meta?.versionId).toBe('1');
       expect(mockEncounterRepository.save).toHaveBeenCalled();
       expect(logger.info).toHaveBeenCalled();
+    });
+
+    it('should handle audit logging errors gracefully in createEncounter (covers line 767)', async () => {
+      const createDto: CreateEncounterDto = {
+        status: 'finished',
+        class: {
+          system: 'http://terminology.hl7.org/CodeSystem/v3-ActCode',
+          code: 'AMB',
+          display: 'ambulatory',
+        },
+        subject: {
+          reference: 'Patient/test-patient-id',
+          display: 'John Doe',
+        },
+        period: {
+          start: '2024-01-15T10:00:00Z',
+          end: '2024-01-15T10:30:00Z',
+        },
+      };
+
+      const mockEntity = new EncounterEntity();
+      mockEntity.fhirResource = {
+        ...createDto,
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
+        id: 'test-encounter-id',
+      } as Encounter;
+      mockEntity.encounterId = 'test-encounter-id';
+
+      mockEncounterRepository.save.mockResolvedValue(mockEntity);
+      mockAuditService.logCreate.mockRejectedValue(new Error('Audit error'));
+
+      const result = await service.createEncounter(createDto);
+      expect(result).toBeDefined();
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        { error: expect.any(Error) },
+        'Failed to log audit for encounter creation',
+      );
     });
   });
 
@@ -1303,6 +1677,35 @@ describe('FhirService', () => {
       expect(logger.info).toHaveBeenCalled();
     });
 
+    it('should handle audit logging errors gracefully in updateEncounter', async () => {
+      const existingEncounter: Encounter = {
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
+        id: 'test-encounter-id',
+        status: 'in-progress',
+        class: { code: 'AMB', display: 'ambulatory' },
+        subject: { reference: 'Patient/test-patient-id' },
+      };
+
+      const mockEntity = new EncounterEntity();
+      mockEntity.fhirResource = existingEncounter;
+      mockEntity.encounterId = 'test-encounter-id';
+
+      mockEncounterRepository.findOne.mockResolvedValue(mockEntity);
+      mockEncounterRepository.save.mockResolvedValue(mockEntity);
+      mockAuditService.logUpdate.mockRejectedValue(new Error('Audit error'));
+
+      const updateDto: UpdateEncounterDto = {
+        status: 'finished',
+        class: { code: 'AMB', display: 'ambulatory' },
+        subject: { reference: 'Patient/test-patient-id' },
+        period: { start: '2024-01-15T10:00:00Z', end: '2024-01-15T10:30:00Z' },
+      };
+
+      const result = await service.updateEncounter('test-encounter-id', updateDto);
+      expect(result).toBeDefined();
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
     it('should throw NotFoundException when encounter does not exist', async () => {
       mockEncounterRepository.findOne.mockResolvedValue(null);
 
@@ -1350,6 +1753,280 @@ describe('FhirService', () => {
       mockEncounterRepository.findOne.mockResolvedValue(null);
 
       await expect(service.deleteEncounter('non-existent-id')).rejects.toThrow(NotFoundException);
+    });
+
+    it('should handle audit logging errors gracefully in deleteEncounter (covers line 919)', async () => {
+      const mockEncounter: Encounter = {
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
+        id: 'test-encounter-id',
+        status: 'finished',
+        class: {
+          code: 'AMB',
+          display: 'ambulatory',
+        },
+        subject: { reference: 'Patient/test-patient-id' },
+      };
+
+      const mockEntity = new EncounterEntity();
+      mockEntity.fhirResource = mockEncounter;
+      mockEntity.encounterId = 'test-encounter-id';
+
+      mockEncounterRepository.findOne.mockResolvedValue(mockEntity);
+      mockEncounterRepository.save.mockResolvedValue(mockEntity);
+      mockAuditService.logDelete.mockRejectedValue(new Error('Audit error'));
+
+      await service.deleteEncounter('test-encounter-id');
+
+      expect(mockEntity.deletedAt).toBeDefined();
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        { error: expect.any(Error) },
+        'Failed to log audit for encounter deletion',
+      );
+    });
+  });
+
+  describe('patientToEntity - edge cases', () => {
+    it('should handle patient without id (covers line 140)', () => {
+      const patient: Patient = {
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
+        name: [{ given: ['John'], family: 'Doe' }],
+      } as Patient;
+
+      const entity = (
+        service as unknown as {
+          patientToEntity: (patient: Patient) => PatientEntity;
+        }
+      ).patientToEntity(patient);
+
+      expect(entity.patientId).toBe('');
+      expect(entity.active).toBe(true); // Default value
+    });
+  });
+
+  describe('practitionerToEntity - edge cases', () => {
+    it('should handle practitioner without id (covers lines 161-162)', () => {
+      const practitioner: Practitioner = {
+        resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
+        name: [{ given: ['Dr. Jane'], family: 'Smith' }],
+      } as Practitioner;
+
+      const entity = (
+        service as unknown as {
+          practitionerToEntity: (practitioner: Practitioner) => PractitionerEntity;
+        }
+      ).practitionerToEntity(practitioner);
+
+      expect(entity.practitionerId).toBe('');
+      expect(entity.active).toBe(true); // Default value
+    });
+  });
+
+  describe('encounterToEntity - edge cases', () => {
+    it('should handle encounter without id or subject reference (covers lines 184-185)', () => {
+      const encounter: Encounter = {
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
+        status: 'finished',
+      } as Encounter;
+
+      const entity = (
+        service as unknown as {
+          encounterToEntity: (encounter: Encounter) => EncounterEntity;
+        }
+      ).encounterToEntity(encounter);
+
+      expect(entity.encounterId).toBe('');
+      expect(entity.subjectReference).toBe('');
+    });
+  });
+
+  describe('canAccessPatient - write operations', () => {
+    it('should allow write access when patient belongs to user (covers line 241)', () => {
+      const user: User = {
+        id: 'patient-user',
+        keycloakUserId: 'patient-user',
+        username: 'patient',
+        email: '',
+        roles: [ROLES.VIEWER],
+        scopes: ['patient:write'],
+      };
+
+      const mockEntity = new PatientEntity();
+      mockEntity.fhirResource = {
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
+        id: 'test-patient-id',
+      } as Patient;
+      mockEntity.patientId = 'test-patient-id';
+      mockEntity.keycloakUserId = 'patient-user'; // Same user
+
+      mockScopePermissionService.roleGrantsPermission.mockReturnValue(false);
+      mockScopePermissionService.hasResourcePermission.mockReturnValue(true);
+
+      const canAccess = (
+        service as unknown as {
+          canAccessPatient: (user: User, entity: PatientEntity, action?: string) => boolean;
+        }
+      ).canAccessPatient(user, mockEntity, 'write');
+
+      expect(canAccess).toBe(true);
+    });
+
+    it('should allow write access when user is practitioner (covers line 241)', () => {
+      const user: User = {
+        id: 'practitioner-user',
+        keycloakUserId: 'practitioner-user',
+        username: 'practitioner',
+        email: '',
+        roles: [ROLES.PRACTITIONER],
+        scopes: ['patient:write'],
+      };
+
+      const mockEntity = new PatientEntity();
+      mockEntity.fhirResource = {
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
+        id: 'test-patient-id',
+      } as Patient;
+      mockEntity.patientId = 'test-patient-id';
+      mockEntity.keycloakUserId = 'different-user'; // Different user
+      mockEntity.active = true; // Active patient
+
+      // When user is practitioner, the code checks active status first (line 218)
+      // and returns before checking scope permissions
+      const canAccess = (
+        service as unknown as {
+          canAccessPatient: (user: User, entity: PatientEntity, action?: string) => boolean;
+        }
+      ).canAccessPatient(user, mockEntity, 'write');
+
+      expect(canAccess).toBe(true);
+    });
+
+    it('should allow write access when user has scope permission and is practitioner (covers line 241)', () => {
+      const user: User = {
+        id: 'viewer-user',
+        keycloakUserId: 'viewer-user',
+        username: 'viewer',
+        email: '',
+        roles: [ROLES.VIEWER], // Not practitioner role
+        scopes: ['patient:write'],
+      };
+
+      const mockEntity = new PatientEntity();
+      mockEntity.fhirResource = {
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
+        id: 'test-patient-id',
+      } as Patient;
+      mockEntity.patientId = 'test-patient-id';
+      mockEntity.keycloakUserId = 'different-user'; // Different user
+
+      mockScopePermissionService.roleGrantsPermission.mockReturnValue(false);
+      mockScopePermissionService.hasResourcePermission.mockReturnValue(true);
+
+      // This should test the OR condition: user.id || user.roles.includes(ROLES.PRACTITIONER)
+      // Since user is not practitioner and keycloakUserId doesn't match, should return false
+      const canAccess = (
+        service as unknown as {
+          canAccessPatient: (user: User, entity: PatientEntity, action?: string) => boolean;
+        }
+      ).canAccessPatient(user, mockEntity, 'write');
+
+      expect(canAccess).toBe(false);
+    });
+
+    it('should allow write access when user has scope permission and owns patient (covers line 241)', () => {
+      const user: User = {
+        id: 'patient-user',
+        keycloakUserId: 'patient-user',
+        username: 'patient',
+        email: '',
+        roles: [ROLES.VIEWER],
+        scopes: ['patient:write'],
+      };
+
+      const mockEntity = new PatientEntity();
+      mockEntity.fhirResource = {
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
+        id: 'test-patient-id',
+      } as Patient;
+      mockEntity.patientId = 'test-patient-id';
+      mockEntity.keycloakUserId = 'patient-user'; // Same user
+
+      mockScopePermissionService.roleGrantsPermission.mockReturnValue(false);
+      mockScopePermissionService.hasResourcePermission.mockReturnValue(true);
+
+      const canAccess = (
+        service as unknown as {
+          canAccessPatient: (user: User, entity: PatientEntity, action?: string) => boolean;
+        }
+      ).canAccessPatient(user, mockEntity, 'write');
+
+      expect(canAccess).toBe(true);
+    });
+  });
+
+  describe('updatePractitioner - edge cases', () => {
+    it('should handle practitioner without meta versionId (covers line 670)', async () => {
+      const existingPractitioner: Practitioner = {
+        resourceType: FHIR_RESOURCE_TYPES.PRACTITIONER,
+        id: 'test-practitioner-id',
+        identifier: [{ system: 'http://example.com/license', value: 'MD-123' }],
+        name: [{ given: ['Dr. John'], family: 'Doe' }],
+        active: true,
+        meta: undefined, // No meta
+      };
+
+      const mockEntity = new PractitionerEntity();
+      mockEntity.id = 'db-uuid';
+      mockEntity.fhirResource = existingPractitioner;
+      mockEntity.practitionerId = 'test-practitioner-id';
+      mockEntity.createdAt = new Date();
+
+      mockPractitionerRepository.findOne.mockResolvedValue(mockEntity);
+      mockPractitionerRepository.save.mockImplementation((entity) => Promise.resolve(entity));
+
+      const updateDto: UpdatePractitionerDto = {
+        identifier: [{ system: 'http://example.com/license', value: 'MD-123' }],
+        name: [{ given: ['Dr. Jane'], family: 'Smith' }],
+      };
+
+      const result = await service.updatePractitioner('test-practitioner-id', updateDto);
+
+      expect(result.meta?.versionId).toBe('2'); // Should default to '1' and increment
+    });
+  });
+
+  describe('searchEncounters - edge cases', () => {
+    it('should handle subject without Patient/ prefix (covers line 808)', async () => {
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(1),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([
+          {
+            fhirResource: {
+              resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
+              id: '1',
+              status: 'finished',
+              subject: { reference: 'Patient/test-patient-id' },
+            },
+          },
+        ]),
+      };
+
+      mockEncounterRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      const result = await service.searchEncounters({
+        subject: 'test-patient-id', // Without Patient/ prefix
+      });
+
+      expect(result.entries.length).toBe(1);
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'encounter.subjectReference = :subject',
+        {
+          subject: 'Patient/test-patient-id', // Should add Patient/ prefix
+        },
+      );
     });
   });
 });

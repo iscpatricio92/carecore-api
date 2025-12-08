@@ -148,5 +148,186 @@ describe('LoggingInterceptor', () => {
         },
       });
     });
+
+    it('should handle null body (covers lines 74-75)', (done) => {
+      const request = {
+        method: 'GET',
+        url: '/api/test',
+        body: null,
+        query: {},
+        params: {},
+        requestId: 'test-request-id',
+      };
+      const response = {
+        statusCode: 200,
+      };
+
+      const context = {
+        switchToHttp: jest.fn().mockReturnValue({
+          getRequest: () => request,
+          getResponse: () => response,
+        }),
+      } as unknown as ExecutionContext;
+
+      const data = { result: 'success' };
+      mockCallHandler.handle = jest.fn().mockReturnValue(of(data));
+
+      interceptor.intercept(context, mockCallHandler).subscribe({
+        next: () => {
+          expect(mockLogger.debug).toHaveBeenCalledWith(
+            expect.objectContaining({
+              body: null,
+            }),
+            expect.any(String),
+          );
+          done();
+        },
+      });
+    });
+
+    it('should handle undefined body (covers lines 74-75)', (done) => {
+      const request = {
+        method: 'GET',
+        url: '/api/test',
+        body: undefined,
+        query: {},
+        params: {},
+        requestId: 'test-request-id',
+      };
+      const response = {
+        statusCode: 200,
+      };
+
+      const context = {
+        switchToHttp: jest.fn().mockReturnValue({
+          getRequest: () => request,
+          getResponse: () => response,
+        }),
+      } as unknown as ExecutionContext;
+
+      const data = { result: 'success' };
+      mockCallHandler.handle = jest.fn().mockReturnValue(of(data));
+
+      interceptor.intercept(context, mockCallHandler).subscribe({
+        next: () => {
+          expect(mockLogger.debug).toHaveBeenCalledWith(
+            expect.objectContaining({
+              body: undefined,
+            }),
+            expect.any(String),
+          );
+          done();
+        },
+      });
+    });
+
+    it('should handle string body (covers lines 74-75)', (done) => {
+      const request = {
+        method: 'POST',
+        url: '/api/test',
+        body: 'string body',
+        query: {},
+        params: {},
+        requestId: 'test-request-id',
+      };
+      const response = {
+        statusCode: 200,
+      };
+
+      const context = {
+        switchToHttp: jest.fn().mockReturnValue({
+          getRequest: () => request,
+          getResponse: () => response,
+        }),
+      } as unknown as ExecutionContext;
+
+      const data = { result: 'success' };
+      mockCallHandler.handle = jest.fn().mockReturnValue(of(data));
+
+      interceptor.intercept(context, mockCallHandler).subscribe({
+        next: () => {
+          expect(mockLogger.debug).toHaveBeenCalledWith(
+            expect.objectContaining({
+              body: 'string body',
+            }),
+            expect.any(String),
+          );
+          done();
+        },
+      });
+    });
+
+    it('should handle number body (covers lines 74-75)', (done) => {
+      const request = {
+        method: 'POST',
+        url: '/api/test',
+        body: 123,
+        query: {},
+        params: {},
+        requestId: 'test-request-id',
+      };
+      const response = {
+        statusCode: 200,
+      };
+
+      const context = {
+        switchToHttp: jest.fn().mockReturnValue({
+          getRequest: () => request,
+          getResponse: () => response,
+        }),
+      } as unknown as ExecutionContext;
+
+      const data = { result: 'success' };
+      mockCallHandler.handle = jest.fn().mockReturnValue(of(data));
+
+      interceptor.intercept(context, mockCallHandler).subscribe({
+        next: () => {
+          expect(mockLogger.debug).toHaveBeenCalledWith(
+            expect.objectContaining({
+              body: 123,
+            }),
+            expect.any(String),
+          );
+          done();
+        },
+      });
+    });
+
+    it('should use request.id as fallback when requestId is not available (covers line 17)', (done) => {
+      const request = {
+        method: 'GET',
+        url: '/api/test',
+        body: {},
+        query: {},
+        params: {},
+        id: 'fallback-id',
+        // No requestId property
+      };
+      const response = {
+        statusCode: 200,
+      };
+
+      const context = {
+        switchToHttp: jest.fn().mockReturnValue({
+          getRequest: () => request,
+          getResponse: () => response,
+        }),
+      } as unknown as ExecutionContext;
+
+      const data = { result: 'success' };
+      mockCallHandler.handle = jest.fn().mockReturnValue(of(data));
+
+      interceptor.intercept(context, mockCallHandler).subscribe({
+        next: () => {
+          expect(mockLogger.debug).toHaveBeenCalledWith(
+            expect.objectContaining({
+              requestId: 'fallback-id',
+            }),
+            expect.any(String),
+          );
+          done();
+        },
+      });
+    });
   });
 });

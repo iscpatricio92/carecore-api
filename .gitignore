@@ -6,9 +6,11 @@ node_modules/
 # Testing
 coverage
 coverage-e2e/
+coverage-integration/
 .nyc_output/
 .jest-cache/
 .jest-e2e-cache/
+.jest-cache-integration/
 storage/
 .jest-e2e-cache/
 

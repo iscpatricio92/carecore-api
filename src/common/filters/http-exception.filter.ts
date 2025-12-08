@@ -143,11 +143,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const errors: Array<{ field: string; message: string }> = [];
 
     if (Array.isArray(exceptionResponse.message)) {
-      exceptionResponse.message.forEach((msg: string) => {
-        errors.push({ field: 'unknown', message: msg });
-      });
-    } else if (Array.isArray((exceptionResponse as { message?: unknown[] }).message)) {
-      (exceptionResponse as { message: unknown[] }).message.forEach((msg: unknown) => {
+      exceptionResponse.message.forEach((msg: unknown) => {
         if (typeof msg === 'string') {
           errors.push({ field: 'unknown', message: msg });
         }

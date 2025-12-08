@@ -21,10 +21,22 @@ jest.mock('@keycloak/keycloak-admin-client', () => ({
   })),
 }));
 
+// Mock qrcode
+jest.mock('qrcode', () => ({
+  toDataURL: jest.fn(),
+}));
+
 import { AuthService } from './auth.service';
 import { DocumentStorageService } from './services/document-storage.service';
 import { KeycloakAdminService } from './services/keycloak-admin.service';
-import { PractitionerVerificationEntity } from '../../entities/practitioner-verification.entity';
+import {
+  PractitionerVerificationEntity,
+  VerificationStatus,
+} from '../../entities/practitioner-verification.entity';
+import { ReviewStatus } from './dto/review-verification.dto';
+import { DocumentType } from './dto/verify-practitioner.dto';
+import { NotFoundException } from '@nestjs/common';
+import * as QRCode from 'qrcode';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -55,6 +67,11 @@ describe('AuthService', () => {
     removeRoleFromUser: jest.fn(),
     updateUserRoles: jest.fn(),
     userHasRole: jest.fn(),
+    userHasMFA: jest.fn(),
+    generateTOTPSecret: jest.fn(),
+    verifyAndEnableTOTP: jest.fn(),
+    verifyTOTPCode: jest.fn(),
+    removeTOTPCredential: jest.fn(),
   };
 
   const mockVerificationRepository = {
@@ -62,6 +79,7 @@ describe('AuthService', () => {
     save: jest.fn(),
     findOne: jest.fn(),
     find: jest.fn(),
+    createQueryBuilder: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -747,6 +765,23 @@ describe('AuthService', () => {
       expect(result.refreshToken).toBe(mockRefreshToken);
     });
 
+    it('should use default values for expires_in and token_type when missing (covers lines 422-423)', async () => {
+      const mockTokenResponse = {
+        access_token: 'new-access-token',
+        // Missing expires_in and token_type
+      };
+
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: async () => mockTokenResponse,
+      });
+
+      const result = await service.refreshToken(mockRefreshToken);
+
+      expect(result.expiresIn).toBe(3600);
+      expect(result.tokenType).toBe('Bearer');
+    });
+
     it('should throw UnauthorizedException when response is not ok (400)', async () => {
       global.fetch = jest.fn().mockResolvedValue({
         ok: false,
@@ -767,6 +802,21 @@ describe('AuthService', () => {
 
       await expect(service.refreshToken(mockRefreshToken)).rejects.toThrow(UnauthorizedException);
       expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should throw UnauthorizedException when response is not ok with other status codes (covers lines 406-408)', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        text: async () => 'Internal server error',
+      });
+
+      await expect(service.refreshToken(mockRefreshToken)).rejects.toThrow(UnauthorizedException);
+      expect(mockLogger.error).toHaveBeenCalled();
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        { status: 500, error: 'Internal server error' },
+        'Failed to refresh token',
+      );
     });
 
     it('should throw UnauthorizedException when access_token is missing', async () => {
@@ -922,6 +972,715 @@ describe('AuthService', () => {
     it('should throw error as not implemented', async () => {
       await expect(service.getUserInfo('access-token')).rejects.toThrow('Not implemented');
       expect(mockLogger.warn).toHaveBeenCalledWith('getUserInfo() not yet implemented');
+    });
+  });
+
+  describe('requestVerification', () => {
+    const mockFile = {
+      buffer: Buffer.from('test'),
+      originalname: 'cedula.pdf',
+      mimetype: 'application/pdf',
+      size: 1024,
+    } as Express.Multer.File;
+
+    const mockDto = {
+      practitionerId: 'practitioner-123',
+      documentType: DocumentType.CEDULA,
+      additionalInfo: 'Test info',
+    };
+
+    it('should create verification request successfully', async () => {
+      const mockVerification = {
+        id: 'verification-123',
+        status: 'pending',
+        practitionerId: 'practitioner-123',
+      };
+
+      mockDocumentStorageService.storeVerificationDocument.mockResolvedValue(
+        'practitioner-123/cedula_123.pdf',
+      );
+      mockVerificationRepository.create.mockReturnValue(mockVerification);
+      mockVerificationRepository.save.mockResolvedValue(mockVerification);
+
+      const result = await service.requestVerification(mockDto, mockFile, 'user-123');
+
+      expect(result).toEqual({
+        verificationId: 'verification-123',
+        status: 'pending',
+        message: 'Verification request submitted successfully',
+        estimatedReviewTime: '2-3 business days',
+      });
+      expect(mockDocumentStorageService.storeVerificationDocument).toHaveBeenCalledWith(
+        mockFile,
+        'practitioner-123',
+        'cedula',
+      );
+      expect(mockVerificationRepository.save).toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException if file is missing', async () => {
+      await expect(
+        service.requestVerification(mockDto, null as unknown as Express.Multer.File, 'user-123'),
+      ).rejects.toThrow(BadRequestException);
+      expect(mockDocumentStorageService.storeVerificationDocument).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException if practitionerId is missing', async () => {
+      const invalidDto = { ...mockDto, practitionerId: '' };
+
+      await expect(service.requestVerification(invalidDto, mockFile, 'user-123')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should set additionalInfo to null when not provided (covers line 566)', async () => {
+      const mockVerification = {
+        id: 'verification-123',
+        status: 'pending',
+        practitionerId: 'practitioner-123',
+      };
+
+      const dtoWithoutAdditionalInfo = {
+        practitionerId: 'practitioner-123',
+        documentType: DocumentType.CEDULA,
+        // No additionalInfo
+      };
+
+      mockDocumentStorageService.storeVerificationDocument.mockResolvedValue(
+        'practitioner-123/cedula_123.pdf',
+      );
+      mockVerificationRepository.create.mockReturnValue(mockVerification);
+      mockVerificationRepository.save.mockResolvedValue(mockVerification);
+
+      await service.requestVerification(dtoWithoutAdditionalInfo, mockFile, 'user-123');
+
+      expect(mockVerificationRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          additionalInfo: null,
+        }),
+      );
+    });
+  });
+
+  describe('listVerifications', () => {
+    it('should return paginated list of verifications', async () => {
+      const mockVerifications = [
+        {
+          id: 'verification-1',
+          practitionerId: 'practitioner-123',
+          status: 'pending',
+          documentType: 'cedula',
+          documentPath: 'path/to/doc.pdf',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      const mockQueryBuilder = {
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(1),
+        getMany: jest.fn().mockResolvedValue(mockVerifications),
+      };
+
+      mockVerificationRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      const result = await service.listVerifications({ page: 1, limit: 10 });
+
+      expect(result.total).toBe(1);
+      expect(result.data).toHaveLength(1);
+      expect(mockQueryBuilder.getCount).toHaveBeenCalled();
+      expect(mockQueryBuilder.getMany).toHaveBeenCalled();
+    });
+
+    it('should filter by status when provided', async () => {
+      const mockQueryBuilder = {
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(0),
+        getMany: jest.fn().mockResolvedValue([]),
+      };
+
+      mockVerificationRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      await service.listVerifications({
+        status: VerificationStatus.PENDING,
+        page: 1,
+        limit: 10,
+      });
+
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('verification.status = :status', {
+        status: VerificationStatus.PENDING,
+      });
+    });
+  });
+
+  describe('getVerificationById', () => {
+    it('should return verification details', async () => {
+      const mockVerification = {
+        id: 'verification-123',
+        practitionerId: 'practitioner-123',
+        status: 'pending',
+        documentType: 'cedula',
+        documentPath: 'path/to/doc.pdf',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockVerificationRepository.findOne.mockResolvedValue(mockVerification);
+
+      const result = await service.getVerificationById('verification-123');
+
+      expect(result.id).toBe('verification-123');
+      expect(mockVerificationRepository.findOne).toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException if verification not found', async () => {
+      mockVerificationRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.getVerificationById('non-existent')).rejects.toThrow(NotFoundException);
+      await expect(service.getVerificationById('non-existent')).rejects.toThrow(
+        'Verification with ID non-existent not found',
+      );
+    });
+  });
+
+  describe('reviewVerification', () => {
+    it('should approve verification successfully', async () => {
+      const mockVerification = {
+        id: 'verification-123',
+        status: VerificationStatus.PENDING,
+        practitionerId: 'practitioner-123',
+        keycloakUserId: 'keycloak-user-123',
+      };
+
+      mockVerificationRepository.findOne.mockResolvedValue(mockVerification);
+      mockVerificationRepository.save.mockResolvedValue({
+        ...mockVerification,
+        status: VerificationStatus.APPROVED,
+        reviewedBy: 'admin-123',
+        reviewedAt: new Date(),
+      });
+      mockKeycloakAdminService.addRoleToUser.mockResolvedValue(true);
+
+      const result = await service.reviewVerification(
+        'verification-123',
+        { status: ReviewStatus.APPROVED },
+        'admin-123',
+      );
+
+      expect(result.status).toBe(VerificationStatus.APPROVED);
+      expect(mockKeycloakAdminService.addRoleToUser).toHaveBeenCalled();
+    });
+
+    it('should log warning when role addition fails after approval (covers lines 742-750)', async () => {
+      const mockVerification = {
+        id: 'verification-123',
+        status: VerificationStatus.PENDING,
+        practitionerId: 'practitioner-123',
+        keycloakUserId: 'keycloak-user-123',
+      };
+
+      mockVerificationRepository.findOne.mockResolvedValue(mockVerification);
+      mockVerificationRepository.save.mockResolvedValue({
+        ...mockVerification,
+        status: VerificationStatus.APPROVED,
+        reviewedBy: 'admin-123',
+        reviewedAt: new Date(),
+      });
+      mockKeycloakAdminService.addRoleToUser.mockResolvedValue(false);
+
+      const result = await service.reviewVerification(
+        'verification-123',
+        { status: ReviewStatus.APPROVED },
+        'admin-123',
+      );
+
+      expect(result.status).toBe(VerificationStatus.APPROVED);
+      expect(mockKeycloakAdminService.addRoleToUser).toHaveBeenCalledWith(
+        'keycloak-user-123',
+        'practitioner-verified',
+      );
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        {
+          verificationId: 'verification-123',
+          keycloakUserId: 'keycloak-user-123',
+        },
+        'Failed to add practitioner-verified role in Keycloak. Verification was approved in database but role update failed.',
+      );
+    });
+
+    it('should reject verification successfully', async () => {
+      const mockVerification = {
+        id: 'verification-123',
+        status: VerificationStatus.PENDING,
+        practitionerId: 'practitioner-123',
+        keycloakUserId: 'keycloak-user-123',
+      };
+
+      mockVerificationRepository.findOne.mockResolvedValue(mockVerification);
+      mockVerificationRepository.save.mockResolvedValue({
+        ...mockVerification,
+        status: VerificationStatus.REJECTED,
+        reviewedBy: 'admin-123',
+        reviewedAt: new Date(),
+        rejectionReason: 'Invalid document',
+      });
+      mockKeycloakAdminService.removeRoleFromUser.mockResolvedValue(true);
+
+      const result = await service.reviewVerification(
+        'verification-123',
+        { status: ReviewStatus.REJECTED, rejectionReason: 'Invalid document' },
+        'admin-123',
+      );
+
+      expect(result.status).toBe(VerificationStatus.REJECTED);
+      expect(mockKeycloakAdminService.addRoleToUser).not.toHaveBeenCalled();
+      expect(mockKeycloakAdminService.removeRoleFromUser).toHaveBeenCalledWith(
+        'keycloak-user-123',
+        'practitioner-verified',
+      );
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        {
+          verificationId: 'verification-123',
+          keycloakUserId: 'keycloak-user-123',
+        },
+        'Removed practitioner-verified role from user in Keycloak',
+      );
+    });
+
+    it('should handle rejection when role removal succeeds (covers lines 761-777)', async () => {
+      const mockVerification = {
+        id: 'verification-123',
+        status: VerificationStatus.PENDING,
+        practitionerId: 'practitioner-123',
+        keycloakUserId: 'keycloak-user-123',
+      };
+
+      mockVerificationRepository.findOne.mockResolvedValue(mockVerification);
+      mockVerificationRepository.save.mockResolvedValue({
+        ...mockVerification,
+        status: VerificationStatus.REJECTED,
+        reviewedBy: 'admin-123',
+        reviewedAt: new Date(),
+        rejectionReason: 'Invalid document',
+      });
+      mockKeycloakAdminService.removeRoleFromUser.mockResolvedValue(true);
+
+      const result = await service.reviewVerification(
+        'verification-123',
+        { status: ReviewStatus.REJECTED, rejectionReason: 'Invalid document' },
+        'admin-123',
+      );
+
+      expect(result.status).toBe(VerificationStatus.REJECTED);
+      expect(mockKeycloakAdminService.removeRoleFromUser).toHaveBeenCalledWith(
+        'keycloak-user-123',
+        'practitioner-verified',
+      );
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        {
+          verificationId: 'verification-123',
+          keycloakUserId: 'keycloak-user-123',
+        },
+        'Removed practitioner-verified role from user in Keycloak',
+      );
+    });
+
+    it('should handle rejection when role does not exist (covers lines 761-777)', async () => {
+      const mockVerification = {
+        id: 'verification-123',
+        status: VerificationStatus.PENDING,
+        practitionerId: 'practitioner-123',
+        keycloakUserId: 'keycloak-user-123',
+      };
+
+      mockVerificationRepository.findOne.mockResolvedValue(mockVerification);
+      mockVerificationRepository.save.mockResolvedValue({
+        ...mockVerification,
+        status: VerificationStatus.REJECTED,
+        reviewedBy: 'admin-123',
+        reviewedAt: new Date(),
+        rejectionReason: 'Invalid document',
+      });
+      mockKeycloakAdminService.removeRoleFromUser.mockResolvedValue(false);
+
+      const result = await service.reviewVerification(
+        'verification-123',
+        { status: ReviewStatus.REJECTED, rejectionReason: 'Invalid document' },
+        'admin-123',
+      );
+
+      expect(result.status).toBe(VerificationStatus.REJECTED);
+      expect(mockKeycloakAdminService.removeRoleFromUser).toHaveBeenCalledWith(
+        'keycloak-user-123',
+        'practitioner-verified',
+      );
+      // Should not log info when role didn't exist
+      expect(mockLogger.info).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          verificationId: 'verification-123',
+        }),
+        'Removed practitioner-verified role from user in Keycloak',
+      );
+    });
+
+    it('should handle Keycloak errors gracefully during review (covers lines 779-789)', async () => {
+      const mockVerification = {
+        id: 'verification-123',
+        status: VerificationStatus.PENDING,
+        practitionerId: 'practitioner-123',
+        keycloakUserId: 'keycloak-user-123',
+      };
+
+      mockVerificationRepository.findOne.mockResolvedValue(mockVerification);
+      mockVerificationRepository.save.mockResolvedValue({
+        ...mockVerification,
+        status: VerificationStatus.APPROVED,
+        reviewedBy: 'admin-123',
+        reviewedAt: new Date(),
+      });
+      mockKeycloakAdminService.addRoleToUser.mockRejectedValue(
+        new Error('Keycloak connection failed'),
+      );
+
+      // Should not throw - database update succeeds, Keycloak error is logged but doesn't fail
+      const result = await service.reviewVerification(
+        'verification-123',
+        { status: ReviewStatus.APPROVED },
+        'admin-123',
+      );
+
+      expect(result.status).toBe(VerificationStatus.APPROVED);
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        {
+          error: expect.any(Error),
+          verificationId: 'verification-123',
+          keycloakUserId: 'keycloak-user-123',
+          status: VerificationStatus.APPROVED,
+        },
+        'Error updating Keycloak roles during verification review',
+      );
+    });
+
+    it('should log warning when keycloakUserId is not set (covers lines 791-797)', async () => {
+      const mockVerification = {
+        id: 'verification-123',
+        status: VerificationStatus.PENDING,
+        practitionerId: 'practitioner-123',
+        keycloakUserId: null,
+      };
+
+      mockVerificationRepository.findOne.mockResolvedValue(mockVerification);
+      mockVerificationRepository.save.mockResolvedValue({
+        ...mockVerification,
+        status: VerificationStatus.APPROVED,
+        reviewedBy: 'admin-123',
+        reviewedAt: new Date(),
+      });
+
+      const result = await service.reviewVerification(
+        'verification-123',
+        { status: ReviewStatus.APPROVED },
+        'admin-123',
+      );
+
+      expect(result.status).toBe(VerificationStatus.APPROVED);
+      expect(mockKeycloakAdminService.addRoleToUser).not.toHaveBeenCalled();
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        {
+          verificationId: 'verification-123',
+        },
+        'Cannot update Keycloak roles: keycloakUserId is not set',
+      );
+    });
+
+    it('should throw NotFoundException if verification not found', async () => {
+      mockVerificationRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.reviewVerification('non-existent', { status: ReviewStatus.APPROVED }, 'admin-123'),
+      ).rejects.toThrow(NotFoundException);
+      await expect(
+        service.reviewVerification('non-existent', { status: ReviewStatus.APPROVED }, 'admin-123'),
+      ).rejects.toThrow('Verification with ID non-existent not found');
+    });
+
+    it('should throw BadRequestException if verification is not pending', async () => {
+      const mockVerification = {
+        id: 'verification-123',
+        status: VerificationStatus.APPROVED,
+      };
+
+      mockVerificationRepository.findOne.mockResolvedValue(mockVerification);
+
+      await expect(
+        service.reviewVerification(
+          'verification-123',
+          { status: ReviewStatus.APPROVED },
+          'admin-123',
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException if rejection reason is missing', async () => {
+      const mockVerification = {
+        id: 'verification-123',
+        status: VerificationStatus.PENDING,
+      };
+
+      mockVerificationRepository.findOne.mockResolvedValue(mockVerification);
+
+      await expect(
+        service.reviewVerification(
+          'verification-123',
+          { status: ReviewStatus.REJECTED },
+          'admin-123',
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('setupMFA', () => {
+    it('should setup MFA successfully', async () => {
+      const mockSecret = 'JBSWY3DPEHPK3PXP';
+      const mockQrCode = 'data:image/png;base64,...';
+
+      mockConfigService.get.mockImplementation((key: string) => {
+        if (key === 'KEYCLOAK_REALM') return 'carecore';
+        return null;
+      });
+      mockKeycloakAdminService.userHasMFA.mockResolvedValue(false);
+      mockKeycloakAdminService.generateTOTPSecret.mockResolvedValue({ secret: mockSecret });
+      (QRCode.toDataURL as jest.Mock).mockResolvedValue(mockQrCode);
+
+      const result = await service.setupMFA('user-123', 'user@example.com');
+
+      expect(result.secret).toBe(mockSecret);
+      expect(result.qrCode).toBe(mockQrCode);
+      expect(mockKeycloakAdminService.userHasMFA).toHaveBeenCalledWith('user-123');
+      expect(mockKeycloakAdminService.generateTOTPSecret).toHaveBeenCalledWith('user-123');
+    });
+
+    it('should throw BadRequestException if MFA already configured', async () => {
+      mockKeycloakAdminService.userHasMFA.mockResolvedValue(true);
+
+      await expect(service.setupMFA('user-123', 'user@example.com')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should throw BadRequestException if TOTP secret generation fails', async () => {
+      mockKeycloakAdminService.userHasMFA.mockResolvedValue(false);
+      mockKeycloakAdminService.generateTOTPSecret.mockResolvedValue(null);
+
+      await expect(service.setupMFA('user-123', 'user@example.com')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should throw BadRequestException if QR code generation fails', async () => {
+      const mockSecret = 'JBSWY3DPEHPK3PXP';
+
+      mockConfigService.get.mockImplementation((key: string) => {
+        if (key === 'KEYCLOAK_REALM') return 'carecore';
+        return null;
+      });
+      mockKeycloakAdminService.userHasMFA.mockResolvedValue(false);
+      mockKeycloakAdminService.generateTOTPSecret.mockResolvedValue({ secret: mockSecret });
+      (QRCode.toDataURL as jest.Mock).mockRejectedValue(new Error('QR code generation failed'));
+
+      await expect(service.setupMFA('user-123', 'user@example.com')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should use default KEYCLOAK_REALM when not configured (covers line 837)', async () => {
+      const mockSecret = 'JBSWY3DPEHPK3PXP';
+      const mockQrCode = 'data:image/png;base64,...';
+
+      mockConfigService.get.mockImplementation((_key: string) => {
+        // KEYCLOAK_REALM not configured, should default to 'carecore'
+        return null;
+      });
+      mockKeycloakAdminService.userHasMFA.mockResolvedValue(false);
+      mockKeycloakAdminService.generateTOTPSecret.mockResolvedValue({ secret: mockSecret });
+      (QRCode.toDataURL as jest.Mock).mockResolvedValue(mockQrCode);
+
+      const result = await service.setupMFA('user-123', 'user@example.com');
+
+      expect(result.secret).toBe(mockSecret);
+      expect(result.qrCode).toBe(mockQrCode);
+      // Verify that the default realm 'carecore' is used in the QR code URL
+      expect(QRCode.toDataURL).toHaveBeenCalledWith(
+        expect.stringContaining('CareCore%20(carecore)'),
+        expect.any(Object),
+      );
+    });
+  });
+
+  describe('verifyMFASetup', () => {
+    it('should verify and enable MFA successfully', async () => {
+      mockKeycloakAdminService.userHasMFA.mockResolvedValue(false);
+      mockKeycloakAdminService.verifyAndEnableTOTP.mockResolvedValue(true);
+
+      const result = await service.verifyMFASetup('user-123', '123456');
+
+      expect(result.success).toBe(true);
+      expect(mockKeycloakAdminService.userHasMFA).toHaveBeenCalledWith('user-123');
+      expect(mockKeycloakAdminService.verifyAndEnableTOTP).toHaveBeenCalledWith(
+        'user-123',
+        '123456',
+      );
+    });
+
+    it('should throw BadRequestException if MFA already enabled (covers lines 878-879)', async () => {
+      mockKeycloakAdminService.userHasMFA.mockResolvedValue(true);
+
+      await expect(service.verifyMFASetup('user-123', '123456')).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(mockKeycloakAdminService.userHasMFA).toHaveBeenCalledWith('user-123');
+      expect(mockKeycloakAdminService.verifyAndEnableTOTP).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException if code is invalid', async () => {
+      mockKeycloakAdminService.userHasMFA.mockResolvedValue(false);
+      mockKeycloakAdminService.verifyAndEnableTOTP.mockResolvedValue(false);
+
+      await expect(service.verifyMFASetup('user-123', '000000')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+  });
+
+  describe('disableMFA', () => {
+    it('should disable MFA successfully', async () => {
+      mockKeycloakAdminService.userHasMFA.mockResolvedValue(true);
+      mockKeycloakAdminService.verifyTOTPCode.mockResolvedValue(true);
+      mockKeycloakAdminService.removeTOTPCredential.mockResolvedValue(true);
+
+      const result = await service.disableMFA('user-123', '123456');
+
+      expect(result.success).toBe(true);
+      expect(mockKeycloakAdminService.userHasMFA).toHaveBeenCalledWith('user-123');
+      expect(mockKeycloakAdminService.verifyTOTPCode).toHaveBeenCalledWith('user-123', '123456');
+      expect(mockKeycloakAdminService.removeTOTPCredential).toHaveBeenCalledWith('user-123');
+    });
+
+    it('should throw BadRequestException if code is invalid (covers lines 915-918)', async () => {
+      mockKeycloakAdminService.userHasMFA.mockResolvedValue(true);
+      mockKeycloakAdminService.verifyTOTPCode.mockResolvedValue(false);
+
+      await expect(service.disableMFA('user-123', '000000')).rejects.toThrow(BadRequestException);
+      expect(mockKeycloakAdminService.userHasMFA).toHaveBeenCalledWith('user-123');
+      expect(mockKeycloakAdminService.verifyTOTPCode).toHaveBeenCalledWith('user-123', '000000');
+      expect(mockKeycloakAdminService.removeTOTPCredential).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException if MFA not enabled', async () => {
+      mockKeycloakAdminService.userHasMFA.mockResolvedValue(false);
+
+      await expect(service.disableMFA('user-123', '123456')).rejects.toThrow(BadRequestException);
+      expect(mockKeycloakAdminService.userHasMFA).toHaveBeenCalledWith('user-123');
+      expect(mockKeycloakAdminService.verifyTOTPCode).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException if removing TOTP credential fails (covers lines 923-924)', async () => {
+      mockKeycloakAdminService.userHasMFA.mockResolvedValue(true);
+      mockKeycloakAdminService.verifyTOTPCode.mockResolvedValue(true);
+      mockKeycloakAdminService.removeTOTPCredential.mockResolvedValue(false);
+
+      await expect(service.disableMFA('user-123', '123456')).rejects.toThrow(BadRequestException);
+      expect(mockKeycloakAdminService.userHasMFA).toHaveBeenCalledWith('user-123');
+      expect(mockKeycloakAdminService.verifyTOTPCode).toHaveBeenCalledWith('user-123', '123456');
+      expect(mockKeycloakAdminService.removeTOTPCredential).toHaveBeenCalledWith('user-123');
+    });
+  });
+
+  describe('getMFAStatus', () => {
+    it('should return MFA status successfully', async () => {
+      mockKeycloakAdminService.userHasMFA.mockResolvedValue(true);
+      mockKeycloakAdminService.findUserById.mockResolvedValue({
+        id: 'user-123',
+        username: 'testuser',
+      });
+      mockKeycloakAdminService.getUserRoles.mockResolvedValue(['patient']);
+
+      const result = await service.getMFAStatus('user-123');
+
+      expect(result.mfaEnabled).toBe(true);
+      expect(result.mfaRequired).toBeDefined();
+      expect(mockKeycloakAdminService.userHasMFA).toHaveBeenCalledWith('user-123');
+    });
+
+    it('should return message when MFA is enabled and user has no critical role', async () => {
+      mockKeycloakAdminService.userHasMFA.mockResolvedValue(true);
+      mockKeycloakAdminService.findUserById.mockResolvedValue({
+        id: 'user-123',
+        username: 'testuser',
+      });
+      mockKeycloakAdminService.getUserRoles.mockResolvedValue(['patient']);
+
+      const result = await service.getMFAStatus('user-123');
+
+      expect(result.mfaEnabled).toBe(true);
+      expect(result.mfaRequired).toBe(false);
+      expect(result.message).toBe('MFA is enabled and active');
+    });
+
+    it('should return message when MFA is not enabled and user has no critical role (covers line 966)', async () => {
+      mockKeycloakAdminService.userHasMFA.mockResolvedValue(false);
+      mockKeycloakAdminService.findUserById.mockResolvedValue({
+        id: 'user-123',
+        username: 'testuser',
+      });
+      mockKeycloakAdminService.getUserRoles.mockResolvedValue(['patient']);
+
+      const result = await service.getMFAStatus('user-123');
+
+      expect(result.mfaEnabled).toBe(false);
+      expect(result.mfaRequired).toBe(false);
+      expect(result.message).toBe('MFA is optional for your role');
+    });
+
+    it('should return mfaRequired true for admin role', async () => {
+      mockKeycloakAdminService.userHasMFA.mockResolvedValue(false);
+      mockKeycloakAdminService.findUserById.mockResolvedValue({
+        id: 'user-123',
+        username: 'admin',
+      });
+      mockKeycloakAdminService.getUserRoles.mockResolvedValue(['admin']);
+
+      const result = await service.getMFAStatus('user-123');
+
+      expect(result.mfaRequired).toBe(true);
+    });
+
+    it('should return mfaRequired true for practitioner role', async () => {
+      mockKeycloakAdminService.userHasMFA.mockResolvedValue(false);
+      mockKeycloakAdminService.findUserById.mockResolvedValue({
+        id: 'user-123',
+        username: 'practitioner',
+      });
+      mockKeycloakAdminService.getUserRoles.mockResolvedValue(['practitioner']);
+
+      const result = await service.getMFAStatus('user-123');
+
+      expect(result.mfaRequired).toBe(true);
+    });
+
+    it('should throw NotFoundException if user not found', async () => {
+      mockKeycloakAdminService.findUserById.mockResolvedValue(null);
+
+      await expect(service.getMFAStatus('non-existent')).rejects.toThrow(NotFoundException);
+      await expect(service.getMFAStatus('non-existent')).rejects.toThrow(
+        'User with ID non-existent not found in Keycloak',
+      );
     });
   });
 });
