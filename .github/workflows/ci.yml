@@ -205,10 +205,10 @@ jobs:
             FILE=$1
             PREFIX=$2
             if [ -f "$FILE" ]; then
-              LINES=$(node -p "Math.round(require('./'$FILE).total.lines.pct || 0)")
-              STATEMENTS=$(node -p "Math.round(require('./'$FILE).total.statements.pct || 0)")
-              FUNCTIONS=$(node -p "Math.round(require('./'$FILE).total.functions.pct || 0)")
-              BRANCHES=$(node -p "Math.round(require('./'$FILE).total.branches.pct || 0)")
+              LINES=$(node -e "const s=require('./${FILE}'); console.log(Math.round((s.total.lines.pct)||0));")
+              STATEMENTS=$(node -e "const s=require('./${FILE}'); console.log(Math.round((s.total.statements.pct)||0));")
+              FUNCTIONS=$(node -e "const s=require('./${FILE}'); console.log(Math.round((s.total.functions.pct)||0));")
+              BRANCHES=$(node -e "const s=require('./${FILE}'); console.log(Math.round((s.total.branches.pct)||0));")
             else
               LINES=0; STATEMENTS=0; FUNCTIONS=0; BRANCHES=0
             fi
