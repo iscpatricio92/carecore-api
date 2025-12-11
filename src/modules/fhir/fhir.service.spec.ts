@@ -151,6 +151,145 @@ describe('FhirService', () => {
 
       expect(result.implementation.url).toBe('http://localhost:3000/api/fhir');
     });
+
+    it('should include SMART on FHIR OAuth2 endpoints', () => {
+      mockConfigService.get.mockImplementation((key: string) => {
+        if (key === 'FHIR_BASE_URL') return 'https://carecore.example.com/api/fhir';
+        if (key === 'API_PREFIX') return '/api';
+        return null;
+      });
+
+      const result = service.getCapabilityStatement();
+
+      expect(result.rest[0].security).toBeDefined();
+      expect(result.rest[0].security.extension).toBeDefined();
+
+      const oauthExtension = result.rest[0].security.extension.find(
+        (ext: { url: string }) =>
+          ext.url === 'http://fhir-registry.smarthealthit.org/StructureDefinition/oauth-uris',
+      );
+
+      expect(oauthExtension).toBeDefined();
+      expect(oauthExtension).not.toBeUndefined();
+      if (oauthExtension) {
+        expect(oauthExtension.extension).toBeDefined();
+
+        const authorizeExt = oauthExtension.extension.find(
+          (ext: { url: string }) => ext.url === 'authorize',
+        );
+        const tokenExt = oauthExtension.extension.find(
+          (ext: { url: string }) => ext.url === 'token',
+        );
+
+        expect(authorizeExt).toBeDefined();
+        expect(tokenExt).toBeDefined();
+        if (authorizeExt && tokenExt) {
+          expect(authorizeExt.valueUri).toBe('https://carecore.example.com/api/fhir/auth');
+          expect(tokenExt.valueUri).toBe('https://carecore.example.com/api/fhir/token');
+        }
+      }
+    });
+
+    it('should include SMART-on-FHIR security service', () => {
+      const result = service.getCapabilityStatement();
+
+      expect(result.rest[0].security.service).toBeDefined();
+      expect(result.rest[0].security.service.length).toBeGreaterThan(0);
+
+      const smartService = result.rest[0].security.service.find(
+        (service: { coding: Array<{ code: string }> }) =>
+          service.coding?.some((coding: { code: string }) => coding.code === 'SMART-on-FHIR'),
+      );
+
+      expect(smartService).toBeDefined();
+      expect(smartService).not.toBeUndefined();
+      if (smartService) {
+        expect(smartService.coding[0].system).toBe('http://hl7.org/fhir/restful-security-service');
+        expect(smartService.coding[0].code).toBe('SMART-on-FHIR');
+      }
+    });
+
+    it('should include supported scopes in extension', () => {
+      const result = service.getCapabilityStatement();
+
+      expect(result.extension).toBeDefined();
+      const capabilitiesExt = result.extension.find(
+        (ext: { url: string }) =>
+          ext.url === 'http://fhir-registry.smarthealthit.org/StructureDefinition/capabilities',
+      );
+
+      expect(capabilitiesExt).toBeDefined();
+      expect(capabilitiesExt).not.toBeUndefined();
+      if (capabilitiesExt) {
+        expect(capabilitiesExt.extension).toBeDefined();
+
+        const scopesExt = capabilitiesExt.extension.find(
+          (ext: { url: string }) => ext.url === 'supported-scopes',
+        );
+        expect(scopesExt).toBeDefined();
+        expect(scopesExt).not.toBeUndefined();
+        if (scopesExt) {
+          expect(scopesExt.valueString).toBeDefined();
+          expect(scopesExt.valueString.length).toBeGreaterThan(0);
+          expect(scopesExt.valueString).toContain('patient:read');
+          expect(scopesExt.valueString).toContain('patient:write');
+        }
+      }
+    });
+
+    it('should include launch types in extension', () => {
+      const result = service.getCapabilityStatement();
+
+      const capabilitiesExt = result.extension.find(
+        (ext: { url: string }) =>
+          ext.url === 'http://fhir-registry.smarthealthit.org/StructureDefinition/capabilities',
+      );
+
+      expect(capabilitiesExt).toBeDefined();
+      expect(capabilitiesExt).not.toBeUndefined();
+      if (capabilitiesExt) {
+        const launchTypesExt = capabilitiesExt.extension.find(
+          (ext: { url: string }) => ext.url === 'launch-types',
+        );
+        expect(launchTypesExt).toBeDefined();
+        expect(launchTypesExt).not.toBeUndefined();
+        if (launchTypesExt) {
+          expect(launchTypesExt.valueString).toBe('standalone launch ehr-launch');
+        }
+      }
+    });
+
+    it('should build OAuth2 URLs correctly from FHIR_BASE_URL', () => {
+      mockConfigService.get.mockImplementation((key: string) => {
+        if (key === 'FHIR_BASE_URL') return 'https://api.carecore.com/api/fhir';
+        return null;
+      });
+
+      const result = service.getCapabilityStatement();
+
+      const oauthExtension = result.rest[0].security.extension.find(
+        (ext: { url: string }) =>
+          ext.url === 'http://fhir-registry.smarthealthit.org/StructureDefinition/oauth-uris',
+      );
+
+      expect(oauthExtension).toBeDefined();
+      expect(oauthExtension).not.toBeUndefined();
+      if (oauthExtension) {
+        const authorizeExt = oauthExtension.extension.find(
+          (ext: { url: string }) => ext.url === 'authorize',
+        );
+        const tokenExt = oauthExtension.extension.find(
+          (ext: { url: string }) => ext.url === 'token',
+        );
+
+        expect(authorizeExt).toBeDefined();
+        expect(tokenExt).toBeDefined();
+        if (authorizeExt && tokenExt) {
+          expect(authorizeExt.valueUri).toBe('https://api.carecore.com/api/fhir/auth');
+          expect(tokenExt.valueUri).toBe('https://api.carecore.com/api/fhir/token');
+        }
+      }
+    });
   });
 
   describe('createPatient', () => {

@@ -20,6 +20,7 @@ import { User } from '../auth/interfaces/user.interface';
 import { ROLES } from '../../common/constants/roles';
 import { FHIR_RESOURCE_TYPES } from '../../common/constants/fhir-resource-types';
 import { FHIR_ACTIONS } from '../../common/constants/fhir-actions';
+import { ALL_FHIR_SCOPES } from '../../common/constants/fhir-scopes';
 import { AuditService } from '../audit/audit.service';
 import { ScopePermissionService } from '../auth/services/scope-permission.service';
 
@@ -48,6 +49,13 @@ export class FhirService {
     const baseUrl =
       this.configService.get<string>('FHIR_BASE_URL') || 'http://localhost:3000/api/fhir';
 
+    // Build SMART on FHIR OAuth2 endpoints
+    // baseUrl already includes /api/fhir, so we just append /auth and /token
+    // Remove trailing slash from baseUrl if present
+    const cleanBaseUrl = baseUrl.replace(/\/$/, '');
+    const authorizeUrl = `${cleanBaseUrl}/auth`;
+    const tokenUrl = `${cleanBaseUrl}/token`;
+
     return {
       resourceType: 'CapabilityStatement',
       status: 'active',
@@ -67,6 +75,36 @@ export class FhirService {
       rest: [
         {
           mode: 'server',
+          security: {
+            extension: [
+              {
+                url: 'http://fhir-registry.smarthealthit.org/StructureDefinition/oauth-uris',
+                extension: [
+                  {
+                    url: 'authorize',
+                    valueUri: authorizeUrl,
+                  },
+                  {
+                    url: 'token',
+                    valueUri: tokenUrl,
+                  },
+                ],
+              },
+            ],
+            service: [
+              {
+                coding: [
+                  {
+                    system: 'http://hl7.org/fhir/restful-security-service',
+                    code: 'SMART-on-FHIR',
+                    display: 'SMART on FHIR',
+                  },
+                ],
+                text: 'OAuth2 using SMART-on-FHIR profile (see http://docs.smarthealthit.org)',
+              },
+            ],
+            cors: true,
+          },
           resource: [
             {
               type: FHIR_RESOURCE_TYPES.PATIENT,
@@ -110,6 +148,22 @@ export class FhirService {
                 { name: 'status', type: 'token' },
                 { name: 'date', type: 'date' },
               ],
+            },
+          ],
+        },
+      ],
+      // SMART on FHIR specific extensions
+      extension: [
+        {
+          url: 'http://fhir-registry.smarthealthit.org/StructureDefinition/capabilities',
+          extension: [
+            {
+              url: 'supported-scopes',
+              valueString: ALL_FHIR_SCOPES.join(' '),
+            },
+            {
+              url: 'launch-types',
+              valueString: 'standalone launch ehr-launch',
             },
           ],
         },
