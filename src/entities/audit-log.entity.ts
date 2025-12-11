@@ -131,6 +131,43 @@ export class AuditLogEntity {
   errorMessage: string | null;
 
   /**
+   * SMART on FHIR: Client ID of the external application
+   * Identifies which SMART on FHIR application made the request
+   * Extracted from JWT token (azp or aud claim) or request parameters
+   * Null for non-SMART on FHIR requests
+   */
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  @Index()
+  clientId: string | null;
+
+  /**
+   * SMART on FHIR: Client name of the external application
+   * Human-readable name of the SMART on FHIR application
+   * Retrieved from Keycloak client configuration
+   * Null for non-SMART on FHIR requests or if name not available
+   */
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  clientName: string | null;
+
+  /**
+   * SMART on FHIR: Launch context from launch sequence
+   * Stores the launch context (patient, encounter, etc.) as JSON
+   * Format: { patient?: "Patient/123", encounter?: "Encounter/456", ... }
+   * Null for non-launch requests or standalone launches
+   */
+  @Column({ type: 'jsonb', nullable: true })
+  launchContext: Record<string, unknown> | null;
+
+  /**
+   * SMART on FHIR: OAuth2 scopes used for the request
+   * Stored as JSON array for audit purposes
+   * Example: ["patient:read", "patient:write"]
+   * Null for non-SMART on FHIR requests
+   */
+  @Column({ type: 'jsonb', nullable: true })
+  scopes: string[] | null;
+
+  /**
    * Record creation timestamp
    * Automatically set when the audit log is created
    * This is the only timestamp - records are immutable

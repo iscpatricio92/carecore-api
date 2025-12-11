@@ -37,6 +37,7 @@ import { User } from '../auth/interfaces/user.interface';
 import { FHIR_RESOURCE_TYPES } from '../../common/constants/fhir-resource-types';
 import { MFARequiredGuard } from '../auth/guards/mfa-required.guard';
 import { KeycloakAdminService } from '../auth/services/keycloak-admin.service';
+import { AuditService } from '../audit/audit.service';
 
 describe('FhirController', () => {
   let controller: FhirController;
@@ -96,6 +97,18 @@ describe('FhirController', () => {
     verifyTOTPCode: jest.fn(),
     verifyAndEnableTOTP: jest.fn(),
     removeTOTPCredential: jest.fn(),
+    findClientById: jest.fn(),
+  };
+
+  const mockAuditService = {
+    logAccess: jest.fn().mockResolvedValue(undefined),
+    logCreate: jest.fn().mockResolvedValue(undefined),
+    logUpdate: jest.fn().mockResolvedValue(undefined),
+    logDelete: jest.fn().mockResolvedValue(undefined),
+    logAction: jest.fn().mockResolvedValue(undefined),
+    logSmartAuth: jest.fn().mockResolvedValue(undefined),
+    logSmartToken: jest.fn().mockResolvedValue(undefined),
+    logSmartLaunch: jest.fn().mockResolvedValue(undefined),
   };
 
   const mockMFARequiredGuard = {
@@ -113,6 +126,16 @@ describe('FhirController', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
 
+    // Reconfigure audit service mocks after clearing
+    mockAuditService.logAccess = jest.fn().mockResolvedValue(undefined);
+    mockAuditService.logCreate = jest.fn().mockResolvedValue(undefined);
+    mockAuditService.logUpdate = jest.fn().mockResolvedValue(undefined);
+    mockAuditService.logDelete = jest.fn().mockResolvedValue(undefined);
+    mockAuditService.logAction = jest.fn().mockResolvedValue(undefined);
+    mockAuditService.logSmartAuth = jest.fn().mockResolvedValue(undefined);
+    mockAuditService.logSmartToken = jest.fn().mockResolvedValue(undefined);
+    mockAuditService.logSmartLaunch = jest.fn().mockResolvedValue(undefined);
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [FhirController],
       providers: [
@@ -127,6 +150,10 @@ describe('FhirController', () => {
         {
           provide: KeycloakAdminService,
           useValue: mockKeycloakAdminService,
+        },
+        {
+          provide: AuditService,
+          useValue: mockAuditService,
         },
         {
           provide: MFARequiredGuard,
@@ -524,8 +551,13 @@ describe('FhirController', () => {
 
     const mockRequest = {
       protocol: 'https',
+      ip: '192.168.1.1',
+      socket: {
+        remoteAddress: '192.168.1.1',
+      },
       get: jest.fn((header: string) => {
         if (header === 'host') return 'api.example.com';
+        if (header === 'user-agent') return 'Mozilla/5.0';
         return undefined;
       }),
     };
@@ -542,6 +574,15 @@ describe('FhirController', () => {
         status: jest.fn().mockReturnThis(),
         json: jest.fn().mockReturnThis(),
       };
+      mockKeycloakAdminService.findClientById.mockResolvedValue({
+        id: 'client-id',
+        clientId: 'app-123',
+        name: 'Test App',
+      });
+      // Reset audit service mocks
+      mockAuditService.logSmartAuth.mockResolvedValue(undefined);
+      mockAuditService.logSmartToken.mockResolvedValue(undefined);
+      mockAuditService.logSmartLaunch.mockResolvedValue(undefined);
     });
 
     it('should redirect to Keycloak authorization URL on valid request', async () => {
@@ -660,14 +701,24 @@ describe('FhirController', () => {
 
     const mockRequest = {
       protocol: 'https',
+      ip: '192.168.1.1',
+      socket: {
+        remoteAddress: '192.168.1.1',
+      },
       get: jest.fn((header: string) => {
         if (header === 'host') return 'api.example.com';
+        if (header === 'user-agent') return 'Mozilla/5.0';
         return undefined;
       }),
     };
 
     beforeEach(() => {
       jest.clearAllMocks();
+      mockKeycloakAdminService.findClientById.mockResolvedValue({
+        id: 'client-id',
+        clientId: 'app-123',
+        name: 'Test App',
+      });
     });
 
     it('should exchange authorization code for tokens successfully', async () => {
@@ -1037,8 +1088,13 @@ describe('FhirController', () => {
 
     const mockRequest = {
       protocol: 'https',
+      ip: '192.168.1.1',
+      socket: {
+        remoteAddress: '192.168.1.1',
+      },
       get: jest.fn((header: string) => {
         if (header === 'host') return 'api.example.com';
+        if (header === 'user-agent') return 'Mozilla/5.0';
         return undefined;
       }),
     };
@@ -1061,6 +1117,15 @@ describe('FhirController', () => {
       mockSmartFhirService.buildAuthorizationUrl.mockReturnValue(
         'https://keycloak.example.com/auth?client_id=app-123',
       );
+      mockKeycloakAdminService.findClientById.mockResolvedValue({
+        id: 'client-id',
+        clientId: 'app-123',
+        name: 'Test App',
+      });
+      // Reset audit service mocks
+      mockAuditService.logSmartAuth.mockResolvedValue(undefined);
+      mockAuditService.logSmartToken.mockResolvedValue(undefined);
+      mockAuditService.logSmartLaunch.mockResolvedValue(undefined);
     });
 
     it('should redirect to authorization endpoint with launch context', async () => {

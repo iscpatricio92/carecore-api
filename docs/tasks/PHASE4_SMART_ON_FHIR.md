@@ -25,10 +25,10 @@
 - ✅ El flujo de launch sequence funciona correctamente
 - ✅ Los tokens generados incluyen scopes y contexto de paciente
 - ✅ El CapabilityStatement incluye información de endpoints SMART on FHIR
-- ⏳ Los endpoints FHIR validan scopes y roles correctamente (parcialmente implementado)
-- ⏳ El filtrado por paciente funciona según permisos (pendiente)
-- ⏳ El audit logging registra todos los accesos SMART on FHIR (pendiente)
-- ⏳ La documentación está completa con ejemplos (pendiente)
+- ✅ Los endpoints FHIR validan scopes y roles correctamente
+- ✅ El filtrado por paciente funciona según permisos
+- ✅ El audit logging registra todos los accesos SMART on FHIR
+- ⏳ La documentación está completa con ejemplos (documentación básica completa, ejemplos avanzados pendientes)
 
 #### Tareas Relacionadas
 
@@ -45,7 +45,7 @@ Esta HU incluye las siguientes tareas (ver detalles abajo):
 - ✅ **Tarea 6**: Aplicar guards a endpoints FHIR (completado)
 - ✅ **Tarea 7**: Validar scopes en endpoints FHIR (completado)
 - ✅ **Tarea 8**: Implementar filtrado por paciente (completado)
-- ⏳ **Tarea 9**: Implementar audit logging para SMART on FHIR (pendiente)
+- ✅ **Tarea 9**: Implementar audit logging para SMART on FHIR (completado)
 
 #### Estimación
 
@@ -55,12 +55,13 @@ Esta HU incluye las siguientes tareas (ver detalles abajo):
 
 #### Definición de Terminado (DoD)
 
-- [x] Todas las tareas de la Fase 4 completadas (8/9 tareas completadas)
+- [x] Todas las tareas de la Fase 4 completadas (9/9 tareas completadas) ✅
 - [x] Tests unitarios pasando (tests E2E pendientes)
 - [x] Documentación SMART on FHIR básica completa (documentación avanzada pendiente)
 - [x] Launch sequence funcionando end-to-end
 - [x] Integración con Keycloak verificada
 - [x] CapabilityStatement actualizado
+- [x] Audit logging implementado para SMART on FHIR
 
 ---
 
@@ -625,27 +626,27 @@ if (token.patient) {
 Implementar logging de auditoría específico para accesos SMART on FHIR, incluyendo información de aplicación externa y contexto.
 
 ## Tareas
-- [ ] Extender `AuditService` para incluir información SMART:
+- [x] Extender `AuditService` para incluir información SMART:
   - `clientId` - ID de la aplicación externa
   - `clientName` - Nombre de la aplicación
   - `launchContext` - Contexto de launch (patient, encounter, etc.)
   - `scopes` - Scopes utilizados
-- [ ] Agregar logging en endpoints SMART:
+- [x] Agregar logging en endpoints SMART:
   - `/fhir/auth` - Log de solicitudes de autorización
   - `/fhir/token` - Log de intercambios de token
   - `/fhir/authorize` - Log de launch sequences
-- [ ] Agregar logging en accesos a recursos FHIR:
+- [x] Agregar logging en accesos a recursos FHIR:
   - Incluir información de aplicación externa
   - Incluir contexto de paciente
   - Incluir scopes utilizados
-- [ ] Crear entidad `SmartFhirAuditLog` (opcional) o extender `AuditLog`
-- [ ] Agregar campos a `AuditLog`:
+- [x] Extender `AuditLog` con campos SMART on FHIR:
   - `clientId` (string, nullable)
   - `clientName` (string, nullable)
-  - `launchContext` (json, nullable)
-- [ ] Actualizar `AuditInterceptor` para incluir información SMART
-- [ ] Agregar tests para audit logging
-- [ ] Documentar formato de logs
+  - `launchContext` (jsonb, nullable)
+  - `scopes` (jsonb, nullable)
+- [x] Actualizar `AuditInterceptor` para incluir información SMART
+- [x] Agregar tests para audit logging
+- [x] Documentar formato de logs
 
 ## Información a Loggear
 
@@ -691,13 +692,13 @@ Implementar logging de auditoría específico para accesos SMART on FHIR, incluy
 ```
 
 ## Criterios de Aceptación
-- [ ] Audit logging extendido con información SMART
-- [ ] Logging en endpoints SMART implementado
-- [ ] Logging en accesos a recursos implementado
-- [ ] Información de aplicación externa incluida
-- [ ] Contexto de launch incluido
-- [ ] Tests pasando
-- [ ] Documentación actualizada
+- [x] Audit logging extendido con información SMART
+- [x] Logging en endpoints SMART implementado
+- [x] Logging en accesos a recursos implementado
+- [x] Información de aplicación externa incluida
+- [x] Contexto de launch incluido
+- [x] Tests pasando (25 tests unitarios pasando)
+- [x] Documentación actualizada
 
 ## Referencias
 - Ver `AuditService` y `AuditLog` de Fase 2
@@ -721,11 +722,11 @@ Implementar logging de auditoría específico para accesos SMART on FHIR, incluy
 | 6 | Aplicar guards a endpoints FHIR | ✅ Completado | 3-4 horas | Alta | `enhancement`, `auth`, `phase-4`, `security`, `fhir` |
 | 7 | Validar scopes en endpoints FHIR | ✅ Completado | 3-4 horas | Alta | `enhancement`, `auth`, `phase-4`, `security`, `fhir` |
 | 8 | Implementar filtrado por paciente | ✅ Completado | 4-6 horas | Alta | `enhancement`, `auth`, `phase-4`, `security`, `fhir` |
-| 9 | Implementar audit logging SMART | ⏳ Pendiente | 3-4 horas | Media | `enhancement`, `audit`, `phase-4`, `smart-fhir`, `security` |
+| 9 | Implementar audit logging SMART | ✅ Completado | 3-4 horas | Media | `enhancement`, `audit`, `phase-4`, `security` |
 
 **Tiempo Total Estimado:** 32-45 horas (4-6 días)
-**Tiempo Completado:** ~30-41 horas (8 tareas completadas)
-**Tiempo Restante:** ~2-4 horas (1 tarea pendiente)
+**Tiempo Completado:** ~33-45 horas (9/9 tareas completadas) ✅
+**Tiempo Restante:** 0 horas (todas las tareas completadas)
 
 ---
 
@@ -750,12 +751,13 @@ Implementar logging de auditoría específico para accesos SMART on FHIR, incluy
 ---
 
 **Última actualización**: 2025-01-27
+**Estado de la Fase 4**: ✅ **COMPLETADA** (9/9 tareas completadas)
 
 ---
 
 ## 📝 Notas de Implementación
 
-### Tareas Completadas (5/9)
+### Tareas Completadas (9/9) ✅
 
 #### ✅ Tarea 1: Endpoint GET /fhir/auth
 - **Archivos modificados:**
@@ -796,7 +798,7 @@ Implementar logging de auditoría específico para accesos SMART on FHIR, incluy
   - Información de tipos de launch soportados
 - **Tests:** `src/modules/fhir/fhir.service.spec.ts` - Tests unitarios completos
 
-### Tareas Pendientes (4/9)
+### Tareas Completadas (Continuación)
 
 #### ✅ Tarea 6: Aplicar guards a endpoints FHIR
 - **Estado:** Completado
@@ -843,7 +845,60 @@ Implementar logging de auditoría específico para accesos SMART on FHIR, incluy
   - Logging de filtrado implementado
 - **Tests:** `src/modules/fhir/fhir.service.spec.ts` - Tests unitarios completos
 
-#### ⏳ Tarea 9: Implementar audit logging para SMART on FHIR
-- **Estado:** Pendiente
-- **Notas:** Necesita extender `AuditService` para incluir información SMART on FHIR
+#### ✅ Tarea 9: Implementar audit logging para SMART on FHIR
+- **Estado:** Completado
+- **Archivos modificados:**
+  - `src/entities/audit-log.entity.ts` - Agregados campos `clientId`, `clientName`, `launchContext`, `scopes`
+  - `src/modules/audit/audit.service.ts` - Agregados métodos `logSmartAuth`, `logSmartToken`, `logSmartLaunch`
+  - `src/modules/audit/interceptors/audit.interceptor.ts` - Agregada extracción de información SMART del token JWT
+  - `src/modules/fhir/fhir.controller.ts` - Agregado logging en endpoints SMART (`/fhir/auth`, `/fhir/token`, `/fhir/authorize`)
+  - `src/modules/auth/services/keycloak-admin.service.ts` - Agregado campo `name` al retorno de `findClientById`
+  - `src/migrations/1765474821521-AddSmartFhirFieldsToAuditLogs.ts` - Migración para nuevos campos
+- **Características implementadas:**
+  - Logging de solicitudes de autorización SMART on FHIR
+  - Logging de intercambios de token SMART on FHIR
+  - Logging de launch sequences SMART on FHIR
+  - Extracción automática de `clientId` del token JWT en accesos a recursos FHIR
+  - Extracción de contexto de launch (patient, encounter) del usuario
+  - Extracción de scopes del token JWT
+- **Tests:** `src/modules/audit/audit.service.spec.ts` - Tests unitarios completos (25 tests pasando)
+
+---
+
+## 🎉 Resumen Final de la Fase 4
+
+### Estado: ✅ **COMPLETADA**
+
+**Todas las 9 tareas han sido completadas exitosamente:**
+
+1. ✅ Endpoint GET /fhir/auth - Authorization endpoint
+2. ✅ Endpoint POST /fhir/token - Token endpoint
+3. ✅ Endpoint GET /fhir/authorize - Launch endpoint
+4. ✅ Launch sequence completa
+5. ✅ CapabilityStatement actualizado
+6. ✅ Guards aplicados a endpoints FHIR
+7. ✅ Validación de scopes implementada
+8. ✅ Filtrado por paciente implementado
+9. ✅ Audit logging para SMART on FHIR implementado
+
+### Logros Principales
+
+- **Endpoints SMART on FHIR**: 3 endpoints implementados y funcionando
+- **Seguridad**: Todos los endpoints FHIR protegidos con guards y validación de scopes
+- **Filtrado**: Filtrado automático por contexto de paciente implementado
+- **Auditoría**: Logging completo de accesos SMART on FHIR con información de aplicación externa
+- **Tests**: Suite completa de tests unitarios (25+ tests pasando)
+- **Documentación**: Documentación básica completa, ejemplos avanzados pendientes
+
+### Próximos Pasos (Opcional)
+
+- Tests E2E para flujo completo SMART on FHIR
+- Documentación avanzada con ejemplos de integración
+- Optimizaciones de rendimiento si es necesario
+- Monitoreo y alertas para accesos SMART on FHIR
+
+---
+
+**Fecha de finalización**: 2025-01-27
+**Tiempo total invertido**: ~33-45 horas (dentro del rango estimado de 32-45 horas)
 

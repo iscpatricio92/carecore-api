@@ -134,6 +134,11 @@ describe('AuditInterceptor', () => {
           requestMethod: 'GET',
           requestPath: '/api/fhir/Patient/123',
           statusCode: 200,
+          // SMART on FHIR fields
+          clientId: null,
+          clientName: null,
+          launchContext: null,
+          scopes: null,
         });
       });
 
@@ -152,6 +157,11 @@ describe('AuditInterceptor', () => {
           requestMethod: 'GET',
           requestPath: '/api/fhir/Patient',
           statusCode: 200,
+          // SMART on FHIR fields
+          clientId: null,
+          clientName: null,
+          launchContext: null,
+          scopes: null,
         });
       });
 
@@ -256,6 +266,11 @@ describe('AuditInterceptor', () => {
           requestPath: '/api/fhir/Patient/123',
           statusCode: 404,
           errorMessage: 'Not found',
+          // SMART on FHIR fields
+          clientId: null,
+          clientName: null,
+          launchContext: null,
+          scopes: null,
         });
       });
 
@@ -286,6 +301,11 @@ describe('AuditInterceptor', () => {
           requestPath: '/api/fhir/.well-known/smart-configuration',
           statusCode: 500,
           errorMessage: 'Server error',
+          // SMART on FHIR fields
+          clientId: null,
+          clientName: null,
+          launchContext: null,
+          scopes: null,
         });
       });
 

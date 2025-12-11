@@ -523,6 +523,7 @@ export class KeycloakAdminService {
   async findClientById(clientId: string): Promise<{
     id?: string;
     clientId?: string;
+    name?: string;
     redirectUris?: string[];
     standardFlowEnabled?: boolean;
   } | null> {
@@ -550,6 +551,7 @@ export class KeycloakAdminService {
       return {
         id: clientDetails.id,
         clientId: clientDetails.clientId,
+        name: clientDetails.name,
         redirectUris: clientDetails.redirectUris || [],
         standardFlowEnabled: clientDetails.standardFlowEnabled,
       };

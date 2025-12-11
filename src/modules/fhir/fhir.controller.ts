@@ -24,11 +24,14 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { Request, Response } from 'express';
+import * as jwt from 'jsonwebtoken';
 
 import { FhirService } from './fhir.service';
 import { SmartFhirService } from './services/smart-fhir.service';
 import { Public } from '../auth/decorators/public.decorator';
 import { PinoLogger } from 'nestjs-pino';
+import { AuditService } from '../audit/audit.service';
+import { KeycloakAdminService } from '../auth/services/keycloak-admin.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { ScopesGuard } from '../auth/guards/scopes.guard';
@@ -60,6 +63,8 @@ export class FhirController {
     private readonly fhirService: FhirService,
     private readonly smartFhirService: SmartFhirService,
     private readonly logger: PinoLogger,
+    private readonly auditService: AuditService,
+    private readonly keycloakAdminService: KeycloakAdminService,
   ) {
     this.logger.setContext(FhirController.name);
   }
@@ -177,9 +182,72 @@ export class FhirController {
         callbackUrl,
       );
 
+      // Get client name for audit logging
+      let clientName: string | null = null;
+      try {
+        const client = await this.keycloakAdminService.findClientById(params.client_id);
+        clientName = client?.name || null;
+      } catch (error) {
+        // Log error but don't fail the request
+        this.logger.warn(
+          { clientId: params.client_id, error },
+          'Failed to get client name for audit',
+        );
+      }
+
+      // Audit log for launch sequence
+      const scopes = params.scope ? params.scope.split(' ').filter((s) => s.length > 0) : [];
+      this.auditService
+        .logSmartLaunch({
+          clientId: params.client_id,
+          clientName,
+          launchToken: params.launch,
+          launchContext: launchContext as unknown as Record<string, unknown>,
+          scopes,
+          ipAddress: req.ip || req.socket.remoteAddress || null,
+          userAgent: req.get('user-agent') || null,
+          statusCode: 302,
+        })
+        .catch((error) => {
+          this.logger.error({ error }, 'Failed to log audit for SMART launch');
+        });
+
       // Redirect to authorization endpoint
       res.redirect(authUrl);
     } catch (error) {
+      // Get client name for audit logging (even on error)
+      let clientName: string | null = null;
+      try {
+        const client = await this.keycloakAdminService.findClientById(params.client_id);
+        clientName = client?.name || null;
+      } catch {
+        // Ignore errors when getting client name
+      }
+
+      // Audit log for failed launch
+      const scopes = params.scope ? params.scope.split(' ').filter((s) => s.length > 0) : [];
+      const statusCode =
+        error instanceof BadRequestException
+          ? 400
+          : error instanceof UnauthorizedException
+            ? 401
+            : 500;
+      this.auditService
+        .logSmartLaunch({
+          clientId: params.client_id,
+          clientName,
+          launchToken: params.launch,
+          launchContext: {},
+          scopes,
+          ipAddress: req.ip || req.socket.remoteAddress || null,
+          userAgent: req.get('user-agent') || null,
+          statusCode,
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        })
+        .catch((err) => {
+          this.logger.error({ error: err }, 'Failed to log audit for SMART launch error');
+        });
+
       // Handle errors and return FHIR OperationOutcome
       if (error instanceof BadRequestException || error instanceof UnauthorizedException) {
         const operationOutcome = error.getResponse();
@@ -275,9 +343,70 @@ export class FhirController {
       // Build Keycloak authorization URL
       const authUrl = this.smartFhirService.buildAuthorizationUrl(params, stateToken, callbackUrl);
 
+      // Get client name for audit logging
+      let clientName: string | null = null;
+      try {
+        const client = await this.keycloakAdminService.findClientById(params.client_id);
+        clientName = client?.name || null;
+      } catch (error) {
+        // Log error but don't fail the request
+        this.logger.warn(
+          { clientId: params.client_id, error },
+          'Failed to get client name for audit',
+        );
+      }
+
+      // Audit log for authorization request
+      const scopes = params.scope ? params.scope.split(' ').filter((s) => s.length > 0) : [];
+      this.auditService
+        .logSmartAuth({
+          clientId: params.client_id,
+          clientName,
+          redirectUri: params.redirect_uri,
+          scopes,
+          ipAddress: req.ip || req.socket.remoteAddress || null,
+          userAgent: req.get('user-agent') || null,
+          statusCode: 302,
+        })
+        .catch((error) => {
+          this.logger.error({ error }, 'Failed to log audit for SMART auth');
+        });
+
       // Redirect to Keycloak for authentication
       res.redirect(authUrl);
     } catch (error) {
+      // Get client name for audit logging (even on error)
+      let clientName: string | null = null;
+      try {
+        const client = await this.keycloakAdminService.findClientById(params.client_id);
+        clientName = client?.name || null;
+      } catch {
+        // Ignore errors when getting client name
+      }
+
+      // Audit log for failed authorization
+      const scopes = params.scope ? params.scope.split(' ').filter((s) => s.length > 0) : [];
+      const statusCode =
+        error instanceof BadRequestException
+          ? 400
+          : error instanceof UnauthorizedException
+            ? 401
+            : 500;
+      this.auditService
+        .logSmartAuth({
+          clientId: params.client_id,
+          clientName,
+          redirectUri: params.redirect_uri,
+          scopes,
+          ipAddress: req.ip || req.socket.remoteAddress || null,
+          userAgent: req.get('user-agent') || null,
+          statusCode,
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        })
+        .catch((err) => {
+          this.logger.error({ error: err }, 'Failed to log audit for SMART auth error');
+        });
+
       // Handle errors and return FHIR OperationOutcome
       if (error instanceof BadRequestException || error instanceof UnauthorizedException) {
         const operationOutcome = error.getResponse();
@@ -410,8 +539,97 @@ export class FhirController {
         tokenResponse.patient = launchContext.patient;
       }
 
+      // Get client name for audit logging
+      let clientName: string | null = null;
+      try {
+        const client = await this.keycloakAdminService.findClientById(tokenParams.client_id);
+        clientName = client?.name || null;
+      } catch (error) {
+        // Log error but don't fail the request
+        this.logger.warn(
+          { clientId: tokenParams.client_id, error },
+          'Failed to get client name for audit',
+        );
+      }
+
+      // Extract clientId from token if available (for audit logging)
+      let tokenClientId: string | null = tokenParams.client_id;
+      try {
+        if (tokenResponse.access_token) {
+          // Decode token without verification to extract claims
+          const decoded = jwt.decode(tokenResponse.access_token, { complete: false });
+          if (decoded && typeof decoded === 'object' && 'azp' in decoded) {
+            // azp (authorized party) is the client ID that requested the token
+            tokenClientId = decoded.azp as string;
+          } else if (decoded && typeof decoded === 'object' && 'aud' in decoded) {
+            // aud (audience) can also contain the client ID
+            const aud = decoded.aud;
+            tokenClientId = Array.isArray(aud) ? aud[0] : (aud as string);
+          }
+        }
+      } catch (error) {
+        // If token decoding fails, use client_id from params
+        this.logger.debug({ error }, 'Failed to extract clientId from token, using params');
+      }
+
+      // Audit log for token exchange
+      const scopes = tokenResponse.scope
+        ? tokenResponse.scope.split(' ').filter((s) => s.length > 0)
+        : [];
+      this.auditService
+        .logSmartToken({
+          clientId: tokenClientId || tokenParams.client_id,
+          clientName,
+          grantType: tokenParams.grant_type || 'authorization_code',
+          launchContext: launchContext
+            ? (launchContext as unknown as Record<string, unknown>)
+            : null,
+          scopes,
+          ipAddress: req?.ip || req?.socket.remoteAddress || null,
+          userAgent: req?.get('user-agent') || null,
+          statusCode: 200,
+        })
+        .catch((error) => {
+          this.logger.error({ error }, 'Failed to log audit for SMART token');
+        });
+
       return tokenResponse;
     } catch (error) {
+      // Get client name for audit logging (even on error)
+      let clientName: string | null = null;
+      const clientId = params.client_id;
+      try {
+        if (clientId) {
+          const client = await this.keycloakAdminService.findClientById(clientId);
+          clientName = client?.name || null;
+        }
+      } catch {
+        // Ignore errors when getting client name
+      }
+
+      // Audit log for failed token exchange
+      const statusCode =
+        error instanceof BadRequestException
+          ? 400
+          : error instanceof UnauthorizedException
+            ? 401
+            : 500;
+      this.auditService
+        .logSmartToken({
+          clientId: clientId || null,
+          clientName,
+          grantType: params.grant_type || 'authorization_code',
+          launchContext: null,
+          scopes: null,
+          ipAddress: req?.ip || req?.socket.remoteAddress || null,
+          userAgent: req?.get('user-agent') || null,
+          statusCode,
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        })
+        .catch((err) => {
+          this.logger.error({ error: err }, 'Failed to log audit for SMART token error');
+        });
+
       // Handle OAuth2 errors (they already have the correct format)
       if (error instanceof BadRequestException || error instanceof UnauthorizedException) {
         const errorResponse = error.getResponse();
