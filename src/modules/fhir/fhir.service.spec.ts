@@ -544,6 +544,78 @@ describe('FhirService', () => {
 
       await expect(service.getPatient('test-patient-id')).rejects.toThrow();
     });
+
+    it('should allow access when patient context matches patient ID', async () => {
+      const user: User = {
+        id: 'app-user',
+        keycloakUserId: 'app-user',
+        username: 'app',
+        email: '',
+        roles: [],
+        patient: 'Patient/test-patient-id', // SMART on FHIR patient context
+      };
+
+      const mockEntity = new PatientEntity();
+      mockEntity.fhirResource = {
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
+        id: 'test-patient-id',
+      } as Patient;
+      mockEntity.patientId = 'test-patient-id';
+
+      mockPatientRepository.findOne.mockResolvedValue(mockEntity);
+
+      const result = await service.getPatient('test-patient-id', user);
+      expect(result).toBeDefined();
+      expect(result.id).toBe('test-patient-id');
+    });
+
+    it('should deny access when patient context does not match patient ID', async () => {
+      const user: User = {
+        id: 'app-user',
+        keycloakUserId: 'app-user',
+        username: 'app',
+        email: '',
+        roles: [],
+        patient: 'Patient/different-patient-id', // Different patient context
+      };
+
+      const mockEntity = new PatientEntity();
+      mockEntity.fhirResource = {
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
+        id: 'test-patient-id',
+      } as Patient;
+      mockEntity.patientId = 'test-patient-id';
+
+      mockPatientRepository.findOne.mockResolvedValue(mockEntity);
+
+      await expect(service.getPatient('test-patient-id', user)).rejects.toThrow(ForbiddenException);
+      expect(logger.warn).toHaveBeenCalled();
+    });
+
+    it('should allow admin access even with patient context (admin bypasses patient context)', async () => {
+      const user: User = {
+        id: 'admin-user',
+        keycloakUserId: 'admin-user',
+        username: 'admin',
+        email: '',
+        roles: [ROLES.ADMIN],
+        patient: 'Patient/different-patient-id', // Patient context
+      };
+
+      const mockEntity = new PatientEntity();
+      mockEntity.fhirResource = {
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
+        id: 'test-patient-id',
+      } as Patient;
+      mockEntity.patientId = 'test-patient-id';
+
+      mockPatientRepository.findOne.mockResolvedValue(mockEntity);
+
+      // Admin should bypass patient context filtering
+      const result = await service.getPatient('test-patient-id', user);
+      expect(result).toBeDefined();
+      expect(result.id).toBe('test-patient-id');
+    });
   });
 
   describe('searchPatients', () => {
@@ -646,6 +718,67 @@ describe('FhirService', () => {
 
       // The service adds a condition that always evaluates to false
       expect(mockQueryBuilder.andWhere).toHaveBeenCalled();
+    });
+
+    it('should filter by SMART on FHIR patient context when present', async () => {
+      const user: User = {
+        id: 'app-user',
+        keycloakUserId: 'app-user',
+        username: 'app',
+        email: '',
+        roles: [],
+        patient: 'Patient/123', // SMART on FHIR patient context
+      };
+
+      await service.searchPatients({}, user);
+
+      // Should filter by patient context, not by role
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'patient.patientId = :tokenPatientId',
+        { tokenPatientId: '123' },
+      );
+      expect(logger.debug).toHaveBeenCalledWith(
+        { tokenPatientId: '123' },
+        'Filtering patients by SMART on FHIR patient context',
+      );
+    });
+
+    it('should filter by SMART on FHIR patient context with just patient ID', async () => {
+      const user: User = {
+        id: 'app-user',
+        keycloakUserId: 'app-user',
+        username: 'app',
+        email: '',
+        roles: [],
+        patient: '456', // Just patient ID, not "Patient/456"
+      };
+
+      await service.searchPatients({}, user);
+
+      // Should extract patient ID correctly
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'patient.patientId = :tokenPatientId',
+        { tokenPatientId: '456' },
+      );
+    });
+
+    it('should allow admin to bypass SMART on FHIR patient context filtering', async () => {
+      const user: User = {
+        id: 'admin-user',
+        keycloakUserId: 'admin-user',
+        username: 'admin',
+        email: '',
+        roles: [ROLES.ADMIN], // Admin normally sees all patients
+        patient: 'Patient/789', // Even with patient context, admin should see all
+      };
+
+      await service.searchPatients({}, user);
+
+      // Admin should bypass patient context filtering
+      expect(mockQueryBuilder.andWhere).not.toHaveBeenCalledWith(
+        'patient.patientId = :tokenPatientId',
+        { tokenPatientId: '789' },
+      );
     });
 
     it('should allow patient to access their own patient record', async () => {
@@ -1616,6 +1749,94 @@ describe('FhirService', () => {
 
       await expect(service.getEncounter('test-encounter-id')).rejects.toThrow();
     });
+
+    it('should allow access when patient context matches encounter subject', async () => {
+      const user: User = {
+        id: 'app-user',
+        keycloakUserId: 'app-user',
+        username: 'app',
+        email: '',
+        roles: [],
+        patient: 'Patient/test-patient-id', // SMART on FHIR patient context
+      };
+
+      const mockEntity = new EncounterEntity();
+      mockEntity.fhirResource = {
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
+        id: 'test-encounter-id',
+        status: 'finished',
+        subject: {
+          reference: 'Patient/test-patient-id',
+        },
+      } as Encounter;
+      mockEntity.encounterId = 'test-encounter-id';
+      mockEntity.subjectReference = 'Patient/test-patient-id';
+
+      mockEncounterRepository.findOne.mockResolvedValue(mockEntity);
+
+      const result = await service.getEncounter('test-encounter-id', user);
+      expect(result).toBeDefined();
+      expect(result.id).toBe('test-encounter-id');
+    });
+
+    it('should deny access when patient context does not match encounter subject', async () => {
+      const user: User = {
+        id: 'app-user',
+        keycloakUserId: 'app-user',
+        username: 'app',
+        email: '',
+        roles: [],
+        patient: 'Patient/different-patient-id', // Different patient context
+      };
+
+      const mockEntity = new EncounterEntity();
+      mockEntity.fhirResource = {
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
+        id: 'test-encounter-id',
+        status: 'finished',
+        subject: {
+          reference: 'Patient/test-patient-id',
+        },
+      } as Encounter;
+      mockEntity.encounterId = 'test-encounter-id';
+      mockEntity.subjectReference = 'Patient/test-patient-id';
+
+      mockEncounterRepository.findOne.mockResolvedValue(mockEntity);
+
+      await expect(service.getEncounter('test-encounter-id', user)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(logger.warn).toHaveBeenCalled();
+    });
+
+    it('should allow admin access to encounters even with patient context', async () => {
+      const user: User = {
+        id: 'admin-user',
+        keycloakUserId: 'admin-user',
+        username: 'admin',
+        email: '',
+        roles: [ROLES.ADMIN],
+        patient: 'Patient/different-patient-id', // Patient context
+      };
+
+      const mockEntity = new EncounterEntity();
+      mockEntity.fhirResource = {
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
+        id: 'test-encounter-id',
+        status: 'finished',
+        subject: {
+          reference: 'Patient/test-patient-id',
+        },
+      } as Encounter;
+      mockEntity.encounterId = 'test-encounter-id';
+      mockEntity.subjectReference = 'Patient/test-patient-id';
+
+      mockEncounterRepository.findOne.mockResolvedValue(mockEntity);
+
+      // Admin should bypass patient context filtering
+      const result = await service.getEncounter('test-encounter-id', user);
+      expect(result).toBeDefined();
+    });
   });
 
   describe('searchEncounters', () => {
@@ -1765,6 +1986,82 @@ describe('FhirService', () => {
 
       expect(result.entries.length).toBe(1);
       expect(result.total).toBe(5);
+    });
+
+    it('should filter encounters by SMART on FHIR patient context when present', async () => {
+      const user: User = {
+        id: 'app-user',
+        keycloakUserId: 'app-user',
+        username: 'app',
+        email: '',
+        roles: [],
+        patient: 'Patient/123', // SMART on FHIR patient context
+      };
+
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(1),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([
+          {
+            fhirResource: {
+              resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
+              id: '1',
+              subject: { reference: 'Patient/123' },
+            },
+          },
+        ]),
+      };
+      mockEncounterRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      await service.searchEncounters({}, user);
+
+      // Should filter by patient context
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'encounter.subjectReference = :tokenPatientRef',
+        { tokenPatientRef: 'Patient/123' },
+      );
+      expect(logger.debug).toHaveBeenCalledWith(
+        { tokenPatientId: '123' },
+        'Filtering encounters by SMART on FHIR patient context',
+      );
+    });
+
+    it('should not apply subject filter when patient context is present', async () => {
+      const user: User = {
+        id: 'app-user',
+        keycloakUserId: 'app-user',
+        username: 'app',
+        email: '',
+        roles: [],
+        patient: 'Patient/123', // SMART on FHIR patient context
+      };
+
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(1),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([]),
+      };
+      mockEncounterRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      await service.searchEncounters({ subject: 'Patient/456' }, user);
+
+      // Should filter by patient context, not by subject parameter
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'encounter.subjectReference = :tokenPatientRef',
+        { tokenPatientRef: 'Patient/123' },
+      );
+      // Should NOT apply subject filter since patient context takes precedence
+      const subjectFilterCall = mockQueryBuilder.andWhere.mock.calls.find((call: unknown[]) => {
+        const params = call[1] as { subject?: string };
+        return params?.subject === 'Patient/456';
+      });
+      expect(subjectFilterCall).toBeUndefined();
     });
   });
 

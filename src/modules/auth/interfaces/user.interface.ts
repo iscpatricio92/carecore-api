@@ -59,4 +59,20 @@ export interface User {
    * Format: space-separated string (e.g., "patient:read patient:write")
    */
   scopes?: string[];
+
+  /**
+   * Patient context from SMART on FHIR token
+   * Extracted from 'patient' claim in the JWT token
+   * Format: "Patient/123" or just "123"
+   * This indicates the patient context for the current session
+   */
+  patient?: string;
+
+  /**
+   * FHIR User context from SMART on FHIR token
+   * Extracted from 'fhirUser' claim in the JWT token
+   * Format: "Patient/123" or "Practitioner/456"
+   * This indicates the FHIR user context for the current session
+   */
+  fhirUser?: string;
 }

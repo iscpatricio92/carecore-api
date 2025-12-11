@@ -243,8 +243,24 @@ export class FhirService {
   // ========== Authorization Helper Methods ==========
 
   /**
+   * Extracts patient ID from SMART on FHIR patient context
+   * Handles formats like "Patient/123" or just "123"
+   * @param patientContext - Patient context from token (can be "Patient/123" or "123")
+   * @returns Patient ID or undefined if not a valid patient context
+   */
+  private extractPatientIdFromContext(patientContext?: string): string | undefined {
+    if (!patientContext) {
+      return undefined;
+    }
+
+    // Remove "Patient/" prefix if present
+    return patientContext.replace(/^Patient\//, '');
+  }
+
+  /**
    * Checks if user has permission to access a patient resource
    * Combines role-based and scope-based authorization
+   * Also considers SMART on FHIR patient context for automatic filtering
    * @param user - Current authenticated user
    * @param patientEntity - Patient entity to check access for
    * @param action - Action type ('read' or 'write')
@@ -255,10 +271,17 @@ export class FhirService {
     patientEntity: PatientEntity,
     action: string = FHIR_ACTIONS.READ,
   ): boolean {
-    // Check role-based permissions first (more permissive)
-    // Admin can access all patients
+    // Admin can access all patients (bypasses patient context)
     if (user.roles.includes(ROLES.ADMIN)) {
       return true;
+    }
+
+    // Check SMART on FHIR patient context
+    // If token has patient context, user can only access that specific patient
+    const tokenPatientId = this.extractPatientIdFromContext(user.patient);
+    if (tokenPatientId) {
+      // Token is scoped to a specific patient - only allow access to that patient
+      return patientEntity.patientId === tokenPatientId;
     }
 
     // Patient can only access their own records
@@ -303,7 +326,7 @@ export class FhirService {
   }
 
   /**
-   * Applies role-based filtering to patient query builder
+   * Applies role-based and SMART on FHIR patient context filtering to patient query builder
    * @param queryBuilder - TypeORM query builder
    * @param user - Current authenticated user
    */
@@ -311,9 +334,21 @@ export class FhirService {
     queryBuilder: SelectQueryBuilder<PatientEntity>,
     user: User,
   ): void {
-    // Admin can see all patients
+    // Admin can see all patients (bypasses patient context)
     if (user.roles.includes(ROLES.ADMIN)) {
       return; // No filter needed
+    }
+
+    // Check SMART on FHIR patient context
+    // If token has patient context, filter to that specific patient only
+    const tokenPatientId = this.extractPatientIdFromContext(user.patient);
+    if (tokenPatientId) {
+      // Token is scoped to a specific patient - filter to that patient only
+      queryBuilder.andWhere('patient.patientId = :tokenPatientId', {
+        tokenPatientId,
+      });
+      this.logger.debug({ tokenPatientId }, 'Filtering patients by SMART on FHIR patient context');
+      return;
     }
 
     // Patient can only see their own records
@@ -327,13 +362,13 @@ export class FhirService {
     // Practitioners can see all active patients (for now)
     // TODO: In the future, filter by assigned patients or consent
     if (user.roles.includes(ROLES.PRACTITIONER)) {
-      queryBuilder.andWhere('patientEntity.active = :active', { active: true });
+      queryBuilder.andWhere('patient.active = :active', { active: true });
       return;
     }
 
     // Other roles (viewer, lab, insurer) need explicit consent
     // For now, return empty results (will be implemented with Consent resource)
-    queryBuilder.andWhere('patientEntity.id = :id', { id: '0' }); // Always false condition
+    queryBuilder.andWhere('patient.id = :id', { id: '0' }); // Always false condition
   }
 
   // ========== Patient Methods ==========
@@ -825,9 +860,55 @@ export class FhirService {
   }
 
   /**
-   * Gets an Encounter by ID (FHIR resource ID, not database UUID)
+   * Checks if user has permission to access an encounter resource
+   * Validates that encounter belongs to patient context if present
+   * @param user - Current authenticated user
+   * @param encounterEntity - Encounter entity to check access for
+   * @returns true if user has access, false otherwise
    */
-  async getEncounter(id: string): Promise<Encounter> {
+  private canAccessEncounter(user: User, encounterEntity: EncounterEntity): boolean {
+    // Admin can access all encounters (bypasses patient context)
+    if (user.roles.includes(ROLES.ADMIN)) {
+      return true;
+    }
+
+    // Check SMART on FHIR patient context
+    const tokenPatientId = this.extractPatientIdFromContext(user.patient);
+    if (tokenPatientId) {
+      // Token is scoped to a specific patient - only allow access to encounters for that patient
+      const encounterPatientId = encounterEntity.subjectReference?.replace(/^Patient\//, '');
+      return encounterPatientId === tokenPatientId;
+    }
+
+    // Practitioners can access all encounters (for now)
+    // TODO: In the future, filter by assigned patients or consent
+    if (user.roles.includes(ROLES.PRACTITIONER)) {
+      return true;
+    }
+
+    // Patient can only access their own encounters
+    // For now, we'll allow if the encounter references a patient
+    // In a full implementation, we'd check if the patient's keycloakUserId matches
+    if (user.roles.includes(ROLES.PATIENT)) {
+      // TODO: Implement full patient ownership check by looking up patient entity
+      return true; // Simplified for now - would need patient lookup
+    }
+
+    // Check scope-based permissions
+    const hasScopePermission = this.scopePermissionService.hasResourcePermission(
+      user,
+      FHIR_RESOURCE_TYPES.ENCOUNTER,
+      FHIR_ACTIONS.READ,
+    );
+
+    return hasScopePermission;
+  }
+
+  /**
+   * Gets an Encounter by ID (FHIR resource ID, not database UUID)
+   * Applies patient context filtering if present
+   */
+  async getEncounter(id: string, user?: User): Promise<Encounter> {
     const entity = await this.encounterRepository.findOne({
       where: { encounterId: id, deletedAt: IsNull() },
     });
@@ -838,26 +919,55 @@ export class FhirService {
       );
     }
 
+    // Check access permissions if user is provided
+    if (user && !this.canAccessEncounter(user, entity)) {
+      this.logger.warn(
+        { encounterId: id, userId: user.id, patient: user.patient },
+        'Access denied to encounter',
+      );
+      throw new ForbiddenException('You do not have permission to access this encounter');
+    }
+
     return this.entityToEncounter(entity);
   }
 
   /**
    * Searches Encounters with optional filters
+   * Applies patient context filtering if present in user token
    */
-  async searchEncounters(params: {
-    page?: number;
-    limit?: number;
-    subject?: string; // Patient reference
-    status?: string;
-    date?: string;
-  }): Promise<{ total: number; entries: Encounter[] }> {
+  async searchEncounters(
+    params: {
+      page?: number;
+      limit?: number;
+      subject?: string; // Patient reference
+      status?: string;
+      date?: string;
+    },
+    user?: User,
+  ): Promise<{ total: number; entries: Encounter[] }> {
     const { page = 1, limit = 10, subject, status, date } = params;
     const queryBuilder = this.encounterRepository
       .createQueryBuilder('encounter')
       .where('encounter.deletedAt IS NULL');
 
-    // Filter by subject (using indexed field)
-    if (subject) {
+    // Apply SMART on FHIR patient context filtering (admin bypasses this)
+    const tokenPatientId =
+      user && !user.roles.includes(ROLES.ADMIN)
+        ? this.extractPatientIdFromContext(user.patient)
+        : undefined;
+    if (tokenPatientId) {
+      // Token is scoped to a specific patient - filter to encounters for that patient only
+      queryBuilder.andWhere('encounter.subjectReference = :tokenPatientRef', {
+        tokenPatientRef: `Patient/${tokenPatientId}`,
+      });
+      this.logger.debug(
+        { tokenPatientId },
+        'Filtering encounters by SMART on FHIR patient context',
+      );
+    }
+
+    // Filter by subject (using indexed field) - only if not already filtered by patient context
+    if (subject && !tokenPatientId) {
       queryBuilder.andWhere('encounter.subjectReference = :subject', {
         subject: subject.includes('/') ? subject : `Patient/${subject}`,
       });

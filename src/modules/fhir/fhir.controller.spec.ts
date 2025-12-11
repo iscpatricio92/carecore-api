@@ -433,10 +433,10 @@ describe('FhirController', () => {
 
       mockFhirService.getEncounter.mockResolvedValue(expectedResult);
 
-      const result = await controller.getEncounter(encounterId);
+      const result = await controller.getEncounter(encounterId, mockUser);
 
       expect(result).toEqual(expectedResult);
-      expect(service.getEncounter).toHaveBeenCalledWith(encounterId);
+      expect(service.getEncounter).toHaveBeenCalledWith(encounterId, mockUser);
     });
   });
 
@@ -461,15 +461,18 @@ describe('FhirController', () => {
 
       mockFhirService.searchEncounters.mockResolvedValue(expectedResult);
 
-      const result = await controller.searchEncounters(pagination, subject, status, date);
+      const result = await controller.searchEncounters(pagination, subject, status, date, mockUser);
 
       expect(result).toEqual(expectedResult);
-      expect(service.searchEncounters).toHaveBeenCalledWith({
-        ...pagination,
-        subject,
-        status,
-        date,
-      });
+      expect(service.searchEncounters).toHaveBeenCalledWith(
+        {
+          ...pagination,
+          subject,
+          status,
+          date,
+        },
+        mockUser,
+      );
     });
   });
 

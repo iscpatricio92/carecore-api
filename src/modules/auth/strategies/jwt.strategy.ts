@@ -134,6 +134,30 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     const scopeString = payload.scope || payload.scp || '';
     const scopes = scopeString ? scopeString.split(' ').filter((s: string) => s.length > 0) : [];
 
+    // Extract SMART on FHIR patient context from token
+    // Can be in 'patient' claim (format: "Patient/123" or "123")
+    // Or in 'fhirUser' claim if it's a Patient reference
+    let patientContext: string | undefined;
+    if (payload.patient) {
+      // Extract patient ID from "Patient/123" format or use as-is if just ID
+      patientContext = payload.patient.toString().replace(/^Patient\//, '');
+    } else if (payload.fhirUser) {
+      // Extract patient ID from fhirUser if it's a Patient reference
+      const fhirUser = payload.fhirUser.toString();
+      if (fhirUser.startsWith('Patient/')) {
+        patientContext = fhirUser.replace(/^Patient\//, '');
+      }
+    } else if (scopeString) {
+      // Try to extract from scopes (e.g., "patient/123.read")
+      const patientScopeMatch = scopeString.match(/patient\/([^.\s]+)/);
+      if (patientScopeMatch) {
+        patientContext = patientScopeMatch[1];
+      }
+    }
+
+    // Extract fhirUser context (can be Patient or Practitioner)
+    const fhirUserContext = payload.fhirUser?.toString();
+
     const user: User = {
       id: keycloakUserId,
       keycloakUserId,
@@ -144,6 +168,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       givenName: payload.given_name,
       familyName: payload.family_name,
       scopes,
+      patient: patientContext,
+      fhirUser: fhirUserContext,
     };
 
     // Validate required fields

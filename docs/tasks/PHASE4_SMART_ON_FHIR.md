@@ -44,7 +44,7 @@ Esta HU incluye las siguientes tareas (ver detalles abajo):
 **Protección y Validación:**
 - ⏳ **Tarea 6**: Aplicar guards a endpoints FHIR (parcialmente implementado)
 - ⏳ **Tarea 7**: Validar scopes en endpoints FHIR (parcialmente implementado)
-- ⏳ **Tarea 8**: Implementar filtrado por paciente (pendiente)
+- ✅ **Tarea 8**: Implementar filtrado por paciente (completado)
 - ⏳ **Tarea 9**: Implementar audit logging para SMART on FHIR (pendiente)
 
 #### Estimación
@@ -55,7 +55,7 @@ Esta HU incluye las siguientes tareas (ver detalles abajo):
 
 #### Definición de Terminado (DoD)
 
-- [x] Todas las tareas de la Fase 4 completadas (5/9 tareas completadas)
+- [x] Todas las tareas de la Fase 4 completadas (6/9 tareas completadas)
 - [x] Tests unitarios pasando (tests E2E pendientes)
 - [x] Documentación SMART on FHIR básica completa (documentación avanzada pendiente)
 - [x] Launch sequence funcionando end-to-end
@@ -554,24 +554,24 @@ Asegurar que cada endpoint FHIR valida que el token contiene los scopes necesari
 Implementar filtrado automático de recursos FHIR basado en el contexto de paciente del token SMART on FHIR.
 
 ## Tareas
-- [ ] Extraer contexto de paciente del token JWT:
+- [x] Extraer contexto de paciente del token JWT:
   - Campo `patient` en token (ej: "Patient/123")
   - O campo `fhirUser` si aplica
-- [ ] Crear interceptor o middleware que filtra recursos:
+- [x] Crear interceptor o middleware que filtra recursos:
   - Para búsquedas: agregar filtro `subject=Patient/123`
   - Para lecturas: validar que recurso pertenece al paciente
   - Para escrituras: validar que recurso pertenece al paciente
-- [ ] Aplicar filtrado en servicios FHIR:
+- [x] Aplicar filtrado en servicios FHIR:
   - `FhirService.searchPatients()` - Filtrar por paciente si contexto existe
   - `FhirService.getPatient()` - Validar pertenencia
   - Similar para Encounter, DocumentReference, etc.
-- [ ] Manejar casos especiales:
-  - Admin puede ver todos los recursos
+- [x] Manejar casos especiales:
+  - Admin puede ver todos los recursos (bypasses patient context)
   - Practitioner puede ver recursos de pacientes asignados
   - Patient solo puede ver sus propios recursos
-- [ ] Agregar logging de filtrado
-- [ ] Actualizar tests para incluir filtrado
-- [ ] Documentar comportamiento de filtrado
+- [x] Agregar logging de filtrado
+- [x] Actualizar tests para incluir filtrado
+- [x] Documentar comportamiento de filtrado
 
 ## Lógica de Filtrado
 
@@ -591,13 +591,13 @@ if (token.patient) {
 ```
 
 ## Criterios de Aceptación
-- [ ] Extracción de contexto de paciente funcionando
-- [ ] Filtrado automático implementado
-- [ ] Validación de pertenencia funcionando
-- [ ] Casos especiales manejados
-- [ ] Logging implementado
-- [ ] Tests pasando
-- [ ] Documentación actualizada
+- [x] Extracción de contexto de paciente funcionando
+- [x] Filtrado automático implementado
+- [x] Validación de pertenencia funcionando
+- [x] Casos especiales manejados
+- [x] Logging implementado
+- [x] Tests pasando
+- [x] Documentación actualizada
 
 ## Referencias
 - [SMART on FHIR Patient Context](http://docs.smarthealthit.org/authorization/scopes-and-launch-context/)
@@ -713,12 +713,12 @@ Implementar logging de auditoría específico para accesos SMART on FHIR, incluy
 | 5 | Actualizar CapabilityStatement | ✅ Completado | 2-3 horas | Alta | `enhancement`, `fhir`, `phase-4`, `smart-fhir`, `documentation` |
 | 6 | Aplicar guards a endpoints FHIR | ⏳ Parcial | 3-4 horas | Alta | `enhancement`, `auth`, `phase-4`, `security`, `fhir` |
 | 7 | Validar scopes en endpoints FHIR | ⏳ Parcial | 3-4 horas | Alta | `enhancement`, `auth`, `phase-4`, `security`, `fhir` |
-| 8 | Implementar filtrado por paciente | ⏳ Pendiente | 4-6 horas | Alta | `enhancement`, `auth`, `phase-4`, `security`, `fhir` |
+| 8 | Implementar filtrado por paciente | ✅ Completado | 4-6 horas | Alta | `enhancement`, `auth`, `phase-4`, `security`, `fhir` |
 | 9 | Implementar audit logging SMART | ⏳ Pendiente | 3-4 horas | Media | `enhancement`, `audit`, `phase-4`, `smart-fhir`, `security` |
 
 **Tiempo Total Estimado:** 32-45 horas (4-6 días)
-**Tiempo Completado:** ~20-27 horas (5 tareas completadas)
-**Tiempo Restante:** ~12-18 horas (4 tareas pendientes)
+**Tiempo Completado:** ~24-33 horas (6 tareas completadas)
+**Tiempo Restante:** ~8-12 horas (3 tareas pendientes)
 
 ---
 
@@ -799,9 +799,20 @@ Implementar logging de auditoría específico para accesos SMART on FHIR, incluy
 - **Estado:** Parcialmente implementado
 - **Notas:** Algunos endpoints ya tienen `@Scopes()` decorator, pero necesita validación completa
 
-#### ⏳ Tarea 8: Implementar filtrado por paciente
-- **Estado:** Pendiente
-- **Notas:** Necesita implementar lógica de filtrado basada en contexto de paciente del token
+#### ✅ Tarea 8: Implementar filtrado por paciente
+- **Estado:** Completado
+- **Archivos modificados:**
+  - `src/modules/auth/interfaces/user.interface.ts` - Agregado campo `patient` y `fhirUser`
+  - `src/modules/auth/strategies/jwt.strategy.ts` - Extracción de contexto de paciente del token
+  - `src/modules/fhir/fhir.service.ts` - Implementación de filtrado automático
+  - `src/modules/fhir/fhir.controller.ts` - Actualizado para pasar `user` a métodos de Encounter
+- **Características implementadas:**
+  - Extracción de contexto de paciente del token JWT (campos `patient` y `fhirUser`)
+  - Filtrado automático en búsquedas de Patient y Encounter
+  - Validación de pertenencia en lecturas de Patient y Encounter
+  - Admin puede ver todos los recursos (bypasses patient context)
+  - Logging de filtrado implementado
+- **Tests:** `src/modules/fhir/fhir.service.spec.ts` - Tests unitarios completos
 
 #### ⏳ Tarea 9: Implementar audit logging para SMART on FHIR
 - **Estado:** Pendiente

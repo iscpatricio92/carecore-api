@@ -663,8 +663,8 @@ export class FhirController {
     description: 'Forbidden - Insufficient scopes (encounter:read required)',
   })
   @ApiResponse({ status: 404, description: 'Encounter not found' })
-  getEncounter(@Param('id') id: string): Promise<Encounter> {
-    return this.fhirService.getEncounter(id);
+  getEncounter(@Param('id') id: string, @CurrentUser() user: User): Promise<Encounter> {
+    return this.fhirService.getEncounter(id, user);
   }
 
   @Get('Encounter')
@@ -698,13 +698,17 @@ export class FhirController {
     @Query('subject') subject?: string,
     @Query('status') status?: string,
     @Query('date') date?: string,
+    @CurrentUser() user?: User,
   ): Promise<{ total: number; entries: Encounter[] }> {
-    return this.fhirService.searchEncounters({
-      ...pagination,
-      subject,
-      status,
-      date,
-    });
+    return this.fhirService.searchEncounters(
+      {
+        ...pagination,
+        subject,
+        status,
+        date,
+      },
+      user,
+    );
   }
 
   @Put('Encounter/:id')
