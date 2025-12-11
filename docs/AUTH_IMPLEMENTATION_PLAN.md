@@ -752,43 +752,43 @@ CREATE TABLE practitioner_verifications (
 #### 4.1 SMART on FHIR Launch Sequence
 
 **Tareas:**
-- [ ] Implementar endpoint `GET /fhir/auth` - Authorization endpoint
-- [ ] Implementar endpoint `POST /fhir/token` - Token endpoint
-- [ ] Implementar endpoint `GET /fhir/authorize` - Launch endpoint
-- [ ] Implementar flujo SMART on FHIR completo
-- [ ] Actualizar CapabilityStatement con endpoints de auth
-- [ ] Documentar flujo SMART on FHIR
+- [x] Implementar endpoint `GET /fhir/auth` - Authorization endpoint ✅
+- [x] Implementar endpoint `POST /fhir/token` - Token endpoint ✅
+- [x] Implementar endpoint `GET /fhir/authorize` - Launch endpoint ✅
+- [x] Implementar flujo SMART on FHIR completo ✅
+- [x] Actualizar CapabilityStatement con endpoints de auth ✅
+- [x] Documentar flujo SMART on FHIR (documentación básica completa) ✅
 
 **Entregables:**
-- Endpoints SMART on FHIR funcionales
-- Flujo completo de launch
-- CapabilityStatement actualizado
+- Endpoints SMART on FHIR funcionales ✅
+- Flujo completo de launch ✅
+- CapabilityStatement actualizado ✅
 
 **Criterios de aceptación:**
-- Launch sequence funciona
-- Tokens generados correctamente
-- Integración con Keycloak completa
+- Launch sequence funciona ✅
+- Tokens generados correctamente ✅
+- Integración con Keycloak completa ✅
 
 ---
 
 #### 4.2 Protección de Endpoints FHIR
 
 **Tareas:**
-- [ ] Aplicar guards a todos los endpoints FHIR
-- [ ] Validar scopes en cada endpoint
-- [ ] Validar roles según recurso
-- [ ] Implementar filtrado por paciente (solo ver sus propios datos)
-- [ ] Logging de accesos a recursos FHIR
+- [x] Aplicar guards a todos los endpoints FHIR ✅
+- [x] Validar scopes en cada endpoint ✅
+- [x] Validar roles según recurso ✅
+- [x] Implementar filtrado por paciente (solo ver sus propios datos) ✅
+- [x] Logging de accesos a recursos FHIR (incluyendo información SMART on FHIR) ✅
 
 **Entregables:**
-- Todos los endpoints FHIR protegidos
-- Validación de permisos funcional
-- Audit logging de accesos
+- Todos los endpoints FHIR protegidos ✅
+- Validación de permisos funcional ✅
+- Audit logging de accesos (con información SMART on FHIR) ✅
 
 **Criterios de aceptación:**
-- Endpoints requieren autenticación
-- Permisos validados correctamente
-- Logs de acceso generados
+- Endpoints requieren autenticación ✅
+- Permisos validados correctamente ✅
+- Logs de acceso generados (con información SMART on FHIR) ✅
 
 ---
 
@@ -955,16 +955,16 @@ Fase 1.8: Documentar setup de Keycloak
 - [x] **3.13** Crear decorador `@Scopes()` ✅
 - [x] **3.14** Mapear scopes a permisos FHIR ✅
 
-### Fase 4: SMART on FHIR
-- [ ] **4.1** Implementar endpoint `/fhir/auth`
-- [ ] **4.2** Implementar endpoint `/fhir/token`
-- [ ] **4.3** Implementar endpoint `/fhir/authorize`
-- [ ] **4.4** Implementar launch sequence
-- [ ] **4.5** Actualizar CapabilityStatement
-- [ ] **4.6** Aplicar guards a endpoints FHIR
-- [ ] **4.7** Validar scopes en endpoints
-- [ ] **4.8** Implementar filtrado por paciente
-- [ ] **4.9** Implementar audit logging
+### Fase 4: SMART on FHIR ✅ COMPLETADA
+- [x] **4.1** Implementar endpoint `/fhir/auth` ✅
+- [x] **4.2** Implementar endpoint `/fhir/token` ✅
+- [x] **4.3** Implementar endpoint `/fhir/authorize` ✅
+- [x] **4.4** Implementar launch sequence ✅
+- [x] **4.5** Actualizar CapabilityStatement ✅
+- [x] **4.6** Aplicar guards a endpoints FHIR ✅
+- [x] **4.7** Validar scopes en endpoints FHIR ✅
+- [x] **4.8** Implementar filtrado por paciente ✅
+- [x] **4.9** Implementar audit logging para SMART on FHIR ✅
 
 ### Fase 5: Testing y Documentación
 - [ ] **5.1** Tests unitarios módulo auth

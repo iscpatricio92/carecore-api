@@ -1,5 +1,6 @@
 import { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { PinoLogger } from 'nestjs-pino';
 
 import { ScopesGuard } from './scopes.guard';
 import { InsufficientScopesException } from '../exceptions/insufficient-scopes.exception';
@@ -9,6 +10,7 @@ import { SCOPES_KEY } from '../decorators/scopes.decorator';
 describe('ScopesGuard', () => {
   let guard: ScopesGuard;
   let reflector: Reflector;
+  let mockLogger: jest.Mocked<PinoLogger>;
 
   const mockUser: User = {
     id: 'user-123',
@@ -40,7 +42,14 @@ describe('ScopesGuard', () => {
 
   beforeEach(() => {
     reflector = new Reflector();
-    guard = new ScopesGuard(reflector);
+    mockLogger = {
+      setContext: jest.fn(),
+      debug: jest.fn(),
+      warn: jest.fn(),
+      info: jest.fn(),
+      error: jest.fn(),
+    } as unknown as jest.Mocked<PinoLogger>;
+    guard = new ScopesGuard(reflector, mockLogger);
   });
 
   afterEach(() => {
@@ -74,6 +83,14 @@ describe('ScopesGuard', () => {
       const result = guard.canActivate(context);
 
       expect(result).toBe(true);
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        {
+          userId: mockUser.id,
+          username: mockUser.username,
+          requiredScopes: ['patient:read'],
+        },
+        'Scope validation successful',
+      );
     });
 
     it('should allow access when user has all required scopes (multiple)', () => {
@@ -135,6 +152,16 @@ describe('ScopesGuard', () => {
           requiredScopes: ['patient:read', 'consent:read'],
           userScopes: ['patient:read', 'patient:write', 'document:read'],
         });
+        expect(mockLogger.warn).toHaveBeenCalledWith(
+          {
+            userId: mockUser.id,
+            username: mockUser.username,
+            requiredScopes: ['patient:read', 'consent:read'],
+            userScopes: ['patient:read', 'patient:write', 'document:read'],
+            missingScopes: ['consent:read'],
+          },
+          'Scope validation failed - user missing required scopes',
+        );
       }
     });
 

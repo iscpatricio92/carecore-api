@@ -99,6 +99,11 @@ describe('AuditService', () => {
         statusCode: 200,
         changes: null,
         errorMessage: null,
+        // SMART on FHIR fields
+        clientId: null,
+        clientName: null,
+        launchContext: null,
+        scopes: null,
       });
       expect(auditLogRepository.save).toHaveBeenCalledWith(mockAuditLog);
     });
@@ -133,6 +138,11 @@ describe('AuditService', () => {
         statusCode: null,
         changes: null,
         errorMessage: null,
+        // SMART on FHIR fields
+        clientId: null,
+        clientName: null,
+        launchContext: null,
+        scopes: null,
       });
       expect(auditLogRepository.save).toHaveBeenCalled();
     });
@@ -168,6 +178,11 @@ describe('AuditService', () => {
         statusCode: null,
         changes: null,
         errorMessage: null,
+        // SMART on FHIR fields
+        clientId: null,
+        clientName: null,
+        launchContext: null,
+        scopes: null,
       });
       expect(auditLogRepository.save).toHaveBeenCalled();
     });
@@ -260,6 +275,11 @@ describe('AuditService', () => {
         statusCode: 201,
         changes: { name: 'John Doe' },
         errorMessage: null,
+        // SMART on FHIR fields
+        clientId: null,
+        clientName: null,
+        launchContext: null,
+        scopes: null,
       });
       expect(auditLogRepository.save).toHaveBeenCalled();
     });
@@ -347,6 +367,11 @@ describe('AuditService', () => {
         statusCode: 200,
         changes: { name: { old: 'John', new: 'Jane' } },
         errorMessage: null,
+        // SMART on FHIR fields
+        clientId: null,
+        clientName: null,
+        launchContext: null,
+        scopes: null,
       });
       expect(auditLogRepository.save).toHaveBeenCalled();
     });
@@ -436,6 +461,11 @@ describe('AuditService', () => {
         statusCode: 204,
         changes: null,
         errorMessage: null,
+        // SMART on FHIR fields
+        clientId: null,
+        clientName: null,
+        launchContext: null,
+        scopes: null,
       });
       expect(auditLogRepository.save).toHaveBeenCalled();
     });
@@ -521,6 +551,11 @@ describe('AuditService', () => {
         statusCode: null,
         changes: { practitionerId: 'practitioner-123' },
         errorMessage: null,
+        // SMART on FHIR fields
+        clientId: null,
+        clientName: null,
+        launchContext: null,
+        scopes: null,
       });
       expect(auditLogRepository.save).toHaveBeenCalled();
     });
@@ -589,6 +624,184 @@ describe('AuditService', () => {
           error: 'String error',
         }),
         'Failed to create audit log',
+      );
+    });
+  });
+
+  describe('logSmartAuth', () => {
+    it('should log SMART authorization request successfully', async () => {
+      const mockAuditLog = {
+        id: 'audit-135',
+        action: 'smart_auth',
+        resourceType: 'SMART-on-FHIR',
+        clientId: 'app-123',
+        clientName: 'Lab System App',
+        scopes: ['patient:read', 'patient:write'],
+      };
+
+      auditLogRepository.create.mockReturnValue(mockAuditLog as unknown as AuditLogEntity);
+      auditLogRepository.save.mockResolvedValue(mockAuditLog as unknown as AuditLogEntity);
+
+      await service.logSmartAuth({
+        clientId: 'app-123',
+        clientName: 'Lab System App',
+        redirectUri: 'https://app.com/callback',
+        scopes: ['patient:read', 'patient:write'],
+        ipAddress: '192.168.1.1',
+        userAgent: 'Mozilla/5.0',
+        statusCode: 302,
+      });
+
+      expect(auditLogRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'smart_auth',
+          resourceType: 'SMART-on-FHIR',
+          clientId: 'app-123',
+          clientName: 'Lab System App',
+          scopes: ['patient:read', 'patient:write'],
+          requestMethod: 'GET',
+          requestPath: '/api/fhir/auth',
+          statusCode: 302,
+        }),
+      );
+      expect(auditLogRepository.save).toHaveBeenCalled();
+    });
+
+    it('should handle errors gracefully without throwing', async () => {
+      const error = new Error('Database error');
+      auditLogRepository.create.mockReturnValue({} as unknown as AuditLogEntity);
+      auditLogRepository.save.mockRejectedValue(error);
+
+      await service.logSmartAuth({
+        clientId: 'app-123',
+        redirectUri: 'https://app.com/callback',
+        scopes: ['patient:read'],
+      });
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: 'Database error',
+        }),
+        'Failed to create audit log for SMART auth',
+      );
+    });
+  });
+
+  describe('logSmartToken', () => {
+    it('should log SMART token exchange successfully', async () => {
+      const mockAuditLog = {
+        id: 'audit-136',
+        action: 'smart_token',
+        resourceType: 'SMART-on-FHIR',
+        clientId: 'app-123',
+        scopes: ['patient:read'],
+      };
+
+      auditLogRepository.create.mockReturnValue(mockAuditLog as unknown as AuditLogEntity);
+      auditLogRepository.save.mockResolvedValue(mockAuditLog as unknown as AuditLogEntity);
+
+      await service.logSmartToken({
+        clientId: 'app-123',
+        clientName: 'Lab System App',
+        grantType: 'authorization_code',
+        launchContext: { patient: 'Patient/123' },
+        scopes: ['patient:read'],
+        ipAddress: '192.168.1.1',
+        statusCode: 200,
+      });
+
+      expect(auditLogRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'smart_token',
+          resourceType: 'SMART-on-FHIR',
+          clientId: 'app-123',
+          clientName: 'Lab System App',
+          launchContext: { patient: 'Patient/123' },
+          scopes: ['patient:read'],
+          requestMethod: 'POST',
+          requestPath: '/api/fhir/token',
+          statusCode: 200,
+        }),
+      );
+      expect(auditLogRepository.save).toHaveBeenCalled();
+    });
+
+    it('should handle errors gracefully without throwing', async () => {
+      const error = new Error('Database error');
+      auditLogRepository.create.mockReturnValue({} as unknown as AuditLogEntity);
+      auditLogRepository.save.mockRejectedValue(error);
+
+      await service.logSmartToken({
+        clientId: 'app-123',
+        grantType: 'authorization_code',
+      });
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: 'Database error',
+        }),
+        'Failed to create audit log for SMART token',
+      );
+    });
+  });
+
+  describe('logSmartLaunch', () => {
+    it('should log SMART launch sequence successfully', async () => {
+      const mockAuditLog = {
+        id: 'audit-137',
+        action: 'smart_launch',
+        resourceType: 'SMART-on-FHIR',
+        clientId: 'app-123',
+        launchContext: { patient: 'Patient/123', encounter: 'Encounter/456' },
+        scopes: ['patient:read'],
+      };
+
+      auditLogRepository.create.mockReturnValue(mockAuditLog as unknown as AuditLogEntity);
+      auditLogRepository.save.mockResolvedValue(mockAuditLog as unknown as AuditLogEntity);
+
+      await service.logSmartLaunch({
+        clientId: 'app-123',
+        clientName: 'Lab System App',
+        launchToken: 'xyz123',
+        launchContext: { patient: 'Patient/123', encounter: 'Encounter/456' },
+        scopes: ['patient:read'],
+        ipAddress: '192.168.1.1',
+        statusCode: 302,
+      });
+
+      expect(auditLogRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'smart_launch',
+          resourceType: 'SMART-on-FHIR',
+          clientId: 'app-123',
+          clientName: 'Lab System App',
+          launchContext: { patient: 'Patient/123', encounter: 'Encounter/456' },
+          scopes: ['patient:read'],
+          requestMethod: 'GET',
+          requestPath: '/api/fhir/authorize',
+          statusCode: 302,
+        }),
+      );
+      expect(auditLogRepository.save).toHaveBeenCalled();
+    });
+
+    it('should handle errors gracefully without throwing', async () => {
+      const error = new Error('Database error');
+      auditLogRepository.create.mockReturnValue({} as unknown as AuditLogEntity);
+      auditLogRepository.save.mockRejectedValue(error);
+
+      await service.logSmartLaunch({
+        clientId: 'app-123',
+        launchToken: 'xyz123',
+        launchContext: {},
+        scopes: ['patient:read'],
+      });
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: 'Database error',
+        }),
+        'Failed to create audit log for SMART launch',
       );
     });
   });

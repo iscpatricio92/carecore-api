@@ -38,6 +38,11 @@ export class AuditService {
     requestPath?: string | null;
     statusCode?: number | null;
     errorMessage?: string | null;
+    // SMART on FHIR fields
+    clientId?: string | null;
+    clientName?: string | null;
+    launchContext?: Record<string, unknown> | null;
+    scopes?: string[] | null;
   }): Promise<void> {
     try {
       const auditLog = this.auditLogRepository.create({
@@ -53,6 +58,11 @@ export class AuditService {
         statusCode: params.statusCode || null,
         changes: null, // No changes for read/search
         errorMessage: params.errorMessage || null,
+        // SMART on FHIR fields
+        clientId: params.clientId || null,
+        clientName: params.clientName || null,
+        launchContext: params.launchContext || null,
+        scopes: params.scopes || params.user?.scopes || null,
       });
 
       await this.auditLogRepository.save(auditLog);
@@ -79,6 +89,11 @@ export class AuditService {
     statusCode?: number | null;
     changes?: Record<string, unknown> | null;
     errorMessage?: string | null;
+    // SMART on FHIR fields
+    clientId?: string | null;
+    clientName?: string | null;
+    launchContext?: Record<string, unknown> | null;
+    scopes?: string[] | null;
   }): Promise<void> {
     try {
       const auditLog = this.auditLogRepository.create({
@@ -94,6 +109,11 @@ export class AuditService {
         statusCode: params.statusCode || null,
         changes: params.changes || null,
         errorMessage: params.errorMessage || null,
+        // SMART on FHIR fields
+        clientId: params.clientId || null,
+        clientName: params.clientName || null,
+        launchContext: params.launchContext || null,
+        scopes: params.scopes || params.user?.scopes || null,
       });
 
       await this.auditLogRepository.save(auditLog);
@@ -119,6 +139,11 @@ export class AuditService {
     statusCode?: number | null;
     changes?: Record<string, unknown> | null;
     errorMessage?: string | null;
+    // SMART on FHIR fields
+    clientId?: string | null;
+    clientName?: string | null;
+    launchContext?: Record<string, unknown> | null;
+    scopes?: string[] | null;
   }): Promise<void> {
     try {
       const auditLog = this.auditLogRepository.create({
@@ -134,6 +159,11 @@ export class AuditService {
         statusCode: params.statusCode || null,
         changes: params.changes || null,
         errorMessage: params.errorMessage || null,
+        // SMART on FHIR fields
+        clientId: params.clientId || null,
+        clientName: params.clientName || null,
+        launchContext: params.launchContext || null,
+        scopes: params.scopes || params.user?.scopes || null,
       });
 
       await this.auditLogRepository.save(auditLog);
@@ -158,6 +188,11 @@ export class AuditService {
     requestPath?: string | null;
     statusCode?: number | null;
     errorMessage?: string | null;
+    // SMART on FHIR fields
+    clientId?: string | null;
+    clientName?: string | null;
+    launchContext?: Record<string, unknown> | null;
+    scopes?: string[] | null;
   }): Promise<void> {
     try {
       const auditLog = this.auditLogRepository.create({
@@ -173,6 +208,11 @@ export class AuditService {
         statusCode: params.statusCode || null,
         changes: null, // No changes for delete
         errorMessage: params.errorMessage || null,
+        // SMART on FHIR fields
+        clientId: params.clientId || null,
+        clientName: params.clientName || null,
+        launchContext: params.launchContext || null,
+        scopes: params.scopes || params.user?.scopes || null,
       });
 
       await this.auditLogRepository.save(auditLog);
@@ -199,6 +239,11 @@ export class AuditService {
     statusCode?: number | null;
     changes?: Record<string, unknown> | null;
     errorMessage?: string | null;
+    // SMART on FHIR fields
+    clientId?: string | null;
+    clientName?: string | null;
+    launchContext?: Record<string, unknown> | null;
+    scopes?: string[] | null;
   }): Promise<void> {
     try {
       const auditLog = this.auditLogRepository.create({
@@ -214,6 +259,11 @@ export class AuditService {
         statusCode: params.statusCode || null,
         changes: params.changes || null,
         errorMessage: params.errorMessage || null,
+        // SMART on FHIR fields
+        clientId: params.clientId || null,
+        clientName: params.clientName || null,
+        launchContext: params.launchContext || null,
+        scopes: params.scopes || params.user?.scopes || null,
       });
 
       await this.auditLogRepository.save(auditLog);
@@ -221,6 +271,146 @@ export class AuditService {
       this.logger.error(
         { error: error instanceof Error ? error.message : String(error), params },
         'Failed to create audit log',
+      );
+    }
+  }
+
+  /**
+   * Logs a SMART on FHIR authorization request
+   */
+  async logSmartAuth(params: {
+    clientId: string;
+    clientName?: string | null;
+    redirectUri: string;
+    scopes: string[];
+    user?: User | null;
+    ipAddress?: string | null;
+    userAgent?: string | null;
+    statusCode?: number | null;
+    errorMessage?: string | null;
+  }): Promise<void> {
+    try {
+      const auditLog = this.auditLogRepository.create({
+        action: 'smart_auth',
+        resourceType: 'SMART-on-FHIR',
+        resourceId: null,
+        userId: params.user?.id || null,
+        userRoles: params.user?.roles || null,
+        ipAddress: params.ipAddress || null,
+        userAgent: params.userAgent || null,
+        requestMethod: 'GET',
+        requestPath: '/api/fhir/auth',
+        statusCode: params.statusCode || null,
+        changes: {
+          redirectUri: params.redirectUri,
+        },
+        errorMessage: params.errorMessage || null,
+        // SMART on FHIR fields
+        clientId: params.clientId,
+        clientName: params.clientName || null,
+        launchContext: null,
+        scopes: params.scopes,
+      });
+
+      await this.auditLogRepository.save(auditLog);
+    } catch (error) {
+      this.logger.error(
+        { error: error instanceof Error ? error.message : String(error), params },
+        'Failed to create audit log for SMART auth',
+      );
+    }
+  }
+
+  /**
+   * Logs a SMART on FHIR token exchange
+   */
+  async logSmartToken(params: {
+    clientId: string | null;
+    clientName?: string | null;
+    grantType: string;
+    user?: User | null;
+    launchContext?: Record<string, unknown> | null;
+    scopes?: string[] | null;
+    ipAddress?: string | null;
+    userAgent?: string | null;
+    statusCode?: number | null;
+    errorMessage?: string | null;
+  }): Promise<void> {
+    try {
+      const auditLog = this.auditLogRepository.create({
+        action: 'smart_token',
+        resourceType: 'SMART-on-FHIR',
+        resourceId: null,
+        userId: params.user?.id || null,
+        userRoles: params.user?.roles || null,
+        ipAddress: params.ipAddress || null,
+        userAgent: params.userAgent || null,
+        requestMethod: 'POST',
+        requestPath: '/api/fhir/token',
+        statusCode: params.statusCode || null,
+        changes: {
+          grantType: params.grantType,
+        },
+        errorMessage: params.errorMessage || null,
+        // SMART on FHIR fields
+        clientId: params.clientId,
+        clientName: params.clientName || null,
+        launchContext: params.launchContext || null,
+        scopes: params.scopes || params.user?.scopes || null,
+      });
+
+      await this.auditLogRepository.save(auditLog);
+    } catch (error) {
+      this.logger.error(
+        { error: error instanceof Error ? error.message : String(error), params },
+        'Failed to create audit log for SMART token',
+      );
+    }
+  }
+
+  /**
+   * Logs a SMART on FHIR launch sequence
+   */
+  async logSmartLaunch(params: {
+    clientId: string;
+    clientName?: string | null;
+    launchToken: string;
+    launchContext: Record<string, unknown>;
+    scopes: string[];
+    user?: User | null;
+    ipAddress?: string | null;
+    userAgent?: string | null;
+    statusCode?: number | null;
+    errorMessage?: string | null;
+  }): Promise<void> {
+    try {
+      const auditLog = this.auditLogRepository.create({
+        action: 'smart_launch',
+        resourceType: 'SMART-on-FHIR',
+        resourceId: null,
+        userId: params.user?.id || null,
+        userRoles: params.user?.roles || null,
+        ipAddress: params.ipAddress || null,
+        userAgent: params.userAgent || null,
+        requestMethod: 'GET',
+        requestPath: '/api/fhir/authorize',
+        statusCode: params.statusCode || null,
+        changes: {
+          launchToken: params.launchToken,
+        },
+        errorMessage: params.errorMessage || null,
+        // SMART on FHIR fields
+        clientId: params.clientId,
+        clientName: params.clientName || null,
+        launchContext: params.launchContext,
+        scopes: params.scopes,
+      });
+
+      await this.auditLogRepository.save(auditLog);
+    } catch (error) {
+      this.logger.error(
+        { error: error instanceof Error ? error.message : String(error), params },
+        'Failed to create audit log for SMART launch',
       );
     }
   }

@@ -2,6 +2,7 @@ import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nes
 import { Observable } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
 import { Request, Response } from 'express';
+import * as jwt from 'jsonwebtoken';
 
 import { AuditService } from '../audit.service';
 import { User } from '../../auth/interfaces/user.interface';
@@ -26,6 +27,9 @@ export class AuditInterceptor implements NestInterceptor {
 
     // Extract user from request (set by JwtAuthGuard)
     const user = (request as Request & { user?: User }).user;
+
+    // Extract SMART on FHIR information from token
+    const smartInfo = this.extractSmartInfo(request, user);
 
     // Extract request information
     const requestMethod = request.method;
@@ -69,6 +73,11 @@ export class AuditInterceptor implements NestInterceptor {
               requestMethod,
               requestPath,
               statusCode,
+              // SMART on FHIR fields
+              clientId: smartInfo.clientId,
+              clientName: smartInfo.clientName,
+              launchContext: smartInfo.launchContext,
+              scopes: smartInfo.scopes,
             })
             .catch((error) => {
               // Silently fail - audit logging should not break the application
@@ -94,6 +103,11 @@ export class AuditInterceptor implements NestInterceptor {
               requestPath,
               statusCode,
               errorMessage,
+              // SMART on FHIR fields
+              clientId: smartInfo.clientId,
+              clientName: smartInfo.clientName,
+              launchContext: smartInfo.launchContext,
+              scopes: smartInfo.scopes,
             })
             .catch((err) => {
               console.error('Audit logging failed:', err);
@@ -192,5 +206,62 @@ export class AuditInterceptor implements NestInterceptor {
     };
 
     return methodMap[method] || 'unknown';
+  }
+
+  /**
+   * Extracts SMART on FHIR information from request
+   * Attempts to extract clientId from JWT token and launch context from user
+   */
+  private extractSmartInfo(
+    request: Request,
+    user?: User,
+  ): {
+    clientId: string | null;
+    clientName: string | null;
+    launchContext: Record<string, unknown> | null;
+    scopes: string[] | null;
+  } {
+    let clientId: string | null = null;
+    let launchContext: Record<string, unknown> | null = null;
+
+    // Try to extract clientId from JWT token
+    try {
+      const authHeader = request.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.substring(7);
+        // Decode token without verification (just to extract claims)
+        const decoded = jwt.decode(token, { complete: false });
+        if (decoded && typeof decoded === 'object') {
+          // azp (authorized party) is the client ID that requested the token
+          if ('azp' in decoded) {
+            clientId = decoded.azp as string;
+          } else if ('aud' in decoded) {
+            // aud (audience) can also contain the client ID
+            const aud = decoded.aud;
+            clientId = Array.isArray(aud) ? aud[0] : (aud as string);
+          }
+        }
+      }
+    } catch {
+      // If token decoding fails, silently continue
+      // This is expected for non-SMART on FHIR requests
+    }
+
+    // Extract launch context from user if available
+    if (user?.patient) {
+      launchContext = {
+        patient: user.patient,
+      };
+      if (user.fhirUser) {
+        launchContext.fhirUser = user.fhirUser;
+      }
+    }
+
+    return {
+      clientId,
+      clientName: null, // Client name would need to be retrieved from Keycloak (async operation)
+      launchContext,
+      scopes: user?.scopes || null,
+    };
   }
 }

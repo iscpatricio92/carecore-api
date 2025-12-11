@@ -3,18 +3,21 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { FhirController } from './fhir.controller';
 import { FhirService } from './fhir.service';
+import { SmartFhirService } from './services/smart-fhir.service';
 import { PatientEntity } from '../../entities/patient.entity';
 import { PractitionerEntity } from '../../entities/practitioner.entity';
 import { EncounterEntity } from '../../entities/encounter.entity';
 import { AuthModule } from '../auth/auth.module';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([PatientEntity, PractitionerEntity, EncounterEntity]),
     AuthModule, // Import AuthModule to use exported guards (JwtAuthGuard, RolesGuard, MFARequiredGuard)
+    AuditModule, // Import AuditModule to use AuditService for SMART on FHIR logging
   ],
   controllers: [FhirController],
-  providers: [FhirService],
+  providers: [FhirService, SmartFhirService],
   exports: [FhirService],
 })
 export class FhirModule {}

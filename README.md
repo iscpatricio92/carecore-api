@@ -424,7 +424,7 @@ El sistema ahora puede:
 #### Fase 2 (Post-MVP) ⏳
 
 **Integraciones:**
-- [ ] Integración FHIR con laboratorios (SMART on FHIR)
+- [x] Integración FHIR con laboratorios (SMART on FHIR) ✅
 - [ ] Integración con aseguradoras
 - [ ] CDS Hooks para decisiones clínicas
 
@@ -471,13 +471,13 @@ El sistema ahora puede:
 **📝 Tareas GitHub Projects Fase 1:** Ver [docs/tasks/PHASE1_KEYCLOAK_SETUP.md](docs/tasks/PHASE1_KEYCLOAK_SETUP.md) ⚠️ *Temporal*
 
 - [x] **Identity Provider** - Keycloak ✅
-  - [x] Setup Keycloak en Docker
-  - [x] Configuración de Realm y Clientes
-  - [ ] Integración con NestJS
-  - [ ] OAuth2/OIDC implementado
-  - [ ] MFA configurado
-  - [ ] Verificación de identidad para practitioners (verificación de cédula)
-  - [ ] SMART on FHIR integrado
+  - [x] Setup Keycloak en Docker ✅
+  - [x] Configuración de Realm y Clientes ✅
+  - [x] Integración con NestJS ✅
+  - [x] OAuth2/OIDC implementado ✅
+  - [x] MFA configurado ✅
+  - [x] Verificación de identidad para practitioners (verificación de cédula) ✅
+  - [x] SMART on FHIR integrado ✅
 
 **🔐 Keycloak Setup:**
 

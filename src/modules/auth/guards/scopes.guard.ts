@@ -1,5 +1,6 @@
-import { Injectable, ExecutionContext } from '@nestjs/common';
+import { Injectable, ExecutionContext, Optional } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { PinoLogger } from 'nestjs-pino';
 
 import { SCOPES_KEY } from '../decorators/scopes.decorator';
 import { InsufficientScopesException } from '../exceptions/insufficient-scopes.exception';
@@ -40,7 +41,14 @@ import { User } from '../interfaces/user.interface';
  */
 @Injectable()
 export class ScopesGuard {
-  constructor(private reflector: Reflector) {}
+  constructor(
+    private reflector: Reflector,
+    @Optional() private readonly logger?: PinoLogger,
+  ) {
+    if (this.logger) {
+      this.logger.setContext(ScopesGuard.name);
+    }
+  }
 
   /**
    * Check if the user has all the required scopes to access the endpoint
@@ -76,7 +84,32 @@ export class ScopesGuard {
     const hasAllScopes = requiredScopes.every((scope) => userScopes.includes(scope));
 
     if (!hasAllScopes) {
+      // Log scope validation failure
+      if (this.logger) {
+        this.logger.warn(
+          {
+            userId: user.id,
+            username: user.username,
+            requiredScopes,
+            userScopes,
+            missingScopes: requiredScopes.filter((scope) => !userScopes.includes(scope)),
+          },
+          'Scope validation failed - user missing required scopes',
+        );
+      }
       throw new InsufficientScopesException(requiredScopes, userScopes);
+    }
+
+    // Log successful scope validation (debug level)
+    if (this.logger) {
+      this.logger.debug(
+        {
+          userId: user.id,
+          username: user.username,
+          requiredScopes,
+        },
+        'Scope validation successful',
+      );
     }
 
     return true;

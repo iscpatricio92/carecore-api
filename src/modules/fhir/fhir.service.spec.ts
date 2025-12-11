@@ -151,6 +151,145 @@ describe('FhirService', () => {
 
       expect(result.implementation.url).toBe('http://localhost:3000/api/fhir');
     });
+
+    it('should include SMART on FHIR OAuth2 endpoints', () => {
+      mockConfigService.get.mockImplementation((key: string) => {
+        if (key === 'FHIR_BASE_URL') return 'https://carecore.example.com/api/fhir';
+        if (key === 'API_PREFIX') return '/api';
+        return null;
+      });
+
+      const result = service.getCapabilityStatement();
+
+      expect(result.rest[0].security).toBeDefined();
+      expect(result.rest[0].security.extension).toBeDefined();
+
+      const oauthExtension = result.rest[0].security.extension.find(
+        (ext: { url: string }) =>
+          ext.url === 'http://fhir-registry.smarthealthit.org/StructureDefinition/oauth-uris',
+      );
+
+      expect(oauthExtension).toBeDefined();
+      expect(oauthExtension).not.toBeUndefined();
+      if (oauthExtension) {
+        expect(oauthExtension.extension).toBeDefined();
+
+        const authorizeExt = oauthExtension.extension.find(
+          (ext: { url: string }) => ext.url === 'authorize',
+        );
+        const tokenExt = oauthExtension.extension.find(
+          (ext: { url: string }) => ext.url === 'token',
+        );
+
+        expect(authorizeExt).toBeDefined();
+        expect(tokenExt).toBeDefined();
+        if (authorizeExt && tokenExt) {
+          expect(authorizeExt.valueUri).toBe('https://carecore.example.com/api/fhir/auth');
+          expect(tokenExt.valueUri).toBe('https://carecore.example.com/api/fhir/token');
+        }
+      }
+    });
+
+    it('should include SMART-on-FHIR security service', () => {
+      const result = service.getCapabilityStatement();
+
+      expect(result.rest[0].security.service).toBeDefined();
+      expect(result.rest[0].security.service.length).toBeGreaterThan(0);
+
+      const smartService = result.rest[0].security.service.find(
+        (service: { coding: Array<{ code: string }> }) =>
+          service.coding?.some((coding: { code: string }) => coding.code === 'SMART-on-FHIR'),
+      );
+
+      expect(smartService).toBeDefined();
+      expect(smartService).not.toBeUndefined();
+      if (smartService) {
+        expect(smartService.coding[0].system).toBe('http://hl7.org/fhir/restful-security-service');
+        expect(smartService.coding[0].code).toBe('SMART-on-FHIR');
+      }
+    });
+
+    it('should include supported scopes in extension', () => {
+      const result = service.getCapabilityStatement();
+
+      expect(result.extension).toBeDefined();
+      const capabilitiesExt = result.extension.find(
+        (ext: { url: string }) =>
+          ext.url === 'http://fhir-registry.smarthealthit.org/StructureDefinition/capabilities',
+      );
+
+      expect(capabilitiesExt).toBeDefined();
+      expect(capabilitiesExt).not.toBeUndefined();
+      if (capabilitiesExt) {
+        expect(capabilitiesExt.extension).toBeDefined();
+
+        const scopesExt = capabilitiesExt.extension.find(
+          (ext: { url: string }) => ext.url === 'supported-scopes',
+        );
+        expect(scopesExt).toBeDefined();
+        expect(scopesExt).not.toBeUndefined();
+        if (scopesExt) {
+          expect(scopesExt.valueString).toBeDefined();
+          expect(scopesExt.valueString.length).toBeGreaterThan(0);
+          expect(scopesExt.valueString).toContain('patient:read');
+          expect(scopesExt.valueString).toContain('patient:write');
+        }
+      }
+    });
+
+    it('should include launch types in extension', () => {
+      const result = service.getCapabilityStatement();
+
+      const capabilitiesExt = result.extension.find(
+        (ext: { url: string }) =>
+          ext.url === 'http://fhir-registry.smarthealthit.org/StructureDefinition/capabilities',
+      );
+
+      expect(capabilitiesExt).toBeDefined();
+      expect(capabilitiesExt).not.toBeUndefined();
+      if (capabilitiesExt) {
+        const launchTypesExt = capabilitiesExt.extension.find(
+          (ext: { url: string }) => ext.url === 'launch-types',
+        );
+        expect(launchTypesExt).toBeDefined();
+        expect(launchTypesExt).not.toBeUndefined();
+        if (launchTypesExt) {
+          expect(launchTypesExt.valueString).toBe('standalone launch ehr-launch');
+        }
+      }
+    });
+
+    it('should build OAuth2 URLs correctly from FHIR_BASE_URL', () => {
+      mockConfigService.get.mockImplementation((key: string) => {
+        if (key === 'FHIR_BASE_URL') return 'https://api.carecore.com/api/fhir';
+        return null;
+      });
+
+      const result = service.getCapabilityStatement();
+
+      const oauthExtension = result.rest[0].security.extension.find(
+        (ext: { url: string }) =>
+          ext.url === 'http://fhir-registry.smarthealthit.org/StructureDefinition/oauth-uris',
+      );
+
+      expect(oauthExtension).toBeDefined();
+      expect(oauthExtension).not.toBeUndefined();
+      if (oauthExtension) {
+        const authorizeExt = oauthExtension.extension.find(
+          (ext: { url: string }) => ext.url === 'authorize',
+        );
+        const tokenExt = oauthExtension.extension.find(
+          (ext: { url: string }) => ext.url === 'token',
+        );
+
+        expect(authorizeExt).toBeDefined();
+        expect(tokenExt).toBeDefined();
+        if (authorizeExt && tokenExt) {
+          expect(authorizeExt.valueUri).toBe('https://api.carecore.com/api/fhir/auth');
+          expect(tokenExt.valueUri).toBe('https://api.carecore.com/api/fhir/token');
+        }
+      }
+    });
   });
 
   describe('createPatient', () => {
@@ -405,6 +544,78 @@ describe('FhirService', () => {
 
       await expect(service.getPatient('test-patient-id')).rejects.toThrow();
     });
+
+    it('should allow access when patient context matches patient ID', async () => {
+      const user: User = {
+        id: 'app-user',
+        keycloakUserId: 'app-user',
+        username: 'app',
+        email: '',
+        roles: [],
+        patient: 'Patient/test-patient-id', // SMART on FHIR patient context
+      };
+
+      const mockEntity = new PatientEntity();
+      mockEntity.fhirResource = {
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
+        id: 'test-patient-id',
+      } as Patient;
+      mockEntity.patientId = 'test-patient-id';
+
+      mockPatientRepository.findOne.mockResolvedValue(mockEntity);
+
+      const result = await service.getPatient('test-patient-id', user);
+      expect(result).toBeDefined();
+      expect(result.id).toBe('test-patient-id');
+    });
+
+    it('should deny access when patient context does not match patient ID', async () => {
+      const user: User = {
+        id: 'app-user',
+        keycloakUserId: 'app-user',
+        username: 'app',
+        email: '',
+        roles: [],
+        patient: 'Patient/different-patient-id', // Different patient context
+      };
+
+      const mockEntity = new PatientEntity();
+      mockEntity.fhirResource = {
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
+        id: 'test-patient-id',
+      } as Patient;
+      mockEntity.patientId = 'test-patient-id';
+
+      mockPatientRepository.findOne.mockResolvedValue(mockEntity);
+
+      await expect(service.getPatient('test-patient-id', user)).rejects.toThrow(ForbiddenException);
+      expect(logger.warn).toHaveBeenCalled();
+    });
+
+    it('should allow admin access even with patient context (admin bypasses patient context)', async () => {
+      const user: User = {
+        id: 'admin-user',
+        keycloakUserId: 'admin-user',
+        username: 'admin',
+        email: '',
+        roles: [ROLES.ADMIN],
+        patient: 'Patient/different-patient-id', // Patient context
+      };
+
+      const mockEntity = new PatientEntity();
+      mockEntity.fhirResource = {
+        resourceType: FHIR_RESOURCE_TYPES.PATIENT,
+        id: 'test-patient-id',
+      } as Patient;
+      mockEntity.patientId = 'test-patient-id';
+
+      mockPatientRepository.findOne.mockResolvedValue(mockEntity);
+
+      // Admin should bypass patient context filtering
+      const result = await service.getPatient('test-patient-id', user);
+      expect(result).toBeDefined();
+      expect(result.id).toBe('test-patient-id');
+    });
   });
 
   describe('searchPatients', () => {
@@ -507,6 +718,67 @@ describe('FhirService', () => {
 
       // The service adds a condition that always evaluates to false
       expect(mockQueryBuilder.andWhere).toHaveBeenCalled();
+    });
+
+    it('should filter by SMART on FHIR patient context when present', async () => {
+      const user: User = {
+        id: 'app-user',
+        keycloakUserId: 'app-user',
+        username: 'app',
+        email: '',
+        roles: [],
+        patient: 'Patient/123', // SMART on FHIR patient context
+      };
+
+      await service.searchPatients({}, user);
+
+      // Should filter by patient context, not by role
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'patient.patientId = :tokenPatientId',
+        { tokenPatientId: '123' },
+      );
+      expect(logger.debug).toHaveBeenCalledWith(
+        { tokenPatientId: '123' },
+        'Filtering patients by SMART on FHIR patient context',
+      );
+    });
+
+    it('should filter by SMART on FHIR patient context with just patient ID', async () => {
+      const user: User = {
+        id: 'app-user',
+        keycloakUserId: 'app-user',
+        username: 'app',
+        email: '',
+        roles: [],
+        patient: '456', // Just patient ID, not "Patient/456"
+      };
+
+      await service.searchPatients({}, user);
+
+      // Should extract patient ID correctly
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'patient.patientId = :tokenPatientId',
+        { tokenPatientId: '456' },
+      );
+    });
+
+    it('should allow admin to bypass SMART on FHIR patient context filtering', async () => {
+      const user: User = {
+        id: 'admin-user',
+        keycloakUserId: 'admin-user',
+        username: 'admin',
+        email: '',
+        roles: [ROLES.ADMIN], // Admin normally sees all patients
+        patient: 'Patient/789', // Even with patient context, admin should see all
+      };
+
+      await service.searchPatients({}, user);
+
+      // Admin should bypass patient context filtering
+      expect(mockQueryBuilder.andWhere).not.toHaveBeenCalledWith(
+        'patient.patientId = :tokenPatientId',
+        { tokenPatientId: '789' },
+      );
     });
 
     it('should allow patient to access their own patient record', async () => {
@@ -1477,6 +1749,94 @@ describe('FhirService', () => {
 
       await expect(service.getEncounter('test-encounter-id')).rejects.toThrow();
     });
+
+    it('should allow access when patient context matches encounter subject', async () => {
+      const user: User = {
+        id: 'app-user',
+        keycloakUserId: 'app-user',
+        username: 'app',
+        email: '',
+        roles: [],
+        patient: 'Patient/test-patient-id', // SMART on FHIR patient context
+      };
+
+      const mockEntity = new EncounterEntity();
+      mockEntity.fhirResource = {
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
+        id: 'test-encounter-id',
+        status: 'finished',
+        subject: {
+          reference: 'Patient/test-patient-id',
+        },
+      } as Encounter;
+      mockEntity.encounterId = 'test-encounter-id';
+      mockEntity.subjectReference = 'Patient/test-patient-id';
+
+      mockEncounterRepository.findOne.mockResolvedValue(mockEntity);
+
+      const result = await service.getEncounter('test-encounter-id', user);
+      expect(result).toBeDefined();
+      expect(result.id).toBe('test-encounter-id');
+    });
+
+    it('should deny access when patient context does not match encounter subject', async () => {
+      const user: User = {
+        id: 'app-user',
+        keycloakUserId: 'app-user',
+        username: 'app',
+        email: '',
+        roles: [],
+        patient: 'Patient/different-patient-id', // Different patient context
+      };
+
+      const mockEntity = new EncounterEntity();
+      mockEntity.fhirResource = {
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
+        id: 'test-encounter-id',
+        status: 'finished',
+        subject: {
+          reference: 'Patient/test-patient-id',
+        },
+      } as Encounter;
+      mockEntity.encounterId = 'test-encounter-id';
+      mockEntity.subjectReference = 'Patient/test-patient-id';
+
+      mockEncounterRepository.findOne.mockResolvedValue(mockEntity);
+
+      await expect(service.getEncounter('test-encounter-id', user)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(logger.warn).toHaveBeenCalled();
+    });
+
+    it('should allow admin access to encounters even with patient context', async () => {
+      const user: User = {
+        id: 'admin-user',
+        keycloakUserId: 'admin-user',
+        username: 'admin',
+        email: '',
+        roles: [ROLES.ADMIN],
+        patient: 'Patient/different-patient-id', // Patient context
+      };
+
+      const mockEntity = new EncounterEntity();
+      mockEntity.fhirResource = {
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
+        id: 'test-encounter-id',
+        status: 'finished',
+        subject: {
+          reference: 'Patient/test-patient-id',
+        },
+      } as Encounter;
+      mockEntity.encounterId = 'test-encounter-id';
+      mockEntity.subjectReference = 'Patient/test-patient-id';
+
+      mockEncounterRepository.findOne.mockResolvedValue(mockEntity);
+
+      // Admin should bypass patient context filtering
+      const result = await service.getEncounter('test-encounter-id', user);
+      expect(result).toBeDefined();
+    });
   });
 
   describe('searchEncounters', () => {
@@ -1626,6 +1986,82 @@ describe('FhirService', () => {
 
       expect(result.entries.length).toBe(1);
       expect(result.total).toBe(5);
+    });
+
+    it('should filter encounters by SMART on FHIR patient context when present', async () => {
+      const user: User = {
+        id: 'app-user',
+        keycloakUserId: 'app-user',
+        username: 'app',
+        email: '',
+        roles: [],
+        patient: 'Patient/123', // SMART on FHIR patient context
+      };
+
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(1),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([
+          {
+            fhirResource: {
+              resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
+              id: '1',
+              subject: { reference: 'Patient/123' },
+            },
+          },
+        ]),
+      };
+      mockEncounterRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      await service.searchEncounters({}, user);
+
+      // Should filter by patient context
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'encounter.subjectReference = :tokenPatientRef',
+        { tokenPatientRef: 'Patient/123' },
+      );
+      expect(logger.debug).toHaveBeenCalledWith(
+        { tokenPatientId: '123' },
+        'Filtering encounters by SMART on FHIR patient context',
+      );
+    });
+
+    it('should not apply subject filter when patient context is present', async () => {
+      const user: User = {
+        id: 'app-user',
+        keycloakUserId: 'app-user',
+        username: 'app',
+        email: '',
+        roles: [],
+        patient: 'Patient/123', // SMART on FHIR patient context
+      };
+
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(1),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([]),
+      };
+      mockEncounterRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      await service.searchEncounters({ subject: 'Patient/456' }, user);
+
+      // Should filter by patient context, not by subject parameter
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'encounter.subjectReference = :tokenPatientRef',
+        { tokenPatientRef: 'Patient/123' },
+      );
+      // Should NOT apply subject filter since patient context takes precedence
+      const subjectFilterCall = mockQueryBuilder.andWhere.mock.calls.find((call: unknown[]) => {
+        const params = call[1] as { subject?: string };
+        return params?.subject === 'Patient/456';
+      });
+      expect(subjectFilterCall).toBeUndefined();
     });
   });
 
