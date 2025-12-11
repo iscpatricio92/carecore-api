@@ -1,0 +1,807 @@
+# 📋 Tareas GitHub Projects - Fase 5: Testing y Documentación
+
+> ⚠️ **ARCHIVO TEMPORAL**
+> Este archivo contiene tareas detalladas para agregar en GitHub Projects.
+> **Puede ser eliminado** una vez que:
+> - Las tareas estén agregadas a GitHub Projects
+> - Las tareas estén completadas
+> - Ya no se necesite como referencia
+>
+> Para documentación permanente, ver: [AUTH_IMPLEMENTATION_PLAN.md](../AUTH_IMPLEMENTATION_PLAN.md)
+
+---
+
+## 📖 Historia de Usuario (HU)
+
+### HU: Testing Completo y Documentación de Autenticación y Autorización
+
+**Como** desarrollador del equipo CareCore,
+**Quiero** tener una suite completa de tests (unitarios y E2E) y documentación exhaustiva sobre autenticación y autorización,
+**Para** garantizar la calidad del código, facilitar el mantenimiento futuro, y permitir que nuevos desarrolladores entiendan rápidamente el sistema de autenticación.
+
+#### Criterios de Aceptación
+
+- ✅ Tests unitarios completos para módulo auth, guards y strategies (mayoría completados)
+- ⏳ Tests E2E para todos los flujos de autenticación y autorización (parcialmente implementados)
+- ⏳ Cobertura de código > 80% en módulos críticos
+- ⏳ Documentación completa de flujos de autenticación
+- ⏳ Documentación de configuración de Keycloak
+- ⏳ Documentación de roles, permisos y scopes
+- ⏳ Guías de desarrollo para integración con autenticación
+- ⏳ README actualizado con sección de autenticación
+
+#### Tareas Relacionadas
+
+Esta HU incluye las siguientes tareas (ver detalles abajo):
+
+**Testing:**
+- ✅ **Tarea 1**: Tests unitarios para módulo auth (mayoría completados)
+- ✅ **Tarea 2**: Tests unitarios para guards (completados)
+- ✅ **Tarea 3**: Tests unitarios para strategies (completados)
+- ⏳ **Tarea 4**: Tests E2E para flujo de login (parcialmente implementado)
+- ⏳ **Tarea 5**: Tests E2E para flujo OAuth2 (parcialmente implementado)
+- ⏳ **Tarea 6**: Tests E2E para verificación de practitioner (pendiente)
+- ⏳ **Tarea 7**: Tests E2E para SMART on FHIR (pendiente)
+
+**Documentación:**
+- ⏳ **Tarea 8**: Documentar flujo de autenticación completo
+- ⏳ **Tarea 9**: Documentar configuración de Keycloak
+- ⏳ **Tarea 10**: Documentar roles y permisos
+- ✅ **Tarea 11**: Documentar scopes disponibles (completado)
+- ⏳ **Tarea 12**: Documentar SMART on FHIR (documentación básica completa, ejemplos avanzados pendientes)
+- ⏳ **Tarea 13**: Actualizar README con sección de auth
+- ⏳ **Tarea 14**: Crear guía de desarrollo para auth
+
+#### Estimación
+
+- **Tiempo total**: 4-6 días
+- **Prioridad**: Media-Alta
+- **Dependencias**: Fases 1, 2, 3 y 4 completadas ✅
+
+#### Definición de Terminado (DoD)
+
+- [x] Tests unitarios completos para módulos críticos (mayoría completados)
+- [ ] Tests E2E para todos los flujos principales
+- [ ] Cobertura de código > 80% en módulos críticos
+- [ ] Documentación completa y actualizada
+- [ ] README actualizado
+- [ ] Guías de desarrollo creadas
+
+---
+
+## 🎯 Tareas Principales
+
+### Tarea 1: Tests unitarios para módulo auth
+
+**Título:** `[PHASE-5] - test(auth): completar tests unitarios para módulo auth`
+
+**Descripción:**
+```markdown
+## Objetivo
+Completar y mejorar los tests unitarios para el módulo de autenticación, asegurando cobertura completa de todos los componentes.
+
+## Tareas
+- [x] Tests para `AuthController` (completado)
+- [x] Tests para `AuthService` (completado)
+- [x] Tests para `JwtStrategy` (completado)
+- [ ] Revisar y mejorar cobertura de edge cases
+- [ ] Tests para manejo de errores de Keycloak
+- [ ] Tests para refresh token flow
+- [ ] Tests para logout flow
+- [ ] Verificar cobertura > 80%
+
+## Archivos a Testear
+
+- `src/modules/auth/auth.controller.ts`
+- `src/modules/auth/auth.service.ts`
+- `src/modules/auth/strategies/jwt.strategy.ts`
+- `src/modules/auth/services/keycloak-admin.service.ts`
+
+## Criterios de Aceptación
+- [x] Tests unitarios para AuthController pasando
+- [x] Tests unitarios para AuthService pasando
+- [x] Tests unitarios para JwtStrategy pasando
+- [ ] Cobertura > 80% en módulo auth
+- [ ] Todos los edge cases cubiertos
+- [ ] Tests de manejo de errores completos
+
+## Referencias
+- Ver tests existentes en `src/modules/auth/**/*.spec.ts`
+- Ver [E2E_TESTING.md](../E2E_TESTING.md) para contexto
+```
+
+**Labels:** `test`, `auth`, `phase-5`, `unit-test`
+
+---
+
+### Tarea 2: Tests unitarios para guards
+
+**Título:** `[PHASE-5] - test(auth): completar tests unitarios para guards de autenticación y autorización`
+
+**Descripción:**
+```markdown
+## Objetivo
+Completar tests unitarios para todos los guards de autenticación y autorización.
+
+## Tareas
+- [x] Tests para `JwtAuthGuard` (completado)
+- [x] Tests para `RolesGuard` (completado)
+- [x] Tests para `ScopesGuard` (completado)
+- [x] Tests para `MFARequiredGuard` (completado)
+- [ ] Revisar y mejorar cobertura de edge cases
+- [ ] Tests para combinaciones de guards
+- [ ] Tests para decoradores `@Public()`, `@Roles()`, `@Scopes()`
+- [ ] Verificar cobertura > 90%
+
+## Archivos a Testear
+
+- `src/modules/auth/guards/jwt-auth.guard.ts`
+- `src/modules/auth/guards/roles.guard.ts`
+- `src/modules/auth/guards/scopes.guard.ts`
+- `src/modules/auth/guards/mfa-required.guard.ts`
+
+## Criterios de Aceptación
+- [x] Tests unitarios para todos los guards pasando
+- [ ] Cobertura > 90% en guards
+- [ ] Todos los edge cases cubiertos
+- [ ] Tests de combinaciones de guards
+
+## Referencias
+- Ver tests existentes en `src/modules/auth/guards/**/*.spec.ts`
+```
+
+**Labels:** `test`, `auth`, `phase-5`, `unit-test`
+
+---
+
+### Tarea 3: Tests unitarios para strategies
+
+**Título:** `[PHASE-5] - test(auth): completar tests unitarios para Passport strategies`
+
+**Descripción:**
+```markdown
+## Objetivo
+Completar tests unitarios para las Passport strategies utilizadas en el sistema.
+
+## Tareas
+- [x] Tests para `JwtStrategy` (completado)
+- [ ] Tests para `KeycloakStrategy` (si aplica)
+- [ ] Revisar y mejorar cobertura de edge cases
+- [ ] Tests para extracción de scopes del token
+- [ ] Tests para extracción de contexto de paciente (SMART on FHIR)
+- [ ] Tests para validación de issuer
+- [ ] Verificar cobertura > 80%
+
+## Archivos a Testear
+
+- `src/modules/auth/strategies/jwt.strategy.ts`
+
+## Criterios de Aceptación
+- [x] Tests unitarios para JwtStrategy pasando
+- [ ] Cobertura > 80% en strategies
+- [ ] Todos los edge cases cubiertos
+- [ ] Tests de validación de tokens completos
+
+## Referencias
+- Ver tests existentes en `src/modules/auth/strategies/**/*.spec.ts`
+```
+
+**Labels:** `test`, `auth`, `phase-5`, `unit-test`
+
+---
+
+### Tarea 4: Tests E2E para flujo de login
+
+**Título:** `[PHASE-5] - test(auth): crear tests E2E para flujo completo de login`
+
+**Descripción:**
+```markdown
+## Objetivo
+Crear tests E2E que validen el flujo completo de login desde el endpoint hasta la obtención del token.
+
+## Tareas
+- [x] Tests básicos de login (parcialmente implementado en `test/auth.e2e-spec.ts`)
+- [ ] Tests para login con credenciales inválidas
+- [ ] Tests para login con usuario inexistente
+- [ ] Tests para login con contraseña incorrecta
+- [ ] Tests para rate limiting (si aplica)
+- [ ] Tests para diferentes tipos de usuarios (patient, practitioner, admin)
+- [ ] Tests para respuesta de token JWT válido
+- [ ] Tests para refresh token flow
+
+## Endpoints a Testear
+
+- `POST /api/auth/login`
+- `POST /api/auth/refresh`
+- `GET /api/auth/user`
+
+## Criterios de Aceptación
+- [x] Tests E2E básicos de login pasando
+- [ ] Todos los casos de error cubiertos
+- [ ] Validación de tokens JWT en respuestas
+- [ ] Tests para diferentes roles de usuario
+
+## Referencias
+- Ver tests existentes en `test/auth.e2e-spec.ts`
+- Ver [E2E_TESTING.md](../E2E_TESTING.md) para guía
+```
+
+**Labels:** `test`, `auth`, `phase-5`, `e2e-test`
+
+---
+
+### Tarea 5: Tests E2E para flujo OAuth2
+
+**Título:** `[PHASE-5] - test(auth): crear tests E2E para flujo completo OAuth2/OIDC`
+
+**Descripción:**
+```markdown
+## Objetivo
+Crear tests E2E que validen el flujo completo OAuth2/OIDC incluyendo autorización, callback y token exchange.
+
+## Tareas
+- [x] Tests básicos de OAuth2 (parcialmente implementado)
+- [ ] Tests para flujo de autorización completo
+- [ ] Tests para callback de Keycloak
+- [ ] Tests para intercambio de código por token
+- [ ] Tests para manejo de errores en OAuth2
+- [ ] Tests para refresh token en OAuth2
+- [ ] Tests para logout en OAuth2
+- [ ] Tests para diferentes clientes OAuth2
+
+## Endpoints a Testear
+
+- `GET /api/auth/login` (redirige a Keycloak)
+- `GET /api/auth/callback` (callback de Keycloak)
+- `POST /api/auth/refresh` (refresh token)
+- `POST /api/auth/logout` (logout)
+
+## Criterios de Aceptación
+- [x] Tests E2E básicos de OAuth2 pasando
+- [ ] Flujo completo OAuth2 validado
+- [ ] Manejo de errores cubierto
+- [ ] Tests para diferentes escenarios de cliente
+
+## Referencias
+- Ver tests existentes en `test/auth.e2e-spec.ts`
+- Ver [E2E_TESTING.md](../E2E_TESTING.md) para guía
+```
+
+**Labels:** `test`, `auth`, `phase-5`, `e2e-test`, `oauth2`
+
+---
+
+### Tarea 6: Tests E2E para verificación de practitioner
+
+**Título:** `[PHASE-5] - test(auth): crear tests E2E para flujo de verificación de practitioner`
+
+**Descripción:**
+```markdown
+## Objetivo
+Crear tests E2E que validen el flujo completo de verificación de practitioners, incluyendo upload de documentos y revisión por admin.
+
+## Tareas
+- [ ] Tests para solicitud de verificación
+- [ ] Tests para upload de documentos (cédula/licencia)
+- [ ] Tests para revisión por admin (aprobar/rechazar)
+- [ ] Tests para actualización automática de roles
+- [ ] Tests para validación de documentos
+- [ ] Tests para manejo de errores
+- [ ] Tests para diferentes estados de verificación
+
+## Endpoints a Testear
+
+- `POST /api/auth/verify-practitioner`
+- `GET /api/auth/verify-practitioner/:id` (admin)
+- `POST /api/auth/verify-practitioner/:id/review` (admin)
+
+## Criterios de Aceptación
+- [ ] Tests E2E para solicitud de verificación pasando
+- [ ] Tests E2E para upload de documentos pasando
+- [ ] Tests E2E para revisión por admin pasando
+- [ ] Validación de actualización de roles
+- [ ] Manejo de errores cubierto
+
+## Referencias
+- Ver [PRACTITIONER_VERIFICATION_GUIDE.md](../PRACTITIONER_VERIFICATION_GUIDE.md)
+- Ver tests existentes en `test/practitioner-verification.e2e-spec.ts` (si existe)
+```
+
+**Labels:** `test`, `auth`, `phase-5`, `e2e-test`, `verification`
+
+---
+
+### Tarea 7: Tests E2E para SMART on FHIR
+
+**Título:** `[PHASE-5] - test(auth): crear tests E2E para flujo completo SMART on FHIR`
+
+**Descripción:**
+```markdown
+## Objetivo
+Crear tests E2E que validen el flujo completo SMART on FHIR incluyendo launch sequence, autorización y token exchange.
+
+## Tareas
+- [ ] Tests para launch sequence (`GET /fhir/authorize`)
+- [ ] Tests para authorization endpoint (`GET /fhir/auth`)
+- [ ] Tests para token endpoint (`POST /fhir/token`)
+- [ ] Tests para flujo completo end-to-end
+- [ ] Tests para diferentes tipos de launch (standalone, EHR launch)
+- [ ] Tests para contexto de paciente en tokens
+- [ ] Tests para validación de scopes
+- [ ] Tests para manejo de errores SMART on FHIR
+
+## Endpoints a Testear
+
+- `GET /api/fhir/authorize` (launch)
+- `GET /api/fhir/auth` (authorization)
+- `POST /api/fhir/token` (token exchange)
+- `GET /api/fhir/metadata` (CapabilityStatement)
+
+## Criterios de Aceptación
+- [ ] Tests E2E para launch sequence pasando
+- [ ] Tests E2E para authorization pasando
+- [ ] Tests E2E para token exchange pasando
+- [ ] Flujo completo end-to-end validado
+- [ ] Validación de contexto de paciente
+- [ ] Manejo de errores cubierto
+
+## Referencias
+- Ver [PHASE4_SMART_ON_FHIR.md](PHASE4_SMART_ON_FHIR.md)
+- Ver tests unitarios en `src/modules/fhir/**/*.spec.ts`
+```
+
+**Labels:** `test`, `auth`, `phase-5`, `e2e-test`, `smart-fhir`
+
+---
+
+### Tarea 8: Documentar flujo de autenticación completo
+
+**Título:** `[PHASE-5] - docs(auth): crear documentación completa del flujo de autenticación`
+
+**Descripción:**
+```markdown
+## Objetivo
+Crear documentación exhaustiva que explique todos los flujos de autenticación y autorización del sistema.
+
+## Tareas
+- [ ] Crear documento `docs/AUTHENTICATION_FLOW.md`
+- [ ] Documentar flujo de login básico
+- [ ] Documentar flujo OAuth2/OIDC completo
+- [ ] Documentar flujo de refresh token
+- [ ] Documentar flujo de logout
+- [ ] Documentar flujo de verificación de practitioner
+- [ ] Documentar flujo SMART on FHIR
+- [ ] Incluir diagramas de flujo
+- [ ] Incluir ejemplos de requests/responses
+- [ ] Incluir casos de error comunes
+
+## Contenido Esperado
+
+- Diagramas de secuencia para cada flujo
+- Ejemplos de código para integración
+- Explicación de tokens JWT
+- Explicación de scopes y permisos
+- Troubleshooting común
+
+## Criterios de Aceptación
+- [ ] Documento de flujo de autenticación creado
+- [ ] Todos los flujos documentados
+- [ ] Diagramas incluidos
+- [ ] Ejemplos de código incluidos
+- [ ] Troubleshooting incluido
+
+## Referencias
+- Ver [AUTH_IMPLEMENTATION_PLAN.md](../AUTH_IMPLEMENTATION_PLAN.md) para contexto
+- Ver [SWAGGER_AUTHENTICATION.md](../SWAGGER_AUTHENTICATION.md) para Swagger
+```
+
+**Labels:** `documentation`, `auth`, `phase-5`
+
+---
+
+### Tarea 9: Documentar configuración de Keycloak
+
+**Título:** `[PHASE-5] - docs(auth): crear documentación completa de configuración de Keycloak`
+
+**Descripción:**
+```markdown
+## Objetivo
+Crear documentación exhaustiva sobre cómo configurar y mantener Keycloak en el proyecto.
+
+## Tareas
+- [x] Documentación básica de Keycloak (existe en `keycloak/README.md`)
+- [ ] Documentar configuración de realm
+- [ ] Documentar configuración de clientes
+- [ ] Documentar configuración de roles
+- [ ] Documentar configuración de scopes
+- [ ] Documentar configuración de MFA
+- [ ] Documentar backup y restore
+- [ ] Documentar troubleshooting avanzado
+- [ ] Incluir ejemplos de configuración
+- [ ] Actualizar documentación existente
+
+## Contenido Esperado
+
+- Guía paso a paso de configuración inicial
+- Configuración de clientes OAuth2
+- Configuración de roles y permisos
+- Configuración de scopes
+- Configuración de MFA/TOTP
+- Scripts de automatización
+- Troubleshooting común
+
+## Criterios de Aceptación
+- [x] Documentación básica de Keycloak existente
+- [ ] Documentación completa de configuración
+- [ ] Ejemplos de configuración incluidos
+- [ ] Troubleshooting avanzado incluido
+- [ ] Scripts documentados
+
+## Referencias
+- Ver `keycloak/README.md`
+- Ver `keycloak/TROUBLESHOOTING.md`
+- Ver `keycloak/BACKUP_RESTORE.md`
+```
+
+**Labels:** `documentation`, `auth`, `phase-5`, `keycloak`
+
+---
+
+### Tarea 10: Documentar roles y permisos
+
+**Título:** `[PHASE-5] - docs(auth): crear documentación completa de roles y permisos`
+
+**Descripción:**
+```markdown
+## Objetivo
+Crear documentación exhaustiva sobre los roles, permisos y cómo funcionan en el sistema.
+
+## Tareas
+- [ ] Crear documento `docs/ROLES_AND_PERMISSIONS.md`
+- [ ] Documentar todos los roles disponibles
+- [ ] Documentar permisos por rol
+- [ ] Documentar cómo se asignan roles
+- [ ] Documentar cómo se validan roles
+- [ ] Documentar `RolesGuard` y decorador `@Roles()`
+- [ ] Incluir ejemplos de uso
+- [ ] Incluir tabla de permisos por recurso
+
+## Contenido Esperado
+
+- Lista completa de roles: patient, practitioner, admin, viewer, etc.
+- Permisos por rol y recurso FHIR
+- Cómo asignar roles en Keycloak
+- Cómo usar `@Roles()` en endpoints
+- Ejemplos de código
+- Tabla de permisos
+
+## Criterios de Aceptación
+- [ ] Documento de roles y permisos creado
+- [ ] Todos los roles documentados
+- [ ] Permisos por recurso documentados
+- [ ] Ejemplos de uso incluidos
+- [ ] Tabla de permisos incluida
+
+## Referencias
+- Ver `src/common/constants/roles.ts`
+- Ver `src/modules/auth/guards/roles.guard.ts`
+- Ver `src/modules/auth/decorators/roles.decorator.ts`
+```
+
+**Labels:** `documentation`, `auth`, `phase-5`, `roles`
+
+---
+
+### Tarea 11: Documentar scopes disponibles
+
+**Título:** `[PHASE-5] - docs(auth): documentar scopes OAuth2 disponibles y su uso`
+
+**Descripción:**
+```markdown
+## Objetivo
+Documentar todos los scopes OAuth2 disponibles y cómo se usan para control de acceso granular.
+
+## Tareas
+- [x] Guía de scopes creada (`docs/SCOPES_SETUP_GUIDE.md`)
+- [ ] Mejorar documentación con ejemplos de uso
+- [ ] Documentar mapeo de scopes a permisos FHIR
+- [ ] Documentar `ScopesGuard` y decorador `@Scopes()`
+- [ ] Incluir ejemplos de requests con scopes
+- [ ] Documentar scopes SMART on FHIR
+- [ ] Actualizar guía existente
+
+## Contenido Esperado
+
+- Lista completa de scopes disponibles
+- Mapeo de scopes a recursos FHIR
+- Cómo solicitar scopes en OAuth2
+- Cómo validar scopes en endpoints
+- Ejemplos de código
+- Scopes SMART on FHIR
+
+## Criterios de Aceptación
+- [x] Guía de scopes creada
+- [ ] Ejemplos de uso incluidos
+- [ ] Mapeo de scopes documentado
+- [ ] Scopes SMART on FHIR documentados
+- [ ] Guía actualizada y completa
+
+## Referencias
+- Ver `docs/SCOPES_SETUP_GUIDE.md`
+- Ver `src/common/constants/fhir-scopes.ts`
+- Ver `src/modules/auth/guards/scopes.guard.ts`
+- Ver `src/modules/auth/services/scope-permission.service.ts`
+```
+
+**Labels:** `documentation`, `auth`, `phase-5`, `scopes`
+
+---
+
+### Tarea 12: Documentar SMART on FHIR
+
+**Título:** `[PHASE-5] - docs(auth): crear documentación completa de integración SMART on FHIR`
+
+**Descripción:**
+```markdown
+## Objetivo
+Crear documentación exhaustiva sobre cómo integrar aplicaciones externas usando SMART on FHIR.
+
+## Tareas
+- [x] Documentación básica de SMART on FHIR (en PHASE4_SMART_ON_FHIR.md)
+- [ ] Crear documento `docs/SMART_ON_FHIR_GUIDE.md`
+- [ ] Documentar flujo completo de integración
+- [ ] Documentar endpoints SMART on FHIR
+- [ ] Documentar launch sequence
+- [ ] Documentar scopes SMART on FHIR
+- [ ] Incluir ejemplos de integración
+- [ ] Incluir ejemplos de código para aplicaciones cliente
+- [ ] Documentar troubleshooting
+
+## Contenido Esperado
+
+- Guía de integración paso a paso
+- Endpoints disponibles y su uso
+- Flujo completo de launch sequence
+- Scopes disponibles para SMART on FHIR
+- Ejemplos de código para diferentes lenguajes
+- Ejemplos de requests/responses
+- Troubleshooting común
+
+## Criterios de Aceptación
+- [x] Documentación básica de SMART on FHIR existente
+- [ ] Guía completa de integración creada
+- [ ] Ejemplos de código incluidos
+- [ ] Flujo completo documentado
+- [ ] Troubleshooting incluido
+
+## Referencias
+- Ver [PHASE4_SMART_ON_FHIR.md](PHASE4_SMART_ON_FHIR.md)
+- Ver [SMART App Launch](http://hl7.org/fhir/smart-app-launch/)
+```
+
+**Labels:** `documentation`, `auth`, `phase-5`, `smart-fhir`, `integration`
+
+---
+
+### Tarea 13: Actualizar README con sección de auth
+
+**Título:** `[PHASE-5] - docs(auth): actualizar README con sección completa de autenticación`
+
+**Descripción:**
+```markdown
+## Objetivo
+Actualizar el README principal del proyecto con una sección completa y clara sobre autenticación y autorización.
+
+## Tareas
+- [x] Sección básica de Keycloak en README (existe)
+- [ ] Expandir sección de autenticación
+- [ ] Agregar diagrama de flujo de autenticación
+- [ ] Documentar endpoints de autenticación
+- [ ] Documentar roles y permisos básicos
+- [ ] Agregar enlaces a documentación detallada
+- [ ] Incluir ejemplos de uso rápido
+- [ ] Actualizar checklist de funcionalidades
+
+## Contenido Esperado
+
+- Sección "Autenticación y Autorización" en README
+- Diagrama de arquitectura de autenticación
+- Endpoints principales documentados
+- Enlaces a documentación detallada
+- Ejemplos de uso rápido
+- Checklist actualizado
+
+## Criterios de Aceptación
+- [x] Sección básica de autenticación en README
+- [ ] Sección expandida y completa
+- [ ] Diagrama incluido
+- [ ] Enlaces a documentación detallada
+- [ ] Ejemplos de uso incluidos
+
+## Referencias
+- Ver `README.md` sección actual de autenticación
+- Ver [AUTH_IMPLEMENTATION_PLAN.md](../AUTH_IMPLEMENTATION_PLAN.md)
+```
+
+**Labels:** `documentation`, `auth`, `phase-5`, `readme`
+
+---
+
+### Tarea 14: Crear guía de desarrollo para auth
+
+**Título:** `[PHASE-5] - docs(auth): crear guía de desarrollo para integración con autenticación`
+
+**Descripción:**
+```markdown
+## Objetivo
+Crear una guía práctica para desarrolladores sobre cómo integrar autenticación y autorización en nuevos endpoints y módulos.
+
+## Tareas
+- [ ] Crear documento `docs/DEVELOPER_GUIDE_AUTH.md`
+- [ ] Documentar cómo proteger endpoints con guards
+- [ ] Documentar cómo usar decoradores `@Roles()` y `@Scopes()`
+- [ ] Documentar cómo acceder al usuario autenticado
+- [ ] Documentar cómo validar permisos
+- [ ] Documentar cómo implementar filtrado por paciente (SMART on FHIR)
+- [ ] Incluir ejemplos de código
+- [ ] Incluir mejores prácticas
+- [ ] Incluir patrones comunes
+
+## Contenido Esperado
+
+- Cómo proteger un endpoint nuevo
+- Cómo validar roles y scopes
+- Cómo acceder al usuario autenticado
+- Cómo implementar filtrado por contexto
+- Ejemplos de código completos
+- Mejores prácticas
+- Patrones comunes y anti-patrones
+
+## Criterios de Aceptación
+- [ ] Guía de desarrollo creada
+- [ ] Todos los casos de uso documentados
+- [ ] Ejemplos de código incluidos
+- [ ] Mejores prácticas incluidas
+- [ ] Patrones comunes documentados
+
+## Referencias
+- Ver `src/modules/auth/guards/` para ejemplos
+- Ver `src/modules/auth/decorators/` para ejemplos
+- Ver `src/modules/fhir/fhir.controller.ts` para ejemplos completos
+```
+
+**Labels:** `documentation`, `auth`, `phase-5`, `developer-guide`
+
+---
+
+## 📊 Resumen de Tareas
+
+| # | Tarea | Estado | Estimación | Prioridad | Labels |
+|---|-------|--------|------------|-----------|--------|
+| 1 | Tests unitarios módulo auth | ✅ Mayoría completado | 2-3 horas | Alta | `test`, `auth`, `phase-5`, `unit-test` |
+| 2 | Tests unitarios guards | ✅ Completado | 1-2 horas | Alta | `test`, `auth`, `phase-5`, `unit-test` |
+| 3 | Tests unitarios strategies | ✅ Completado | 1-2 horas | Alta | `test`, `auth`, `phase-5`, `unit-test` |
+| 4 | Tests E2E flujo login | ⏳ Parcial | 3-4 horas | Alta | `test`, `auth`, `phase-5`, `e2e-test` |
+| 5 | Tests E2E flujo OAuth2 | ⏳ Parcial | 3-4 horas | Alta | `test`, `auth`, `phase-5`, `e2e-test`, `oauth2` |
+| 6 | Tests E2E verificación practitioner | ⏳ Pendiente | 2-3 horas | Media | `test`, `auth`, `phase-5`, `e2e-test`, `verification` |
+| 7 | Tests E2E SMART on FHIR | ⏳ Pendiente | 4-6 horas | Alta | `test`, `auth`, `phase-5`, `e2e-test`, `smart-fhir` |
+| 8 | Documentar flujo autenticación | ⏳ Pendiente | 3-4 horas | Media | `documentation`, `auth`, `phase-5` |
+| 9 | Documentar configuración Keycloak | ⏳ Parcial | 2-3 horas | Media | `documentation`, `auth`, `phase-5`, `keycloak` |
+| 10 | Documentar roles y permisos | ⏳ Pendiente | 2-3 horas | Media | `documentation`, `auth`, `phase-5`, `roles` |
+| 11 | Documentar scopes disponibles | ✅ Completado | 1-2 horas | Media | `documentation`, `auth`, `phase-5`, `scopes` |
+| 12 | Documentar SMART on FHIR | ⏳ Parcial | 3-4 horas | Media | `documentation`, `auth`, `phase-5`, `smart-fhir`, `integration` |
+| 13 | Actualizar README con auth | ⏳ Parcial | 1-2 horas | Media | `documentation`, `auth`, `phase-5`, `readme` |
+| 14 | Crear guía desarrollo auth | ⏳ Pendiente | 2-3 horas | Media | `documentation`, `auth`, `phase-5`, `developer-guide` |
+
+**Tiempo Total Estimado:** 30-42 horas (4-6 días)
+**Tiempo Completado:** ~8-12 horas (3 tareas completadas, 3 parciales)
+**Tiempo Restante:** ~22-30 horas (8 tareas pendientes, 3 parciales)
+
+---
+
+## 🚀 Cómo Usar Esta Lista
+
+### Opción 1: Crear Issues Individuales
+1. Copia cada tarea como un nuevo Issue en GitHub
+2. Usa el título y descripción proporcionados
+3. Agrega los labels sugeridos
+4. Asigna a un milestone "Fase 5: Testing y Documentación"
+
+### Opción 2: Crear Issue Épico (HU)
+1. Crea un issue principal "Fase 5: Testing y Documentación" (HU)
+2. Crea issues hijos para cada tarea
+3. Usa GitHub Projects para organizar
+
+### Opción 3: Usar Script Automático
+1. Ejecuta: `node scripts/create-github-tasks-phase5.js`
+2. El script creará la HU y todas las tareas automáticamente
+3. Las tareas se vincularán a la HU como parent
+
+---
+
+**Última actualización**: 2025-01-27
+**Estado de la Fase 5**: ⏳ **EN PROGRESO** (3/14 tareas completadas, 3 parciales)
+
+---
+
+## 📝 Notas de Implementación
+
+### Tareas Completadas (3/14) ✅
+
+#### ✅ Tarea 1: Tests unitarios módulo auth
+- **Estado:** Mayoría completado
+- **Archivos de tests existentes:**
+  - `src/modules/auth/auth.controller.spec.ts` - Tests completos
+  - `src/modules/auth/auth.service.spec.ts` - Tests completos
+  - `src/modules/auth/strategies/jwt.strategy.spec.ts` - Tests completos
+- **Pendiente:** Revisar y mejorar cobertura de edge cases
+
+#### ✅ Tarea 2: Tests unitarios guards
+- **Estado:** Completado
+- **Archivos de tests existentes:**
+  - `src/modules/auth/guards/jwt-auth.guard.spec.ts` - Tests completos
+  - `src/modules/auth/guards/roles.guard.spec.ts` - Tests completos
+  - `src/modules/auth/guards/scopes.guard.spec.ts` - Tests completos
+  - `src/modules/auth/guards/mfa-required.guard.spec.ts` - Tests completos
+
+#### ✅ Tarea 3: Tests unitarios strategies
+- **Estado:** Completado
+- **Archivos de tests existentes:**
+  - `src/modules/auth/strategies/jwt.strategy.spec.ts` - Tests completos
+
+#### ✅ Tarea 11: Documentar scopes disponibles
+- **Estado:** Completado
+- **Archivo:** `docs/SCOPES_SETUP_GUIDE.md` - Guía completa creada
+
+### Tareas Parciales (3/14) ⏳
+
+#### ⏳ Tarea 4: Tests E2E flujo login
+- **Estado:** Parcialmente implementado
+- **Archivo:** `test/auth.e2e-spec.ts` - Tests básicos existentes
+- **Pendiente:** Completar casos de error y edge cases
+
+#### ⏳ Tarea 5: Tests E2E flujo OAuth2
+- **Estado:** Parcialmente implementado
+- **Archivo:** `test/auth.e2e-spec.ts` - Tests básicos existentes
+- **Pendiente:** Completar flujo completo OAuth2
+
+#### ⏳ Tarea 9: Documentar configuración Keycloak
+- **Estado:** Parcialmente implementado
+- **Archivos existentes:**
+  - `keycloak/README.md` - Documentación básica
+  - `keycloak/TROUBLESHOOTING.md` - Guía de troubleshooting
+  - `keycloak/BACKUP_RESTORE.md` - Guía de backup/restore
+- **Pendiente:** Expandir con configuración avanzada
+
+#### ⏳ Tarea 12: Documentar SMART on FHIR
+- **Estado:** Parcialmente implementado
+- **Archivo:** `docs/tasks/PHASE4_SMART_ON_FHIR.md` - Documentación básica
+- **Pendiente:** Crear guía completa de integración con ejemplos
+
+#### ⏳ Tarea 13: Actualizar README con auth
+- **Estado:** Parcialmente implementado
+- **Archivo:** `README.md` - Sección básica existente
+- **Pendiente:** Expandir sección con más detalles
+
+### Tareas Pendientes (8/14) ⏳
+
+#### ⏳ Tarea 6: Tests E2E verificación practitioner
+- **Estado:** Pendiente
+- **Archivo:** Crear `test/practitioner-verification.e2e-spec.ts`
+
+#### ⏳ Tarea 7: Tests E2E SMART on FHIR
+- **Estado:** Pendiente
+- **Archivo:** Crear `test/smart-fhir.e2e-spec.ts`
+
+#### ⏳ Tarea 8: Documentar flujo autenticación
+- **Estado:** Pendiente
+- **Archivo:** Crear `docs/AUTHENTICATION_FLOW.md`
+
+#### ⏳ Tarea 10: Documentar roles y permisos
+- **Estado:** Pendiente
+- **Archivo:** Crear `docs/ROLES_AND_PERMISSIONS.md`
+
+#### ⏳ Tarea 14: Crear guía desarrollo auth
+- **Estado:** Pendiente
+- **Archivo:** Crear `docs/DEVELOPER_GUIDE_AUTH.md`
+
