@@ -46,7 +46,7 @@ Esta HU incluye las siguientes tareas (ver detalles abajo):
 **Documentación:**
 - ✅ **Tarea 8**: Documentar flujo de autenticación completo (completado)
 - ✅ **Tarea 9**: Documentar configuración de Keycloak (completado)
-- ⏳ **Tarea 10**: Documentar roles y permisos
+- ✅ **Tarea 10**: Documentar roles y permisos (completado)
 - ✅ **Tarea 11**: Documentar scopes disponibles (completado)
 - ⏳ **Tarea 12**: Documentar SMART on FHIR (documentación básica completa, ejemplos avanzados pendientes)
 - ⏳ **Tarea 13**: Actualizar README con sección de auth
@@ -658,41 +658,59 @@ El documento `docs/KEYCLOAK_CONFIGURATION.md` incluye:
 
 **Título:** `[PHASE-5] - docs(auth): crear documentación completa de roles y permisos`
 
+**Estado:** ✅ **COMPLETADO**
+
 **Descripción:**
 ```markdown
 ## Objetivo
 Crear documentación exhaustiva sobre los roles, permisos y cómo funcionan en el sistema.
 
 ## Tareas
-- [ ] Crear documento `docs/ROLES_AND_PERMISSIONS.md`
-- [ ] Documentar todos los roles disponibles
-- [ ] Documentar permisos por rol
-- [ ] Documentar cómo se asignan roles
-- [ ] Documentar cómo se validan roles
-- [ ] Documentar `RolesGuard` y decorador `@Roles()`
-- [ ] Incluir ejemplos de uso
-- [ ] Incluir tabla de permisos por recurso
+- [x] Crear documento `docs/ROLES_AND_PERMISSIONS.md` (completado)
+- [x] Documentar todos los roles disponibles (completado - 9 roles)
+- [x] Documentar permisos por rol (completado)
+- [x] Documentar cómo se asignan roles (completado)
+- [x] Documentar cómo se validan roles (completado)
+- [x] Documentar `RolesGuard` y decorador `@Roles()` (completado)
+- [x] Incluir ejemplos de uso (completado - 5 ejemplos)
+- [x] Incluir tabla de permisos por recurso (completado)
 
 ## Contenido Esperado
 
-- Lista completa de roles: patient, practitioner, admin, viewer, etc.
-- Permisos por rol y recurso FHIR
-- Cómo asignar roles en Keycloak
-- Cómo usar `@Roles()` en endpoints
-- Ejemplos de código
-- Tabla de permisos
+- Lista completa de roles: patient, practitioner, admin, viewer, etc. ✅
+- Permisos por rol y recurso FHIR ✅
+- Cómo asignar roles en Keycloak ✅
+- Cómo usar `@Roles()` en endpoints ✅
+- Ejemplos de código ✅
+- Tabla de permisos ✅
 
 ## Criterios de Aceptación
-- [ ] Documento de roles y permisos creado
-- [ ] Todos los roles documentados
-- [ ] Permisos por recurso documentados
-- [ ] Ejemplos de uso incluidos
-- [ ] Tabla de permisos incluida
+- [x] Documento de roles y permisos creado
+- [x] Todos los roles documentados
+- [x] Permisos por recurso documentados
+- [x] Ejemplos de uso incluidos
+- [x] Tabla de permisos incluida
+
+## Contenido del Documento
+
+El documento `docs/ROLES_AND_PERMISSIONS.md` incluye:
+
+1. **Visión General**: Componentes del sistema y flujo de autorización
+2. **Roles Disponibles**: 9 roles documentados con permisos y ejemplos
+3. **Permisos por Rol**: Matriz completa de permisos
+4. **Asignación de Roles**: Manual, automática y programática
+5. **Validación de Roles**: RolesGuard y funcionamiento
+6. **Uso en el Código**: Decorador @Roles() y ejemplos
+7. **Integración con Scopes**: Roles vs Scopes y combinación
+8. **Tabla de Permisos por Recurso**: Patient, Practitioner, Encounter, DocumentReference, Consent
+9. **Ejemplos Prácticos**: 5 ejemplos de código
+10. **Mejores Prácticas**: 7 mejores prácticas documentadas
 
 ## Referencias
 - Ver `src/common/constants/roles.ts`
 - Ver `src/modules/auth/guards/roles.guard.ts`
 - Ver `src/modules/auth/decorators/roles.decorator.ts`
+- Ver `docs/ROLES_AND_PERMISSIONS.md` - Documento creado
 ```
 
 **Labels:** `documentation`, `auth`, `phase-5`, `roles`
@@ -1004,9 +1022,9 @@ Crear una guía práctica para desarrolladores sobre cómo integrar autenticaci�
 - **Estado:** Completado
 - **Archivo:** `docs/AUTHENTICATION_FLOW.md` - Documento completo creado (940 líneas)
 
-#### ⏳ Tarea 10: Documentar roles y permisos
-- **Estado:** Pendiente
-- **Archivo:** Crear `docs/ROLES_AND_PERMISSIONS.md`
+#### ✅ Tarea 10: Documentar roles y permisos
+- **Estado:** Completado
+- **Archivo:** `docs/ROLES_AND_PERMISSIONS.md` - Documentación completa creada (816 líneas)
 
 #### ⏳ Tarea 14: Crear guía desarrollo auth
 - **Estado:** Pendiente
