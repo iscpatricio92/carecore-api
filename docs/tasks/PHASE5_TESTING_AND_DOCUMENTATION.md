@@ -48,8 +48,8 @@ Esta HU incluye las siguientes tareas (ver detalles abajo):
 - ✅ **Tarea 9**: Documentar configuración de Keycloak (completado)
 - ✅ **Tarea 10**: Documentar roles y permisos (completado)
 - ✅ **Tarea 11**: Documentar scopes disponibles (completado)
-- ⏳ **Tarea 12**: Documentar SMART on FHIR (documentación básica completa, ejemplos avanzados pendientes)
-- ⏳ **Tarea 13**: Actualizar README con sección de auth
+- ✅ **Tarea 12**: Documentar SMART on FHIR (completado)
+- ✅ **Tarea 13**: Actualizar README con sección de auth (completado)
 - ⏳ **Tarea 14**: Crear guía de desarrollo para auth
 
 #### Estimación
@@ -766,6 +766,8 @@ Documentar todos los scopes OAuth2 disponibles y cómo se usan para control de a
 
 **Título:** `[PHASE-5] - docs(auth): crear documentación completa de integración SMART on FHIR`
 
+**Estado:** ✅ **COMPLETADO**
+
 **Descripción:**
 ```markdown
 ## Objetivo
@@ -773,31 +775,47 @@ Crear documentación exhaustiva sobre cómo integrar aplicaciones externas usand
 
 ## Tareas
 - [x] Documentación básica de SMART on FHIR (en PHASE4_SMART_ON_FHIR.md)
-- [ ] Crear documento `docs/SMART_ON_FHIR_GUIDE.md`
-- [ ] Documentar flujo completo de integración
-- [ ] Documentar endpoints SMART on FHIR
-- [ ] Documentar launch sequence
-- [ ] Documentar scopes SMART on FHIR
-- [ ] Incluir ejemplos de integración
-- [ ] Incluir ejemplos de código para aplicaciones cliente
-- [ ] Documentar troubleshooting
+- [x] Crear documento `docs/SMART_ON_FHIR_GUIDE.md` (completado)
+- [x] Documentar flujo completo de integración (completado)
+- [x] Documentar endpoints SMART on FHIR (completado)
+- [x] Documentar launch sequence (completado)
+- [x] Documentar scopes SMART on FHIR (completado)
+- [x] Incluir ejemplos de integración (completado - 4 ejemplos)
+- [x] Incluir ejemplos de código para aplicaciones cliente (completado)
+- [x] Documentar troubleshooting (completado)
 
 ## Contenido Esperado
 
-- Guía de integración paso a paso
-- Endpoints disponibles y su uso
-- Flujo completo de launch sequence
-- Scopes disponibles para SMART on FHIR
-- Ejemplos de código para diferentes lenguajes
-- Ejemplos de requests/responses
-- Troubleshooting común
+- Guía de integración paso a paso ✅
+- Endpoints disponibles y su uso ✅
+- Flujo completo de launch sequence ✅
+- Scopes disponibles para SMART on FHIR ✅
+- Ejemplos de código para diferentes lenguajes ✅
+- Ejemplos de requests/responses ✅
+- Troubleshooting común ✅
 
 ## Criterios de Aceptación
 - [x] Documentación básica de SMART on FHIR existente
-- [ ] Guía completa de integración creada
-- [ ] Ejemplos de código incluidos
-- [ ] Flujo completo documentado
-- [ ] Troubleshooting incluido
+- [x] Guía completa de integración creada
+- [x] Ejemplos de código incluidos
+- [x] Flujo completo documentado
+- [x] Troubleshooting incluido
+
+## Contenido del Documento
+
+El documento `docs/SMART_ON_FHIR_GUIDE.md` incluye:
+
+1. **Introducción**: Casos de uso y estándares
+2. **¿Qué es SMART on FHIR?**: Explicación del estándar
+3. **Requisitos Previos**: Para desarrolladores y aplicaciones
+4. **Registro de Aplicación**: Paso a paso para registrar apps
+5. **Flujo de Integración**: Standalone Launch y EHR Launch con diagramas
+6. **Endpoints SMART on FHIR**: Documentación completa de 4 endpoints
+7. **Scopes y Permisos**: Tabla completa de scopes y contexto
+8. **Contexto de Paciente**: Cómo funciona y se usa
+9. **Ejemplos de Integración**: JavaScript/TypeScript, Python, cURL, EHR Launch
+10. **Troubleshooting**: 6 problemas comunes y soluciones
+11. **Mejores Prácticas**: 5 categorías de mejores prácticas
 
 ## Referencias
 - Ver [PHASE4_SMART_ON_FHIR.md](PHASE4_SMART_ON_FHIR.md)
@@ -812,6 +830,8 @@ Crear documentación exhaustiva sobre cómo integrar aplicaciones externas usand
 
 **Título:** `[PHASE-5] - docs(auth): actualizar README con sección completa de autenticación`
 
+**Estado:** ✅ **COMPLETADO**
+
 **Descripción:**
 ```markdown
 ## Objetivo
@@ -819,29 +839,47 @@ Actualizar el README principal del proyecto con una sección completa y clara so
 
 ## Tareas
 - [x] Sección básica de Keycloak en README (existe)
-- [ ] Expandir sección de autenticación
-- [ ] Agregar diagrama de flujo de autenticación
-- [ ] Documentar endpoints de autenticación
-- [ ] Documentar roles y permisos básicos
-- [ ] Agregar enlaces a documentación detallada
-- [ ] Incluir ejemplos de uso rápido
-- [ ] Actualizar checklist de funcionalidades
+- [x] Expandir sección de autenticación (completado)
+- [x] Agregar diagrama de flujo de autenticación (completado)
+- [x] Documentar endpoints de autenticación (completado)
+- [x] Documentar roles y permisos básicos (completado)
+- [x] Agregar enlaces a documentación detallada (completado)
+- [x] Incluir ejemplos de uso rápido (completado)
+- [x] Actualizar checklist de funcionalidades (completado)
 
 ## Contenido Esperado
 
-- Sección "Autenticación y Autorización" en README
-- Diagrama de arquitectura de autenticación
-- Endpoints principales documentados
-- Enlaces a documentación detallada
-- Ejemplos de uso rápido
-- Checklist actualizado
+- Sección "Autenticación y Autorización" en README ✅
+- Diagrama de arquitectura de autenticación ✅
+- Endpoints principales documentados ✅
+- Enlaces a documentación detallada ✅
+- Ejemplos de uso rápido ✅
+- Checklist actualizado ✅
 
 ## Criterios de Aceptación
 - [x] Sección básica de autenticación en README
-- [ ] Sección expandida y completa
-- [ ] Diagrama incluido
-- [ ] Enlaces a documentación detallada
-- [ ] Ejemplos de uso incluidos
+- [x] Sección expandida y completa
+- [x] Diagrama incluido
+- [x] Enlaces a documentación detallada
+- [x] Ejemplos de uso incluidos
+
+## Contenido Agregado al README
+
+La sección de autenticación en el README ahora incluye:
+
+1. **Arquitectura de Autenticación**: Diagrama ASCII del flujo completo
+2. **Características Implementadas**: Lista de 9 características principales
+3. **Endpoints Principales**: Tabla con 8 endpoints principales
+4. **Roles Disponibles**: Tabla con 9 roles y sus descripciones
+5. **Scopes Disponibles**: Lista de scopes OAuth2 disponibles
+6. **Ejemplo de Uso Rápido**: 4 ejemplos de código (login, autenticación, uso de token, refresh)
+7. **Documentación Detallada**: Enlaces a 6 documentos de referencia
+8. **Keycloak Setup**: Información de acceso rápido y documentación
+
+Además, se actualizaron:
+- Checklist de funcionalidades (autenticación marcada como completada)
+- Sección de Security en Stack Tecnológico
+- Sección de Documentación Permanente con nuevos documentos
 
 ## Referencias
 - Ver `README.md` sección actual de autenticación
@@ -998,14 +1036,15 @@ Crear una guía práctica para desarrolladores sobre cómo integrar autenticaci�
   - `keycloak/BACKUP_RESTORE.md` - Guía de backup/restore
 - **Nuevo archivo:** `docs/KEYCLOAK_CONFIGURATION.md` - Documentación consolidada completa (835 líneas)
 
-#### ⏳ Tarea 12: Documentar SMART on FHIR
-- **Estado:** Parcialmente implementado
+#### ✅ Tarea 12: Documentar SMART on FHIR
+- **Estado:** Completado
 - **Archivo:** `docs/tasks/PHASE4_SMART_ON_FHIR.md` - Documentación básica
-- **Pendiente:** Crear guía completa de integración con ejemplos
+- **Nuevo archivo:** `docs/SMART_ON_FHIR_GUIDE.md` - Guía completa de integración creada (893 líneas)
 
-#### ⏳ Tarea 13: Actualizar README con auth
-- **Estado:** Parcialmente implementado
-- **Archivo:** `README.md` - Sección básica existente
+#### ✅ Tarea 13: Actualizar README con auth
+- **Estado:** Completado
+- **Archivo:** `README.md` - Sección expandida y completa
+- **Contenido:** Diagrama de arquitectura, endpoints, roles, scopes, ejemplos de uso, enlaces a documentación
 - **Pendiente:** Expandir sección con más detalles
 
 ### Tareas Pendientes (8/14) ⏳

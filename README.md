@@ -136,8 +136,8 @@ Creamos una plataforma móvil y web que centraliza el perfil médico del pacient
 
 - ✅ Servir como orquestador central de datos clínicos
 - ✅ Exponer recursos compatibles con FHIR (Patient, Practitioner, Encounter, DocumentReference, Consent)
-- ⏳ Implementar seguridad avanzada, roles, acceso basado en consentimiento (FHIR Consent) y auditoría inmutable
-- ⏳ Preparar endpoints y pipelines para módulos de IA (resumen clínico, extracción semántica, normalización de términos)
+- ✅ Implementar seguridad avanzada, roles, acceso basado en consentimiento (FHIR Consent) y auditoría inmutable ✅
+- ⏳ Preparar endpoints y pipelines para módulos de IA (resumen clínico, extracción semántica, normalización de términos) - Pendiente
 - ⏳ Ser la base para futuras integraciones con:
   - Laboratorios
   - Clínicas
@@ -397,12 +397,15 @@ El sistema ahora puede:
 
 #### MVP (Fase 1) ✅
 
-**Autenticación y Autorización:**
-- [ ] Registro/login de pacientes
-- [ ] Registro/login de practitioners
-- [ ] Verificación básica de practitioner (documentos)
-- [ ] API protegida con OAuth2/OIDC
-- [ ] Sistema de roles (patient, practitioner, viewer, admin)
+**Autenticación y Autorización:** ✅ COMPLETADO
+- [x] Registro/login de pacientes ✅
+- [x] Registro/login de practitioners ✅
+- [x] Verificación básica de practitioner (documentos) ✅
+- [x] API protegida con OAuth2/OIDC ✅
+- [x] Sistema de roles (patient, practitioner, viewer, admin, lab, insurer, system, audit) ✅
+- [x] Scopes y permisos granulares ✅
+- [x] MFA (Multi-Factor Authentication) ✅
+- [x] SMART on FHIR integrado ✅
 
 **Recursos FHIR MVP:**
 - [x] Crear perfil Patient
@@ -465,31 +468,156 @@ El sistema ahora puede:
 - [ ] **S3/MinIO** — Almacenamiento de documentos (DocumentReference)
 - [ ] **Encrypted fields** — pgcrypto, client-side encryption para ePHI crítico
 
-### Autenticación y Autorización ⏳[HU: ARCH_001](https://github.com/users/iscpatricio92/projects/2/views/1?pane=issue&itemId=141432066&issue=iscpatricio92%7Ccarecore-api%7C13#:~:text=ARCH%2D001%20Decisi%C3%B3n%20e%20Integraci%C3%B3n%20del%20Identity%20Provider%20(IdP)%20%5BKeycloak/Auth0/Propio%5D%20%2313) [HU: API_002](https://github.com/users/iscpatricio92/projects/2/views/1?pane=issue&itemId=141430055&issue=iscpatricio92%7Ccarecore-api%7C2#:~:text=Autenticaci%C3%B3n%20(OAuth2/OIDC)-,%232,-Edit)
+### Autenticación y Autorización ✅ COMPLETADO
 
-**📋 Plan detallado:** Ver [docs/AUTH_IMPLEMENTATION_PLAN.md](docs/AUTH_IMPLEMENTATION_PLAN.md)
-**📝 Tareas GitHub Projects Fase 1:** Ver [docs/tasks/PHASE1_KEYCLOAK_SETUP.md](docs/tasks/PHASE1_KEYCLOAK_SETUP.md) ⚠️ *Temporal*
+CareCore API implementa un sistema completo de autenticación y autorización basado en **OAuth2/OIDC** con **Keycloak** como Identity Provider.
 
-- [x] **Identity Provider** - Keycloak ✅
-  - [x] Setup Keycloak en Docker ✅
-  - [x] Configuración de Realm y Clientes ✅
-  - [x] Integración con NestJS ✅
-  - [x] OAuth2/OIDC implementado ✅
-  - [x] MFA configurado ✅
-  - [x] Verificación de identidad para practitioners (verificación de cédula) ✅
-  - [x] SMART on FHIR integrado ✅
+#### Arquitectura de Autenticación
 
-**🔐 Keycloak Setup:**
+```
+┌──────────┐         ┌──────────────┐         ┌──────────┐
+│ Cliente  │         │ CareCore API │         │ Keycloak │
+│ (App)    │         │             │         │  (IdP)   │
+└────┬─────┘         └──────┬───────┘         └────┬─────┘
+     │                      │                      │
+     │ 1. POST /auth/login  │                      │
+     │─────────────────────>│                      │
+     │                      │                      │
+     │ 2. Authorization URL │                      │
+     │<─────────────────────│                      │
+     │                      │                      │
+     │ 3. Redirect to Keycloak                     │
+     │────────────────────────────────────────────>│
+     │                      │                      │
+     │                      │ 4. User authenticates │
+     │                      │<──────────────────────│
+     │                      │                      │
+     │                      │ 5. Authorization code │
+     │                      │──────────────────────>│
+     │                      │                      │
+     │ 6. GET /auth/callback│                      │
+     │    (with code)       │                      │
+     │─────────────────────>│                      │
+     │                      │                      │
+     │                      │ 7. Exchange code      │
+     │                      │──────────────────────>│
+     │                      │                      │
+     │                      │ 8. JWT tokens         │
+     │                      │<──────────────────────│
+     │                      │                      │
+     │ 9. Access token +    │                      │
+     │    refresh token     │                      │
+     │<─────────────────────│                      │
+     │                      │                      │
+     │ 10. API requests     │                      │
+     │     (with Bearer token)                     │
+     │─────────────────────>│                      │
+     │                      │                      │
+     │                      │ 11. Validate token   │
+     │                      │──────────────────────>│
+     │                      │                      │
+     │                      │ 12. Token valid       │
+     │                      │<──────────────────────│
+     │                      │                      │
+     │ 13. Protected resource│                     │
+     │<─────────────────────│                      │
+```
 
-Keycloak está configurado y funcionando. Para más información, ver:
-- [keycloak/README.md](keycloak/README.md) - Documentación principal de Keycloak
-- [keycloak/TROUBLESHOOTING.md](keycloak/TROUBLESHOOTING.md) - Guía de troubleshooting
-- [keycloak/BACKUP_RESTORE.md](keycloak/BACKUP_RESTORE.md) - Guía de backup y restore
+#### Características Implementadas
+
+- ✅ **OAuth2/OIDC**: Flujo Authorization Code completo
+- ✅ **JWT Authentication**: Tokens JWT firmados por Keycloak
+- ✅ **Role-Based Access Control (RBAC)**: 9 roles implementados
+- ✅ **Scope-Based Access Control**: Permisos granulares por recurso
+- ✅ **Multi-Factor Authentication (MFA)**: TOTP configurado
+- ✅ **Practitioner Verification**: Verificación de identidad con documentos
+- ✅ **SMART on FHIR**: Integración completa para aplicaciones externas
+- ✅ **Token Refresh**: Renovación automática de tokens
+- ✅ **Audit Logging**: Registro completo de accesos y operaciones
+
+#### Endpoints Principales
+
+| Endpoint | Método | Descripción | Autenticación |
+|----------|--------|-------------|---------------|
+| `/api/auth/login` | POST | Inicia flujo OAuth2 | No requerida |
+| `/api/auth/callback` | GET | Callback de Keycloak | No requerida |
+| `/api/auth/refresh` | POST | Renueva tokens | Refresh token |
+| `/api/auth/logout` | POST | Cierra sesión | Refresh token |
+| `/api/auth/user` | GET | Información del usuario | JWT requerido |
+| `/api/fhir/authorize` | GET | Launch SMART on FHIR | No requerida |
+| `/api/fhir/auth` | GET | Authorization SMART on FHIR | No requerida |
+| `/api/fhir/token` | POST | Token exchange SMART on FHIR | Client credentials |
+
+#### Roles Disponibles
+
+| Rol | Descripción | Permisos Principales |
+|-----|-------------|---------------------|
+| `patient` | Paciente | Leer/escribir sus propios datos |
+| `practitioner` | Profesional médico | Crear/leer registros clínicos |
+| `practitioner-verified` | Practitioner verificado | Mismos permisos que practitioner |
+| `admin` | Administrador | Acceso completo al sistema |
+| `viewer` | Visualizador temporal | Solo lectura con consentimiento |
+| `lab` | Sistema de laboratorio | Crear/leer resultados de laboratorio |
+| `insurer` | Sistema de aseguradora | Leer datos con consentimiento |
+| `system` | Sistema externo | Permisos según integración |
+| `audit` | Auditoría | Solo lectura de logs |
+
+#### Scopes Disponibles
+
+Los scopes permiten control granular de acceso a recursos FHIR:
+
+- `patient:read`, `patient:write` - Acceso a recursos Patient
+- `practitioner:read`, `practitioner:write` - Acceso a recursos Practitioner
+- `encounter:read`, `encounter:write` - Acceso a recursos Encounter
+- `document:read`, `document:write` - Acceso a DocumentReference
+- `consent:read`, `consent:write`, `consent:share` - Acceso a Consent
+
+#### Ejemplo de Uso Rápido
+
+**1. Iniciar Login:**
+```bash
+curl -X POST "http://localhost:3000/api/auth/login?returnUrl=true"
+# Retorna: { "authorizationUrl": "http://keycloak:8080/realms/carecore/..." }
+```
+
+**2. Autenticarse en Keycloak:**
+- Abrir `authorizationUrl` en navegador
+- Ingresar credenciales
+- Autorizar aplicación
+
+**3. Usar Token en Requests:**
+```bash
+curl -H "Authorization: Bearer <access-token>" \
+     "http://localhost:3000/api/fhir/Patient"
+```
+
+**4. Refrescar Token:**
+```bash
+curl -X POST "http://localhost:3000/api/auth/refresh" \
+     -H "Content-Type: application/json" \
+     -d '{"refreshToken": "<refresh-token>"}'
+```
+
+#### Documentación Detallada
+
+- 📘 [Flujo de Autenticación Completo](docs/AUTHENTICATION_FLOW.md) - Todos los flujos documentados
+- 🔐 [Configuración de Keycloak](docs/KEYCLOAK_CONFIGURATION.md) - Guía completa de configuración
+- 👥 [Roles y Permisos](docs/ROLES_AND_PERMISSIONS.md) - Sistema de roles y permisos
+- 🔑 [Scopes y Permisos](docs/SCOPES_SETUP_GUIDE.md) - Configuración de scopes
+- 🚀 [SMART on FHIR](docs/SMART_ON_FHIR_GUIDE.md) - Guía de integración para aplicaciones externas
+- 📋 [Plan de Implementación](docs/AUTH_IMPLEMENTATION_PLAN.md) - Plan completo de autenticación
+
+#### Keycloak Setup
 
 **Acceso rápido:**
 - Admin Console: `http://localhost:${KEYCLOAK_HTTP_PORT}` (ver `.env.local` para puerto)
 - Usuario: Valor de `KEYCLOAK_ADMIN` en `.env.local`
 - Contraseña: Valor de `KEYCLOAK_ADMIN_PASSWORD` en `.env.local`
+
+**Documentación de Keycloak:**
+- [keycloak/README.md](keycloak/README.md) - Documentación principal
+- [keycloak/TROUBLESHOOTING.md](keycloak/TROUBLESHOOTING.md) - Guía de troubleshooting
+- [keycloak/BACKUP_RESTORE.md](keycloak/BACKUP_RESTORE.md) - Guía de backup y restore
 
 ### Observabilidad
 
@@ -532,7 +660,7 @@ Keycloak está configurado y funcionando. Para más información, ver:
 - ✅ **fhir-kit-client** - FHIR client
 - ✅ **fhir-r4** - FHIR R4 types and resources
 
-### Security
+### Security ✅
 
 - ✅ **Helmet** - HTTP security headers
 - ✅ **express-rate-limit** - Rate limiting
@@ -543,6 +671,12 @@ Keycloak está configurado y funcionando. Para más información, ver:
   - `passport` (v0.7.0) - Authentication middleware
   - `passport-jwt` (v4.0.1) - JWT strategy for Passport
   - `@types/passport-jwt` (v4.0.1) - TypeScript types
+- ✅ **Keycloak** - Identity Provider (OAuth2/OIDC)
+- ✅ **OAuth2/OIDC** - Authorization flows
+- ✅ **Role-Based Access Control (RBAC)** - Sistema de roles
+- ✅ **Scope-Based Access Control** - Permisos granulares
+- ✅ **Multi-Factor Authentication (MFA)** - TOTP configurado
+- ✅ **SMART on FHIR** - Integración para aplicaciones externas
 
 ---
 
@@ -710,6 +844,11 @@ Access FHIR metadata at: `/api/fhir/metadata`
 ### Documentación Permanente
 
 - [docs/PROJECT_CONTEXT.md](docs/PROJECT_CONTEXT.md) - **📘 Contexto completo del proyecto** - Documento para compartir con agentes de IA y nuevos desarrolladores
+- [docs/AUTHENTICATION_FLOW.md](docs/AUTHENTICATION_FLOW.md) - **🔐 Flujo de Autenticación Completo** - Todos los flujos de autenticación y autorización documentados
+- [docs/KEYCLOAK_CONFIGURATION.md](docs/KEYCLOAK_CONFIGURATION.md) - **🔑 Configuración de Keycloak** - Guía completa de configuración e instalación
+- [docs/ROLES_AND_PERMISSIONS.md](docs/ROLES_AND_PERMISSIONS.md) - **👥 Roles y Permisos** - Sistema completo de roles, permisos y su uso
+- [docs/SMART_ON_FHIR_GUIDE.md](docs/SMART_ON_FHIR_GUIDE.md) - **🚀 SMART on FHIR** - Guía de integración para aplicaciones externas
+- [docs/SCOPES_SETUP_GUIDE.md](docs/SCOPES_SETUP_GUIDE.md) - **🔑 Scopes y Permisos** - Configuración de scopes OAuth2
 - [docs/AUTH_IMPLEMENTATION_PLAN.md](docs/AUTH_IMPLEMENTATION_PLAN.md) - Plan completo de autenticación y autorización
 - [docs/DATABASE_ENCRYPTION.md](docs/DATABASE_ENCRYPTION.md) - Guía completa de cifrado de datos en reposo
 - [ENV_VARIABLES.md](ENV_VARIABLES.md) - Configuración detallada de variables de entorno
