@@ -437,6 +437,51 @@ describe('AuthService', () => {
       );
       expect(mockLogger.error).toHaveBeenCalled();
     });
+
+    it('should handle Keycloak returning 500 error', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        text: async () => 'Internal Server Error',
+      });
+
+      await expect(service.exchangeCodeForTokens(mockCode, mockRedirectUri)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 500,
+        }),
+        'Failed to exchange code for tokens',
+      );
+    });
+
+    it('should handle Keycloak returning 503 Service Unavailable', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: false,
+        status: 503,
+        text: async () => 'Service Unavailable',
+      });
+
+      await expect(service.exchangeCodeForTokens(mockCode, mockRedirectUri)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should handle malformed JSON response from Keycloak', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: async () => {
+          throw new Error('Invalid JSON');
+        },
+      });
+
+      await expect(service.exchangeCodeForTokens(mockCode, mockRedirectUri)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
   });
 
   describe('getUserInfoFromKeycloak', () => {
@@ -575,6 +620,51 @@ describe('AuthService', () => {
 
     it('should handle fetch errors', async () => {
       global.fetch = jest.fn().mockRejectedValue(new Error('Network error'));
+
+      await expect(service.getUserInfoFromKeycloak(mockAccessToken)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should handle Keycloak returning 500 error', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        text: async () => 'Internal Server Error',
+      });
+
+      await expect(service.getUserInfoFromKeycloak(mockAccessToken)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 500,
+        }),
+        'Failed to get user info from Keycloak',
+      );
+    });
+
+    it('should handle Keycloak returning 401 Unauthorized', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: false,
+        status: 401,
+        text: async () => 'Unauthorized',
+      });
+
+      await expect(service.getUserInfoFromKeycloak(mockAccessToken)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should handle malformed JSON response from Keycloak', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: async () => {
+          throw new Error('Invalid JSON');
+        },
+      });
 
       await expect(service.getUserInfoFromKeycloak(mockAccessToken)).rejects.toThrow(
         UnauthorizedException,
