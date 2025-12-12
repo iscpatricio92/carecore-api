@@ -32,7 +32,7 @@
     "test:integration": "jest --config jest.integration.js",
     "test:integration:cov": "jest --config jest.integration.js --coverage",
     "test:all": "npm run test && npm run test:e2e",
-    "test:all:cov": "npm run test:cov && echo '\\n' && npm run test:e2e:cov",
+    "test:all:cov": "npm run test:cov && echo '\\n' && npm run test:e2e:cov && echo '\\n' && npm run test:integration:cov",
     "typeorm": "typeorm-ts-node-commonjs",
     "migration:generate": "typeorm-ts-node-commonjs migration:generate -d src/config/data-source.ts",
     "migration:create": "ts-node scripts/generate-migration.ts",
