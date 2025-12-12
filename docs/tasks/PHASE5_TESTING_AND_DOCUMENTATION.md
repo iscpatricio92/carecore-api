@@ -44,8 +44,8 @@ Esta HU incluye las siguientes tareas (ver detalles abajo):
 - ✅ **Tarea 7**: Tests E2E para SMART on FHIR (completado - 40 tests)
 
 **Documentación:**
-- ⏳ **Tarea 8**: Documentar flujo de autenticación completo
-- ⏳ **Tarea 9**: Documentar configuración de Keycloak
+- ✅ **Tarea 8**: Documentar flujo de autenticación completo (completado)
+- ✅ **Tarea 9**: Documentar configuración de Keycloak (completado)
 - ⏳ **Tarea 10**: Documentar roles y permisos
 - ✅ **Tarea 11**: Documentar scopes disponibles (completado)
 - ⏳ **Tarea 12**: Documentar SMART on FHIR (documentación básica completa, ejemplos avanzados pendientes)
@@ -527,41 +527,60 @@ Crear tests E2E que validen el flujo completo SMART on FHIR incluyendo launch se
 
 **Título:** `[PHASE-5] - docs(auth): crear documentación completa del flujo de autenticación`
 
+**Estado:** ✅ **COMPLETADO**
+
 **Descripción:**
 ```markdown
 ## Objetivo
 Crear documentación exhaustiva que explique todos los flujos de autenticación y autorización del sistema.
 
 ## Tareas
-- [ ] Crear documento `docs/AUTHENTICATION_FLOW.md`
-- [ ] Documentar flujo de login básico
-- [ ] Documentar flujo OAuth2/OIDC completo
-- [ ] Documentar flujo de refresh token
-- [ ] Documentar flujo de logout
-- [ ] Documentar flujo de verificación de practitioner
-- [ ] Documentar flujo SMART on FHIR
-- [ ] Incluir diagramas de flujo
-- [ ] Incluir ejemplos de requests/responses
-- [ ] Incluir casos de error comunes
+- [x] Crear documento `docs/AUTHENTICATION_FLOW.md` (completado)
+- [x] Documentar flujo de login básico (completado)
+- [x] Documentar flujo OAuth2/OIDC completo (completado)
+- [x] Documentar flujo de refresh token (completado)
+- [x] Documentar flujo de logout (completado)
+- [x] Documentar flujo de verificación de practitioner (completado)
+- [x] Documentar flujo SMART on FHIR (completado)
+- [x] Incluir diagramas de flujo (completado - diagramas ASCII)
+- [x] Incluir ejemplos de requests/responses (completado)
+- [x] Incluir casos de error comunes (completado)
 
 ## Contenido Esperado
 
-- Diagramas de secuencia para cada flujo
-- Ejemplos de código para integración
-- Explicación de tokens JWT
-- Explicación de scopes y permisos
-- Troubleshooting común
+- Diagramas de secuencia para cada flujo ✅
+- Ejemplos de código para integración ✅
+- Explicación de tokens JWT ✅
+- Explicación de scopes y permisos ✅
+- Troubleshooting común ✅
 
 ## Criterios de Aceptación
-- [ ] Documento de flujo de autenticación creado
-- [ ] Todos los flujos documentados
-- [ ] Diagramas incluidos
-- [ ] Ejemplos de código incluidos
-- [ ] Troubleshooting incluido
+- [x] Documento de flujo de autenticación creado
+- [x] Todos los flujos documentados
+- [x] Diagramas incluidos
+- [x] Ejemplos de código incluidos
+- [x] Troubleshooting incluido
+
+## Contenido del Documento
+
+El documento `docs/AUTHENTICATION_FLOW.md` incluye:
+
+1. **Visión General**: Arquitectura y componentes
+2. **Flujo de Login Básico**: OAuth2/OIDC paso a paso
+3. **Flujo de Refresh Token**: Renovación de tokens
+4. **Flujo de Logout**: Cierre de sesión y revocación
+5. **Flujo de Verificación de Practitioner**: Upload y revisión
+6. **Flujo SMART on FHIR**: Integración con EHR
+7. **Tokens JWT**: Estructura y validación
+8. **Scopes y Permisos**: Tabla de permisos por rol
+9. **Casos de Error Comunes**: Soluciones a problemas frecuentes
+10. **Troubleshooting**: Guía de solución de problemas
+11. **Apéndice**: Ejemplos de código (JavaScript/TypeScript, cURL)
 
 ## Referencias
 - Ver [AUTH_IMPLEMENTATION_PLAN.md](../AUTH_IMPLEMENTATION_PLAN.md) para contexto
 - Ver [SWAGGER_AUTHENTICATION.md](../SWAGGER_AUTHENTICATION.md) para Swagger
+- Ver [AUTHENTICATION_FLOW.md](../AUTHENTICATION_FLOW.md) - Documento creado
 ```
 
 **Labels:** `documentation`, `auth`, `phase-5`
@@ -572,6 +591,8 @@ Crear documentación exhaustiva que explique todos los flujos de autenticación 
 
 **Título:** `[PHASE-5] - docs(auth): crear documentación completa de configuración de Keycloak`
 
+**Estado:** ✅ **COMPLETADO**
+
 **Descripción:**
 ```markdown
 ## Objetivo
@@ -579,37 +600,54 @@ Crear documentación exhaustiva sobre cómo configurar y mantener Keycloak en el
 
 ## Tareas
 - [x] Documentación básica de Keycloak (existe en `keycloak/README.md`)
-- [ ] Documentar configuración de realm
-- [ ] Documentar configuración de clientes
-- [ ] Documentar configuración de roles
-- [ ] Documentar configuración de scopes
-- [ ] Documentar configuración de MFA
-- [ ] Documentar backup y restore
-- [ ] Documentar troubleshooting avanzado
-- [ ] Incluir ejemplos de configuración
-- [ ] Actualizar documentación existente
+- [x] Documentar configuración de realm (completado)
+- [x] Documentar configuración de clientes (completado)
+- [x] Documentar configuración de roles (completado)
+- [x] Documentar configuración de scopes (completado - referencia a SCOPES_SETUP_GUIDE.md)
+- [x] Documentar configuración de MFA (completado - referencia a MFA_SETUP_GUIDE.md)
+- [x] Documentar backup y restore (completado - referencia a BACKUP_RESTORE.md)
+- [x] Documentar troubleshooting avanzado (completado)
+- [x] Incluir ejemplos de configuración (completado)
+- [x] Actualizar documentación existente (completado - consolidado en KEYCLOAK_CONFIGURATION.md)
 
 ## Contenido Esperado
 
-- Guía paso a paso de configuración inicial
-- Configuración de clientes OAuth2
-- Configuración de roles y permisos
-- Configuración de scopes
-- Configuración de MFA/TOTP
-- Scripts de automatización
-- Troubleshooting común
+- Guía paso a paso de configuración inicial ✅
+- Configuración de clientes OAuth2 ✅
+- Configuración de roles y permisos ✅
+- Configuración de scopes ✅
+- Configuración de MFA/TOTP ✅
+- Scripts de automatización ✅
+- Troubleshooting común ✅
 
 ## Criterios de Aceptación
 - [x] Documentación básica de Keycloak existente
-- [ ] Documentación completa de configuración
-- [ ] Ejemplos de configuración incluidos
-- [ ] Troubleshooting avanzado incluido
-- [ ] Scripts documentados
+- [x] Documentación completa de configuración
+- [x] Ejemplos de configuración incluidos
+- [x] Troubleshooting avanzado incluido
+- [x] Scripts documentados
+
+## Contenido del Documento
+
+El documento `docs/KEYCLOAK_CONFIGURATION.md` incluye:
+
+1. **Visión General**: Arquitectura y componentes
+2. **Instalación e Inicialización**: Setup automático y manual
+3. **Configuración del Realm**: Settings básicos y avanzados
+4. **Configuración de Clientes**: carecore-api, carecore-web, keycloak-admin-api, SMART apps
+5. **Configuración de Roles**: Roles base y asignación
+6. **Configuración de Scopes**: Referencia a guía completa
+7. **Configuración de MFA**: Referencia a guía completa
+8. **Configuración Avanzada**: User federation, Identity providers, Events
+9. **Backup y Restore**: Referencia a guía completa
+10. **Troubleshooting**: Problemas comunes y soluciones
+11. **Scripts de Automatización**: Documentación de todos los scripts
 
 ## Referencias
 - Ver `keycloak/README.md`
 - Ver `keycloak/TROUBLESHOOTING.md`
 - Ver `keycloak/BACKUP_RESTORE.md`
+- Ver `docs/KEYCLOAK_CONFIGURATION.md` - Documento consolidado creado
 ```
 
 **Labels:** `documentation`, `auth`, `phase-5`, `keycloak`
@@ -934,13 +972,13 @@ Crear una guía práctica para desarrolladores sobre cómo integrar autenticaci�
 - **Archivo:** `test/auth.e2e-spec.ts` - Tests básicos existentes
 - **Pendiente:** Completar flujo completo OAuth2
 
-#### ⏳ Tarea 9: Documentar configuración Keycloak
-- **Estado:** Parcialmente implementado
+#### ✅ Tarea 9: Documentar configuración Keycloak
+- **Estado:** Completado
 - **Archivos existentes:**
   - `keycloak/README.md` - Documentación básica
   - `keycloak/TROUBLESHOOTING.md` - Guía de troubleshooting
   - `keycloak/BACKUP_RESTORE.md` - Guía de backup/restore
-- **Pendiente:** Expandir con configuración avanzada
+- **Nuevo archivo:** `docs/KEYCLOAK_CONFIGURATION.md` - Documentación consolidada completa (835 líneas)
 
 #### ⏳ Tarea 12: Documentar SMART on FHIR
 - **Estado:** Parcialmente implementado
@@ -962,9 +1000,9 @@ Crear una guía práctica para desarrolladores sobre cómo integrar autenticaci�
 - **Estado:** Pendiente
 - **Archivo:** Crear `test/smart-fhir.e2e-spec.ts`
 
-#### ⏳ Tarea 8: Documentar flujo autenticación
-- **Estado:** Pendiente
-- **Archivo:** Crear `docs/AUTHENTICATION_FLOW.md`
+#### ✅ Tarea 8: Documentar flujo autenticación
+- **Estado:** Completado
+- **Archivo:** `docs/AUTHENTICATION_FLOW.md` - Documento completo creado (940 líneas)
 
 #### ⏳ Tarea 10: Documentar roles y permisos
 - **Estado:** Pendiente
