@@ -50,7 +50,7 @@ Esta HU incluye las siguientes tareas (ver detalles abajo):
 - ✅ **Tarea 11**: Documentar scopes disponibles (completado)
 - ✅ **Tarea 12**: Documentar SMART on FHIR (completado)
 - ✅ **Tarea 13**: Actualizar README con sección de auth (completado)
-- ⏳ **Tarea 14**: Crear guía de desarrollo para auth
+- ✅ **Tarea 14**: Crear guía de desarrollo para auth (completado)
 
 #### Estimación
 
@@ -894,43 +894,61 @@ Además, se actualizaron:
 
 **Título:** `[PHASE-5] - docs(auth): crear guía de desarrollo para integración con autenticación`
 
+**Estado:** ✅ **COMPLETADO**
+
 **Descripción:**
 ```markdown
 ## Objetivo
 Crear una guía práctica para desarrolladores sobre cómo integrar autenticación y autorización en nuevos endpoints y módulos.
 
 ## Tareas
-- [ ] Crear documento `docs/DEVELOPER_GUIDE_AUTH.md`
-- [ ] Documentar cómo proteger endpoints con guards
-- [ ] Documentar cómo usar decoradores `@Roles()` y `@Scopes()`
-- [ ] Documentar cómo acceder al usuario autenticado
-- [ ] Documentar cómo validar permisos
-- [ ] Documentar cómo implementar filtrado por paciente (SMART on FHIR)
-- [ ] Incluir ejemplos de código
-- [ ] Incluir mejores prácticas
-- [ ] Incluir patrones comunes
+- [x] Crear documento `docs/DEVELOPER_GUIDE_AUTH.md` (completado)
+- [x] Documentar cómo proteger endpoints con guards (completado)
+- [x] Documentar cómo usar decoradores `@Roles()` y `@Scopes()` (completado)
+- [x] Documentar cómo acceder al usuario autenticado (completado)
+- [x] Documentar cómo validar permisos (completado)
+- [x] Documentar cómo implementar filtrado por paciente (SMART on FHIR) (completado)
+- [x] Incluir ejemplos de código (completado - 6 ejemplos completos)
+- [x] Incluir mejores prácticas (completado - 7 mejores prácticas)
+- [x] Incluir patrones comunes (completado - 6 patrones + 5 anti-patrones)
 
 ## Contenido Esperado
 
-- Cómo proteger un endpoint nuevo
-- Cómo validar roles y scopes
-- Cómo acceder al usuario autenticado
-- Cómo implementar filtrado por contexto
-- Ejemplos de código completos
-- Mejores prácticas
-- Patrones comunes y anti-patrones
+- Cómo proteger un endpoint nuevo ✅
+- Cómo validar roles y scopes ✅
+- Cómo acceder al usuario autenticado ✅
+- Cómo implementar filtrado por contexto ✅
+- Ejemplos de código completos ✅
+- Mejores prácticas ✅
+- Patrones comunes y anti-patrones ✅
 
 ## Criterios de Aceptación
-- [ ] Guía de desarrollo creada
-- [ ] Todos los casos de uso documentados
-- [ ] Ejemplos de código incluidos
-- [ ] Mejores prácticas incluidas
-- [ ] Patrones comunes documentados
+- [x] Guía de desarrollo creada
+- [x] Todos los casos de uso documentados
+- [x] Ejemplos de código incluidos
+- [x] Mejores prácticas incluidas
+- [x] Patrones comunes documentados
+
+## Contenido del Documento
+
+El documento `docs/DEVELOPER_GUIDE_AUTH.md` incluye:
+
+1. **Introducción**: Componentes disponibles y estructura
+2. **Proteger Endpoints**: 5 tipos de protección (básica, roles, scopes, combinada, MFA)
+3. **Validar Roles**: 3 métodos de validación
+4. **Validar Scopes**: 2 métodos de validación
+5. **Acceder al Usuario Autenticado**: Decorador @CurrentUser() y propiedades
+6. **Filtrado por Contexto**: Patient context y Practitioner context
+7. **Patrones Comunes**: 6 patrones documentados
+8. **Mejores Prácticas**: 7 mejores prácticas con ejemplos
+9. **Anti-Patrones**: 5 anti-patrones con correcciones
+10. **Ejemplos Completos**: 6 ejemplos completos de código
 
 ## Referencias
 - Ver `src/modules/auth/guards/` para ejemplos
 - Ver `src/modules/auth/decorators/` para ejemplos
 - Ver `src/modules/fhir/fhir.controller.ts` para ejemplos completos
+- Ver `docs/DEVELOPER_GUIDE_AUTH.md` - Guía creada
 ```
 
 **Labels:** `documentation`, `auth`, `phase-5`, `developer-guide`
@@ -1065,7 +1083,8 @@ Crear una guía práctica para desarrolladores sobre cómo integrar autenticaci�
 - **Estado:** Completado
 - **Archivo:** `docs/ROLES_AND_PERMISSIONS.md` - Documentación completa creada (816 líneas)
 
-#### ⏳ Tarea 14: Crear guía desarrollo auth
-- **Estado:** Pendiente
-- **Archivo:** Crear `docs/DEVELOPER_GUIDE_AUTH.md`
+#### ✅ Tarea 14: Crear guía desarrollo auth
+- **Estado:** Completado
+- **Archivo:** `docs/DEVELOPER_GUIDE_AUTH.md` - Guía completa creada (955 líneas)
+- **Contenido:** Protección de endpoints, validación de roles/scopes, filtrado por contexto, 6 ejemplos completos, mejores prácticas y anti-patrones
 
