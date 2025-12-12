@@ -721,6 +721,8 @@ El documento `docs/ROLES_AND_PERMISSIONS.md` incluye:
 
 **Título:** `[PHASE-5] - docs(auth): documentar scopes OAuth2 disponibles y su uso`
 
+**Estado:** ✅ **COMPLETADO**
+
 **Descripción:**
 ```markdown
 ## Objetivo
@@ -728,31 +730,43 @@ Documentar todos los scopes OAuth2 disponibles y cómo se usan para control de a
 
 ## Tareas
 - [x] Guía de scopes creada (`docs/SCOPES_SETUP_GUIDE.md`)
-- [ ] Mejorar documentación con ejemplos de uso
-- [ ] Documentar mapeo de scopes a permisos FHIR
-- [ ] Documentar `ScopesGuard` y decorador `@Scopes()`
-- [ ] Incluir ejemplos de requests con scopes
-- [ ] Documentar scopes SMART on FHIR
-- [ ] Actualizar guía existente
+- [x] Mejorar documentación con ejemplos de uso (completado)
+- [x] Documentar mapeo de scopes a permisos FHIR (completado)
+- [x] Documentar `ScopesGuard` y decorador `@Scopes()` (completado)
+- [x] Incluir ejemplos de requests con scopes (completado)
+- [x] Documentar scopes SMART on FHIR (completado)
+- [x] Actualizar guía existente (completado)
 
 ## Contenido Esperado
 
-- Lista completa de scopes disponibles
-- Mapeo de scopes a recursos FHIR
-- Cómo solicitar scopes en OAuth2
-- Cómo validar scopes en endpoints
-- Ejemplos de código
-- Scopes SMART on FHIR
+- Lista completa de scopes disponibles ✅
+- Mapeo de scopes a recursos FHIR ✅
+- Cómo solicitar scopes en OAuth2 ✅
+- Cómo validar scopes en endpoints ✅
+- Ejemplos de código ✅
+- Scopes SMART on FHIR ✅
 
 ## Criterios de Aceptación
 - [x] Guía de scopes creada
-- [ ] Ejemplos de uso incluidos
-- [ ] Mapeo de scopes documentado
-- [ ] Scopes SMART on FHIR documentados
-- [ ] Guía actualizada y completa
+- [x] Ejemplos de uso incluidos
+- [x] Mapeo de scopes documentado
+- [x] Scopes SMART on FHIR documentados
+- [x] Guía actualizada y completa
+
+## Contenido Agregado a la Guía
+
+La guía `docs/SCOPES_SETUP_GUIDE.md` fue mejorada con:
+
+1. **Uso de Scopes en el Código**: Sección completa sobre cómo usar scopes
+2. **Mapeo de Scopes a Permisos FHIR**: Tabla completa de mapeo
+3. **ScopesGuard y Decorador @Scopes()**: Documentación completa con ejemplos
+4. **ScopePermissionService**: Documentación de métodos y ejemplos de uso
+5. **Ejemplos de Requests con Scopes**: Solicitar scopes, token response, usar tokens
+6. **Scopes SMART on FHIR**: Scopes con contexto de paciente/usuario, scopes estándar, ejemplos de flujo
+7. **Referencias Adicionales**: Enlaces a documentación relacionada y código
 
 ## Referencias
-- Ver `docs/SCOPES_SETUP_GUIDE.md`
+- Ver `docs/SCOPES_SETUP_GUIDE.md` - Guía actualizada
 - Ver `src/common/constants/fhir-scopes.ts`
 - Ver `src/modules/auth/guards/scopes.guard.ts`
 - Ver `src/modules/auth/services/scope-permission.service.ts`
