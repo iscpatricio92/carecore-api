@@ -709,6 +709,7 @@ Access FHIR metadata at: `/api/fhir/metadata`
 
 ### Documentación Permanente
 
+- [docs/PROJECT_CONTEXT.md](docs/PROJECT_CONTEXT.md) - **📘 Contexto completo del proyecto** - Documento para compartir con agentes de IA y nuevos desarrolladores
 - [docs/AUTH_IMPLEMENTATION_PLAN.md](docs/AUTH_IMPLEMENTATION_PLAN.md) - Plan completo de autenticación y autorización
 - [docs/DATABASE_ENCRYPTION.md](docs/DATABASE_ENCRYPTION.md) - Guía completa de cifrado de datos en reposo
 - [ENV_VARIABLES.md](ENV_VARIABLES.md) - Configuración detallada de variables de entorno
