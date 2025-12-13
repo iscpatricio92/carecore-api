@@ -1070,12 +1070,23 @@ export class AuthService {
         'Patient registered successfully',
       );
 
+      // Step 8: Generate email verification token and send verification email
+      try {
+        await this.sendVerificationEmail(keycloakUserId, registerDto.email, registerDto.username);
+      } catch (error) {
+        // Log error but don't fail registration if email sending fails
+        this.logger.error(
+          { error, userId: keycloakUserId, email: registerDto.email },
+          'Failed to send verification email, but registration succeeded',
+        );
+      }
+
       return {
         userId: keycloakUserId,
         patientId: patient.id || '',
         username: registerDto.username,
         email: registerDto.email,
-        message: 'Patient registered successfully',
+        message: 'Patient registered successfully. Please check your email to verify your account.',
       };
     } catch (error) {
       this.logger.error({ error, username: registerDto.username }, 'Failed to register patient');
@@ -1215,5 +1226,75 @@ export class AuthService {
     }
 
     return encrypted;
+  }
+  /**
+   * Send email verification email using Keycloak's built-in email service
+   * This uses Keycloak's SMTP configuration (set in Realm settings → Email)
+   * Keycloak handles token generation, expiration, and email sending
+   * @param userId Keycloak user ID
+   * @param email Email address to verify (for logging purposes)
+   */
+  async sendVerificationEmail(userId: string, email: string, _username: string): Promise<void> {
+    // Use Keycloak's built-in email verification
+    // Keycloak will:
+    // 1. Generate a secure verification token
+    // 2. Send the email using its configured SMTP server
+    // 3. Handle token expiration (configurable in Realm settings)
+    const emailSent = await this.keycloakAdminService.sendEmailVerification(userId);
+
+    if (!emailSent) {
+      this.logger.warn(
+        { userId, email },
+        'Failed to send email verification via Keycloak. Make sure SMTP is configured in Keycloak Realm settings.',
+      );
+      // Don't throw error - registration succeeded, email verification can be retried
+    } else {
+      this.logger.info({ userId, email }, 'Email verification email sent via Keycloak');
+    }
+  }
+
+  /**
+   * Check email verification status in Keycloak
+   * Note: Keycloak handles email verification automatically when user clicks the link in the email.
+   * This method only checks the current verification status.
+   * @param userId Keycloak user ID
+   * @returns Object with verified status and email
+   */
+  async checkEmailVerificationStatus(
+    userId: string,
+  ): Promise<{ verified: boolean; email: string }> {
+    const user = await this.keycloakAdminService.findUserById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const emailVerified = user.emailVerified ?? false;
+    const email = user.email || '';
+
+    return {
+      verified: emailVerified,
+      email,
+    };
+  }
+
+  /**
+   * Resend verification email
+   * @param userId Keycloak user ID
+   * @param email Email address
+   * @returns True if email sent successfully
+   */
+  async resendVerificationEmail(userId: string, email: string): Promise<boolean> {
+    // Get user info from Keycloak to get username
+    const user = await this.keycloakAdminService.findUserById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const username = user.username || email.split('@')[0];
+
+    // Send verification email (this will create a new token)
+    await this.sendVerificationEmail(userId, email, username);
+
+    return true;
   }
 }

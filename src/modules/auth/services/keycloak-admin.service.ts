@@ -96,7 +96,7 @@ export class KeycloakAdminService {
    */
   async findUserById(
     userId: string,
-  ): Promise<{ id?: string; username?: string; email?: string } | null> {
+  ): Promise<{ id?: string; username?: string; email?: string; emailVerified?: boolean } | null> {
     try {
       await this.authenticate();
 
@@ -730,6 +730,62 @@ export class KeycloakAdminService {
       this.logger.error({ error, username, email }, 'Failed to check if user exists in Keycloak');
       // Return false on error to allow registration attempt
       return { usernameExists: false, emailExists: false };
+    }
+  }
+
+  /**
+   * Update user email verification status in Keycloak
+   * @param userId Keycloak user ID
+   * @param emailVerified Email verification status
+   * @returns True if successful, false otherwise
+   */
+  async updateUserEmailVerified(userId: string, emailVerified: boolean): Promise<boolean> {
+    try {
+      await this.authenticate();
+
+      await this.kcAdminClient.users.update(
+        { id: userId },
+        {
+          emailVerified,
+        },
+      );
+
+      this.logger.info(
+        { userId, emailVerified },
+        'User email verification status updated in Keycloak',
+      );
+      return true;
+    } catch (error) {
+      this.logger.error(
+        { error, userId, emailVerified },
+        'Failed to update email verification status in Keycloak',
+      );
+      return false;
+    }
+  }
+
+  /**
+   * Send email verification email using Keycloak's built-in email service
+   * This uses Keycloak's SMTP configuration (set in Realm settings → Email)
+   * @param userId Keycloak user ID
+   * @returns True if email sent successfully, false otherwise
+   */
+  async sendEmailVerification(userId: string): Promise<boolean> {
+    try {
+      await this.authenticate();
+
+      // Keycloak's executeActionsEmail sends an email with actions to execute
+      // Using 'VERIFY_EMAIL' action triggers Keycloak's email verification flow
+      await this.kcAdminClient.users.executeActionsEmail({
+        id: userId,
+        actions: ['VERIFY_EMAIL'],
+      });
+
+      this.logger.info({ userId }, 'Email verification email sent via Keycloak');
+      return true;
+    } catch (error) {
+      this.logger.error({ error, userId }, 'Failed to send email verification via Keycloak');
+      return false;
     }
   }
 }

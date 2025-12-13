@@ -97,6 +97,9 @@ ENCRYPTION_KEY=
 # CORS
 CORS_ORIGIN=http://localhost:3000
 
+# Frontend URL (for OAuth redirects)
+FRONTEND_URL=http://localhost:3000
+
 # Rate Limiting
 RATE_LIMIT_TTL=60
 RATE_LIMIT_MAX=100
@@ -167,6 +170,14 @@ KEYCLOAK_HTTP_ENABLED=true
 ### CORS
 - `CORS_ORIGIN`: Allowed origin for CORS (use `*` in development, specific in production)
 
+### Frontend URL
+- `FRONTEND_URL`: Frontend URL for OAuth callback redirects (**optional**)
+  - Used to redirect users after successful OAuth authentication
+  - Default: `http://localhost:3001` (if not set)
+  - Alternative: `CLIENT_URL` (used as fallback if `FRONTEND_URL` is not set)
+  - Example: `http://localhost:3001` (development) or `https://app.carecore.com` (production)
+  - **Note:** This variable is used for OAuth redirects, not for email verification
+
 ### Rate Limiting
 - `RATE_LIMIT_TTL`: Time window in seconds for rate limiting
 - `RATE_LIMIT_MAX`: Maximum number of requests per window
@@ -209,6 +220,32 @@ KEYCLOAK_HTTP_ENABLED=true
 - `KEYCLOAK_DB_PORT`: Database port for Keycloak (**required**)
 - `KEYCLOAK_HTTP_PORT`: Internal HTTP port for Keycloak (**required**)
 - `KEYCLOAK_HTTP_ENABLED`: Enable HTTP in Keycloak (`true` or `false`) (**required**)
+
+### Frontend URL (Optional)
+
+- `FRONTEND_URL`: Frontend URL for OAuth callback redirects (**optional**)
+  - Used to redirect users after successful OAuth authentication
+  - Default: `http://localhost:3001` (if not set)
+  - Alternative: `CLIENT_URL` (used as fallback if `FRONTEND_URL` is not set)
+  - Example: `http://localhost:3001` (development) or `https://app.carecore.com` (production)
+
+**Note:** This variable is used for OAuth redirects, not for email verification. Email verification is handled entirely by Keycloak.
+
+### Email Configuration (Deprecated - Removed)
+
+⚠️ **Nota importante:** Las variables SMTP han sido **eliminadas** del proyecto. La verificación de email está completamente manejada por **Keycloak** usando su configuración SMTP en Realm settings.
+
+**Recomendación:** Configura SMTP en Keycloak Realm settings (Realm settings → Email) en lugar de usar variables en `.env`. Ver: [docs/EMAIL_VERIFICATION.md](EMAIL_VERIFICATION.md) y [docs/KEYCLOAK_CONFIGURATION.md](KEYCLOAK_CONFIGURATION.md)
+
+**Variables SMTP eliminadas:**
+- ~~`SMTP_HOST`~~ - Eliminada (usar Keycloak SMTP config)
+- ~~`SMTP_PORT`~~ - Eliminada (usar Keycloak SMTP config)
+- ~~`SMTP_USER`~~ - Eliminada (usar Keycloak SMTP config)
+- ~~`SMTP_PASSWORD`~~ - Eliminada (usar Keycloak SMTP config)
+- ~~`SMTP_SECURE`~~ - Eliminada (usar Keycloak SMTP config)
+- ~~`SMTP_FROM`~~ - Eliminada (usar Keycloak SMTP config)
+
+**Para verificación de email:** Keycloak maneja automáticamente el envío y verificación de emails. No se requiere configuración adicional en la API. Ver: [docs/EMAIL_VERIFICATION.md](EMAIL_VERIFICATION.md)
 
 ### Keycloak Client (API)
 - `KEYCLOAK_CLIENT_ID`: Client ID for the API backend (**required**)

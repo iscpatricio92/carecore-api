@@ -540,6 +540,8 @@ CareCore API implementa un sistema completo de autenticación y autorización ba
 | Endpoint | Método | Descripción | Autenticación |
 |----------|--------|-------------|---------------|
 | `/api/auth/register` | POST | Registro de nuevos pacientes | No requerida |
+| `/api/auth/email-verification-status` | GET | Verificar estado de verificación de email | Requerida |
+| `/api/auth/resend-verification-email` | POST | Reenviar email de verificación | Requerida |
 | `/api/auth/login` | POST | Inicia flujo OAuth2 | No requerida |
 | `/api/auth/callback` | GET | Callback de Keycloak | No requerida |
 | `/api/auth/refresh` | POST | Renueva tokens | Refresh token |

@@ -1966,7 +1966,9 @@ describe('AuthService', () => {
       expect(result).toHaveProperty('patientId', 'patient-id-123');
       expect(result).toHaveProperty('username', 'newpatient');
       expect(result).toHaveProperty('email', 'newpatient@example.com');
-      expect(result.message).toBe('Patient registered successfully');
+      expect(result.message).toBe(
+        'Patient registered successfully. Please check your email to verify your account.',
+      );
 
       expect(mockKeycloakAdminService.checkUserExists).toHaveBeenCalledWith(
         'newpatient',

@@ -61,6 +61,11 @@ import {
   MFAStatusResponseDto,
 } from './dto/mfa.dto';
 import { RegisterPatientDto, RegisterPatientResponseDto } from './dto/register-patient.dto';
+import {
+  VerifyEmailResponseDto,
+  ResendVerificationEmailDto,
+  ResendVerificationEmailResponseDto,
+} from './dto/verify-email.dto';
 
 /**
  * Authentication Controller
@@ -117,6 +122,108 @@ export class AuthController {
       }
       throw new BadRequestException(
         `Failed to register patient: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  }
+
+  /**
+   * Check email verification status
+   * Note: Keycloak handles email verification automatically when the user clicks the link in the verification email.
+   * This endpoint only checks the current verification status in Keycloak.
+   * The user must be authenticated to check their own verification status.
+   */
+  @Get('email-verification-status')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Check email verification status',
+    description:
+      'Checks the email verification status of the authenticated user. ' +
+      'Note: Keycloak handles email verification automatically when the user clicks the link in the verification email.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Email verification status retrieved successfully',
+    type: VerifyEmailResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token required',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  async checkEmailVerificationStatus(@CurrentUser() user: User): Promise<VerifyEmailResponseDto> {
+    try {
+      const result = await this.authService.checkEmailVerificationStatus(user.keycloakUserId);
+
+      return {
+        message: result.verified
+          ? 'Email is verified'
+          : 'Email is not verified. Please check your email and click the verification link.',
+        email: result.email,
+      };
+    } catch (error) {
+      this.logger.error({ error, userId: user.id }, 'Failed to check email verification status');
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException(
+        `Failed to check email verification status: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  }
+
+  /**
+   * Resend verification email
+   * This endpoint requires authentication and allows users to request a new verification email
+   */
+  @Post('resend-verification-email')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Resend verification email',
+    description: 'Resends the email verification email to the authenticated user.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Verification email sent successfully',
+    type: ResendVerificationEmailResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Email service not configured or failed to send email',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token required',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  async resendVerificationEmail(
+    @Body() resendDto: ResendVerificationEmailDto,
+    @CurrentUser() user: User,
+  ): Promise<ResendVerificationEmailResponseDto> {
+    try {
+      await this.authService.resendVerificationEmail(user.keycloakUserId, resendDto.email);
+
+      return {
+        message: 'Verification email sent successfully',
+      };
+    } catch (error) {
+      this.logger.error(
+        { error, userId: user.id, email: resendDto.email },
+        'Failed to resend verification email',
+      );
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException(
+        `Failed to resend verification email: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
     }
   }

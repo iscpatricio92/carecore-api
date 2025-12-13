@@ -216,6 +216,10 @@ Para habilitar envío de emails (verificación, reset password):
    - **Password:** SMTP password
    - **Enable StartTLS:** ON (si usa puerto 587)
 
+**Nota importante:** La verificación de email está completamente manejada por Keycloak. Cuando un usuario se registra, Keycloak envía automáticamente un email de verificación. El usuario hace clic en el enlace y Keycloak verifica el email automáticamente. No se requiere configuración adicional en la API.
+
+Para más detalles, ver: [docs/EMAIL_VERIFICATION.md](EMAIL_VERIFICATION.md)
+
 #### Themes
 
 1. Ir a **Realm settings** → **Themes**
