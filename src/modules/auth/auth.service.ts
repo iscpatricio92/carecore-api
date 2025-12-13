@@ -121,7 +121,7 @@ export class AuthService {
    * @throws UnauthorizedException if state tokens don't match
    */
   validateStateToken(receivedState: string, storedState: string | undefined): void {
-    if (!receivedState || !storedState) {
+    if (!receivedState || !receivedState.trim() || !storedState || !storedState.trim()) {
       this.logger.warn('State token missing in callback');
       throw new UnauthorizedException('Invalid state token');
     }
@@ -170,9 +170,14 @@ export class AuthService {
       throw new BadRequestException('Keycloak client secret is not configured');
     }
 
-    if (!code) {
+    if (!code || code.trim() === '') {
       this.logger.error('Authorization code is required');
       throw new BadRequestException('Authorization code is required');
+    }
+
+    if (!redirectUri || redirectUri.trim() === '') {
+      this.logger.error('Redirect URI is required');
+      throw new BadRequestException('Redirect URI is required');
     }
 
     // Build token endpoint URL
@@ -249,6 +254,10 @@ export class AuthService {
 
     if (!keycloakUrl) {
       throw new BadRequestException('Keycloak URL is not configured');
+    }
+
+    if (!accessToken || accessToken.trim() === '') {
+      throw new BadRequestException('Access token is required');
     }
 
     const userInfoUrl = `${keycloakUrl}/realms/${keycloakRealm}/protocol/openid-connect/userinfo`;

@@ -602,6 +602,9 @@ describe('Practitioner Verification E2E', () => {
         return;
       }
 
+      // Mock addRoleToUser to return true (success)
+      mockKeycloakAdminService.addRoleToUser.mockResolvedValue(true);
+
       const response = await request(app.getHttpServer())
         .put(`/api/auth/verify-practitioner/${pendingVerificationId}/review`)
         .set('Authorization', `Bearer ${adminToken}`)
@@ -612,6 +615,74 @@ describe('Practitioner Verification E2E', () => {
       expect(response.body).toHaveProperty('status', 'approved');
       expect(response.body).toHaveProperty('reviewedBy');
       expect(response.body).toHaveProperty('reviewedAt');
+
+      // Verify that addRoleToUser was called with practitioner-verified role
+      expect(mockKeycloakAdminService.addRoleToUser).toHaveBeenCalledWith(
+        expect.any(String), // keycloakUserId
+        'practitioner-verified',
+      );
+    });
+
+    it('should add practitioner-verified role when approving verification', async () => {
+      // Create a new verification for this test
+      const testFile = createTestFile('test-approve-role.pdf');
+      const createResponse = await request(app.getHttpServer())
+        .post('/api/auth/verify-practitioner')
+        .set('Authorization', `Bearer ${practitionerToken}`)
+        .attach('documentFile', testFile)
+        .field('practitionerId', testPractitionerId || 'test-practitioner-123')
+        .field('documentType', 'cedula');
+
+      if (createResponse.status !== 201) {
+        return;
+      }
+
+      const verificationId = createResponse.body.verificationId;
+
+      // Mock addRoleToUser to return true
+      mockKeycloakAdminService.addRoleToUser.mockResolvedValue(true);
+
+      await request(app.getHttpServer())
+        .put(`/api/auth/verify-practitioner/${verificationId}/review`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'approved' })
+        .expect(200);
+
+      // Verify that addRoleToUser was called
+      expect(mockKeycloakAdminService.addRoleToUser).toHaveBeenCalledWith(
+        expect.any(String),
+        'practitioner-verified',
+      );
+    });
+
+    it('should handle failure to add role when approving (verification still approved)', async () => {
+      // Create a new verification for this test
+      const testFile = createTestFile('test-approve-role-fail.pdf');
+      const createResponse = await request(app.getHttpServer())
+        .post('/api/auth/verify-practitioner')
+        .set('Authorization', `Bearer ${practitionerToken}`)
+        .attach('documentFile', testFile)
+        .field('practitionerId', testPractitionerId || 'test-practitioner-123')
+        .field('documentType', 'cedula');
+
+      if (createResponse.status !== 201) {
+        return;
+      }
+
+      const verificationId = createResponse.body.verificationId;
+
+      // Mock addRoleToUser to return false (failure)
+      mockKeycloakAdminService.addRoleToUser.mockResolvedValue(false);
+
+      const response = await request(app.getHttpServer())
+        .put(`/api/auth/verify-practitioner/${verificationId}/review`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'approved' })
+        .expect(200);
+
+      // Verification should still be approved even if role addition fails
+      expect(response.body).toHaveProperty('status', 'approved');
+      expect(mockKeycloakAdminService.addRoleToUser).toHaveBeenCalled();
     });
 
     it('should reject verification with reason as admin with MFA', async () => {
@@ -631,6 +702,9 @@ describe('Practitioner Verification E2E', () => {
 
       const rejectVerificationId = createResponse.body.verificationId;
 
+      // Mock removeRoleFromUser to return true (role was removed)
+      mockKeycloakAdminService.removeRoleFromUser.mockResolvedValue(true);
+
       const response = await request(app.getHttpServer())
         .put(`/api/auth/verify-practitioner/${rejectVerificationId}/review`)
         .set('Authorization', `Bearer ${adminToken}`)
@@ -646,6 +720,80 @@ describe('Practitioner Verification E2E', () => {
       expect(response.body).toHaveProperty('reviewedAt');
       // Note: rejectionReason is stored but not returned in ReviewVerificationResponseDto
       // It can be retrieved via GET /api/auth/verify-practitioner/:id
+
+      // Verify that removeRoleFromUser was called with practitioner-verified role
+      expect(mockKeycloakAdminService.removeRoleFromUser).toHaveBeenCalledWith(
+        expect.any(String), // keycloakUserId
+        'practitioner-verified',
+      );
+    });
+
+    it('should remove practitioner-verified role when rejecting verification', async () => {
+      // Create a new verification for this test
+      const testFile = createTestFile('test-reject-role.pdf');
+      const createResponse = await request(app.getHttpServer())
+        .post('/api/auth/verify-practitioner')
+        .set('Authorization', `Bearer ${practitionerToken}`)
+        .attach('documentFile', testFile)
+        .field('practitionerId', testPractitionerId || 'test-practitioner-123')
+        .field('documentType', 'cedula');
+
+      if (createResponse.status !== 201) {
+        return;
+      }
+
+      const verificationId = createResponse.body.verificationId;
+
+      // Mock removeRoleFromUser to return true (role existed and was removed)
+      mockKeycloakAdminService.removeRoleFromUser.mockResolvedValue(true);
+
+      await request(app.getHttpServer())
+        .put(`/api/auth/verify-practitioner/${verificationId}/review`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          status: 'rejected',
+          rejectionReason: 'Test rejection reason',
+        })
+        .expect(200);
+
+      // Verify that removeRoleFromUser was called
+      expect(mockKeycloakAdminService.removeRoleFromUser).toHaveBeenCalledWith(
+        expect.any(String),
+        'practitioner-verified',
+      );
+    });
+
+    it('should handle rejection when role does not exist (no error)', async () => {
+      // Create a new verification for this test
+      const testFile = createTestFile('test-reject-no-role.pdf');
+      const createResponse = await request(app.getHttpServer())
+        .post('/api/auth/verify-practitioner')
+        .set('Authorization', `Bearer ${practitionerToken}`)
+        .attach('documentFile', testFile)
+        .field('practitionerId', testPractitionerId || 'test-practitioner-123')
+        .field('documentType', 'cedula');
+
+      if (createResponse.status !== 201) {
+        return;
+      }
+
+      const verificationId = createResponse.body.verificationId;
+
+      // Mock removeRoleFromUser to return false (role didn't exist)
+      mockKeycloakAdminService.removeRoleFromUser.mockResolvedValue(false);
+
+      const response = await request(app.getHttpServer())
+        .put(`/api/auth/verify-practitioner/${verificationId}/review`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          status: 'rejected',
+          rejectionReason: 'Test rejection reason',
+        })
+        .expect(200);
+
+      // Verification should still be rejected even if role didn't exist
+      expect(response.body).toHaveProperty('status', 'rejected');
+      expect(mockKeycloakAdminService.removeRoleFromUser).toHaveBeenCalled();
     });
 
     it('should return 400 when reviewing already reviewed verification', async () => {

@@ -325,5 +325,351 @@ bash scripts/restore-keycloak.sh keycloak/backups/carecore-realm-YYYYMMDD-HHMMSS
 
 ---
 
-**Última actualización:** 2025-01-27
+## 📖 Uso de Scopes en el Código
+
+### Mapeo de Scopes a Permisos FHIR
+
+Los scopes se mapean automáticamente a permisos de recursos FHIR mediante `SCOPE_PERMISSIONS_MAP`:
+
+| Scope | Recurso FHIR | Acción | Descripción |
+|-------|--------------|--------|-------------|
+| `patient:read` | Patient | read | Leer recursos Patient |
+| `patient:write` | Patient | write | Crear/actualizar recursos Patient |
+| `practitioner:read` | Practitioner | read | Leer recursos Practitioner |
+| `practitioner:write` | Practitioner | write | Crear/actualizar recursos Practitioner |
+| `encounter:read` | Encounter | read | Leer recursos Encounter |
+| `encounter:write` | Encounter | write | Crear/actualizar recursos Encounter |
+| `document:read` | DocumentReference | read | Leer recursos DocumentReference |
+| `document:write` | DocumentReference | write | Crear/actualizar recursos DocumentReference |
+| `consent:read` | Consent | read | Leer recursos Consent |
+| `consent:write` | Consent | write | Crear/actualizar recursos Consent |
+| `consent:share` | Consent | share | Compartir consentimientos |
+
+Este mapeo está definido en `src/common/constants/fhir-scopes.ts` y es utilizado por `ScopePermissionService` para validar permisos.
+
+### ScopesGuard y Decorador @Scopes()
+
+#### ScopesGuard
+
+El `ScopesGuard` valida que el usuario tenga todos los scopes requeridos para acceder a un endpoint.
+
+**Ubicación:** `src/modules/auth/guards/scopes.guard.ts`
+
+**Funcionamiento:**
+1. Extrae scopes requeridos del decorador `@Scopes()`
+2. Extrae scopes del usuario del request (seteado por `JwtAuthGuard`)
+3. Valida que el usuario tenga **TODOS** los scopes requeridos
+4. Lanza `InsufficientScopesException` si faltan scopes
+
+**Ejemplo de uso:**
+```typescript
+import { Controller, Get, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ScopesGuard } from '../auth/guards/scopes.guard';
+import { Scopes } from '../auth/decorators/scopes.decorator';
+import { FHIR_SCOPES } from '../../common/constants/fhir-scopes';
+
+@Controller('fhir')
+export class FhirController {
+  @Get('Patient')
+  @Scopes(FHIR_SCOPES.PATIENT_READ)
+  @UseGuards(JwtAuthGuard, ScopesGuard)
+  async searchPatients() {
+    // Requiere scope patient:read
+    return this.fhirService.searchPatients();
+  }
+}
+```
+
+#### Decorador @Scopes()
+
+El decorador `@Scopes()` define qué scopes son requeridos para acceder a un endpoint.
+
+**Ubicación:** `src/modules/auth/decorators/scopes.decorator.ts`
+
+**Uso básico:**
+```typescript
+import { Scopes } from '../auth/decorators/scopes.decorator';
+import { FHIR_SCOPES } from '../../common/constants/fhir-scopes';
+
+@Get('patient')
+@Scopes(FHIR_SCOPES.PATIENT_READ)
+@UseGuards(JwtAuthGuard, ScopesGuard)
+async getPatient() {
+  // Requiere scope patient:read
+}
+```
+
+**Múltiples scopes (AND lógico):**
+```typescript
+@Post('consent/:id/share')
+@Scopes(FHIR_SCOPES.CONSENT_READ, FHIR_SCOPES.CONSENT_SHARE)
+@UseGuards(JwtAuthGuard, ScopesGuard)
+async shareConsent() {
+  // Requiere AMBOS scopes: consent:read Y consent:share
+}
+```
+
+**Orden de Guards:**
+
+⚠️ **IMPORTANTE:** `JwtAuthGuard` debe ir **siempre primero**:
+
+```typescript
+// ✅ Correcto
+@UseGuards(JwtAuthGuard, ScopesGuard)
+
+// ❌ Incorrecto - user no estará disponible
+@UseGuards(ScopesGuard, JwtAuthGuard)
+```
+
+### ScopePermissionService
+
+El `ScopePermissionService` proporciona métodos para validar permisos basados en scopes.
+
+**Ubicación:** `src/modules/auth/services/scope-permission.service.ts`
+
+**Métodos principales:**
+
+```typescript
+// Verificar si un scope otorga permiso para un recurso/acción
+hasPermission(scope: string, resourceType: string, action: string): boolean
+
+// Obtener scopes requeridos para un recurso/acción
+getRequiredScopes(resourceType: string, action: string): string[]
+
+// Validar si el usuario tiene todos los scopes requeridos
+validateScopes(userScopes: string[], requiredScopes: string[]): boolean
+
+// Verificar si el usuario tiene permiso (combina roles y scopes)
+hasResourcePermission(user: User, resourceType: string, action: string): boolean
+```
+
+**Ejemplo de uso en el servicio:**
+```typescript
+import { ScopePermissionService } from '../auth/services/scope-permission.service';
+
+@Injectable()
+export class FhirService {
+  constructor(
+    private scopePermissionService: ScopePermissionService,
+  ) {}
+
+  async getPatient(id: string, user: User) {
+    // Validar permisos usando el servicio
+    const hasPermission = this.scopePermissionService.hasResourcePermission(
+      user,
+      FHIR_RESOURCE_TYPES.PATIENT,
+      FHIR_ACTIONS.READ,
+    );
+
+    if (!hasPermission) {
+      throw new ForbiddenException('Insufficient permissions');
+    }
+
+    return this.patientRepository.findOne(id);
+  }
+}
+```
+
+---
+
+## 🔄 Ejemplos de Requests con Scopes
+
+### Solicitar Scopes en OAuth2
+
+Al iniciar el flujo OAuth2, puedes solicitar scopes específicos:
+
+```bash
+# Request de autorización con scopes
+GET /api/auth/login?scope=patient:read%20patient:write%20encounter:read
+```
+
+**En el código (JavaScript/TypeScript):**
+```typescript
+const scopes = ['patient:read', 'patient:write', 'encounter:read'];
+const scopeString = scopes.join(' ');
+const authUrl = `${baseUrl}/api/auth/login?scope=${encodeURIComponent(scopeString)}`;
+```
+
+### Token Response con Scopes
+
+Después de la autenticación, el token incluirá los scopes otorgados:
+
+```json
+{
+  "access_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "Bearer",
+  "expires_in": 3600,
+  "refresh_token": "refresh-token-xyz",
+  "scope": "openid profile email roles patient:read patient:write encounter:read"
+}
+```
+
+**Nota:** El servidor puede otorgar un subconjunto de los scopes solicitados, dependiendo de los permisos del usuario y la configuración del cliente.
+
+### Usar Token con Scopes en Requests
+
+```bash
+# Request con token que incluye scopes
+curl -H "Authorization: Bearer <access-token>" \
+     -H "Accept: application/fhir+json" \
+     "https://carecore.example.com/api/fhir/Patient"
+```
+
+El servidor validará automáticamente que el token tenga el scope `patient:read` requerido para este endpoint.
+
+### Validar Scopes en el Código
+
+```typescript
+@Get('patient/:id')
+@Scopes(FHIR_SCOPES.PATIENT_READ)
+@UseGuards(JwtAuthGuard, ScopesGuard)
+async getPatient(@Param('id') id: string, @CurrentUser() user: User) {
+  // El ScopesGuard ya validó que el usuario tiene patient:read
+  // user.scopes contiene: ['patient:read', 'patient:write', ...]
+
+  return this.fhirService.getPatient(id, user);
+}
+```
+
+---
+
+## 🚀 Scopes SMART on FHIR
+
+SMART on FHIR extiende los scopes OAuth2 con contexto de paciente y usuario.
+
+### Scopes con Contexto de Paciente
+
+Los scopes SMART on FHIR pueden incluir contexto de paciente:
+
+- `patient/123.read`: Leer recursos del paciente 123
+- `patient/123.write`: Escribir recursos del paciente 123
+- `patient/*.read`: Leer recursos de cualquier paciente (requiere permisos especiales)
+
+**Ejemplo de solicitud:**
+```bash
+GET /api/fhir/authorize?scope=patient/123.read%20patient/123.write
+```
+
+### Scopes con Contexto de Usuario
+
+Los scopes SMART on FHIR también pueden incluir contexto de usuario:
+
+- `user/Practitioner/456.read`: Leer recursos del practitioner 456
+- `user/*.read`: Leer recursos del usuario actual
+
+### Scopes SMART on FHIR Estándar
+
+SMART on FHIR define scopes estándar adicionales:
+
+| Scope | Descripción | Uso |
+|-------|-------------|-----|
+| `openid` | OpenID Connect | Siempre incluido |
+| `profile` | Información del perfil | Información básica del usuario |
+| `fhirUser` | FHIR User Resource | Referencia al recurso FHIR del usuario |
+| `launch` | Launch context | Contexto de launch desde EHR |
+| `launch/patient` | Patient launch context | Launch con contexto de paciente |
+| `launch/encounter` | Encounter launch context | Launch con contexto de encuentro |
+
+### Ejemplo de Flujo SMART on FHIR con Scopes
+
+```typescript
+// 1. Solicitar autorización con scopes SMART on FHIR
+const authUrl = `${fhirBaseUrl}/api/fhir/auth?` +
+  `client_id=smart-app-123&` +
+  `response_type=code&` +
+  `redirect_uri=${encodeURIComponent('https://app.com/callback')}&` +
+  `scope=${encodeURIComponent('patient:read patient:write launch/patient')}&` +
+  `launch=launch-token-123`;
+
+// 2. Después de autorización, intercambiar código por token
+const tokenResponse = await fetch(`${fhirBaseUrl}/api/fhir/token`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  body: new URLSearchParams({
+    grant_type: 'authorization_code',
+    code: authorizationCode,
+    redirect_uri: 'https://app.com/callback',
+    client_id: 'smart-app-123',
+    client_secret: 'secret-xyz',
+  }),
+});
+
+// 3. Token response incluye scopes y contexto de paciente
+const tokens = await tokenResponse.json();
+// {
+//   "access_token": "...",
+//   "scope": "patient:read patient:write launch/patient",
+//   "patient": "patient-123"  // Contexto de paciente
+// }
+
+// 4. Usar token para acceder a recursos
+const patientResponse = await fetch(`${fhirBaseUrl}/api/fhir/Patient/patient-123`, {
+  headers: {
+    'Authorization': `Bearer ${tokens.access_token}`,
+    'Accept': 'application/fhir+json',
+  },
+});
+```
+
+### Validación de Scopes SMART on FHIR
+
+El servidor valida automáticamente los scopes SMART on FHIR:
+
+```typescript
+@Get('Patient/:id')
+@Scopes(FHIR_SCOPES.PATIENT_READ)
+@UseGuards(JwtAuthGuard, ScopesGuard)
+async getPatient(@Param('id') id: string, @CurrentUser() user: User) {
+  // Si el token tiene contexto de paciente (user.patient),
+  // el servicio filtra automáticamente para solo ese paciente
+  return this.fhirService.getPatient(id, user);
+}
+```
+
+**En el servicio:**
+```typescript
+async getPatient(id: string, user: User) {
+  // Si hay contexto de paciente, validar que el ID coincida
+  if (user.patient) {
+    const patientId = user.patient.replace(/^Patient\//, '');
+    if (id !== patientId) {
+      throw new ForbiddenException('Cannot access this patient');
+    }
+  }
+
+  return this.patientRepository.findOne(id);
+}
+```
+
+Para más información sobre SMART on FHIR, ver [SMART_ON_FHIR_GUIDE.md](./SMART_ON_FHIR_GUIDE.md).
+
+---
+
+## 📚 Referencias Adicionales
+
+### Documentación del Proyecto
+
+- [DEVELOPER_GUIDE_AUTH.md](./DEVELOPER_GUIDE_AUTH.md) - Guía de desarrollo para autenticación
+- [ROLES_AND_PERMISSIONS.md](./ROLES_AND_PERMISSIONS.md) - Roles y permisos
+- [SMART_ON_FHIR_GUIDE.md](./SMART_ON_FHIR_GUIDE.md) - Guía de integración SMART on FHIR
+- [AUTHENTICATION_FLOW.md](./AUTHENTICATION_FLOW.md) - Flujos de autenticación
+
+### Código de Referencia
+
+- `src/common/constants/fhir-scopes.ts` - Constantes de scopes
+- `src/modules/auth/guards/scopes.guard.ts` - Implementación de ScopesGuard
+- `src/modules/auth/decorators/scopes.decorator.ts` - Decorador @Scopes()
+- `src/modules/auth/services/scope-permission.service.ts` - Servicio de validación de permisos
+- `src/modules/fhir/fhir.controller.ts` - Ejemplos de uso de scopes
+
+### Especificaciones
+
+- [OAuth2 Scopes (RFC 6749)](https://datatracker.ietf.org/doc/html/rfc6749#section-3.3)
+- [JWT Scope Claim (RFC 8693)](https://datatracker.ietf.org/doc/html/rfc8693)
+- [SMART on FHIR Scopes](http://hl7.org/fhir/smart-app-launch/scopes-and-launch-context/)
+
+---
+
+**Última actualización:** 2025-12-12
 

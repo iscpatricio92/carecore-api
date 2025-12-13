@@ -260,6 +260,20 @@ describe('AuthService', () => {
       }).toThrow(UnauthorizedException);
       expect(mockLogger.warn).toHaveBeenCalledWith('State token mismatch - possible CSRF attack');
     });
+
+    it('should throw UnauthorizedException when received state is only whitespace', () => {
+      expect(() => {
+        service.validateStateToken('   ', 'stored-token');
+      }).toThrow(UnauthorizedException);
+      expect(mockLogger.warn).toHaveBeenCalledWith('State token missing in callback');
+    });
+
+    it('should throw UnauthorizedException when stored state is only whitespace', () => {
+      expect(() => {
+        service.validateStateToken('received-token', '   ');
+      }).toThrow(UnauthorizedException);
+      expect(mockLogger.warn).toHaveBeenCalledWith('State token missing in callback');
+    });
   });
 
   describe('exchangeCodeForTokens', () => {
@@ -332,6 +346,27 @@ describe('AuthService', () => {
         BadRequestException,
       );
       expect(mockLogger.error).toHaveBeenCalledWith('Authorization code is required');
+    });
+
+    it('should throw BadRequestException if code is only whitespace', async () => {
+      await expect(service.exchangeCodeForTokens('   ', mockRedirectUri)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(mockLogger.error).toHaveBeenCalledWith('Authorization code is required');
+    });
+
+    it('should throw BadRequestException if redirectUri is empty', async () => {
+      await expect(service.exchangeCodeForTokens(mockCode, '')).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(mockLogger.error).toHaveBeenCalledWith('Redirect URI is required');
+    });
+
+    it('should throw BadRequestException if redirectUri is only whitespace', async () => {
+      await expect(service.exchangeCodeForTokens(mockCode, '   ')).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(mockLogger.error).toHaveBeenCalledWith('Redirect URI is required');
     });
 
     it('should successfully exchange code for tokens', async () => {
@@ -437,6 +472,51 @@ describe('AuthService', () => {
       );
       expect(mockLogger.error).toHaveBeenCalled();
     });
+
+    it('should handle Keycloak returning 500 error', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        text: async () => 'Internal Server Error',
+      });
+
+      await expect(service.exchangeCodeForTokens(mockCode, mockRedirectUri)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 500,
+        }),
+        'Failed to exchange code for tokens',
+      );
+    });
+
+    it('should handle Keycloak returning 503 Service Unavailable', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: false,
+        status: 503,
+        text: async () => 'Service Unavailable',
+      });
+
+      await expect(service.exchangeCodeForTokens(mockCode, mockRedirectUri)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should handle malformed JSON response from Keycloak', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: async () => {
+          throw new Error('Invalid JSON');
+        },
+      });
+
+      await expect(service.exchangeCodeForTokens(mockCode, mockRedirectUri)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
   });
 
   describe('getUserInfoFromKeycloak', () => {
@@ -452,6 +532,14 @@ describe('AuthService', () => {
         };
         return config[key] || null;
       });
+    });
+
+    it('should throw BadRequestException if accessToken is empty', async () => {
+      await expect(service.getUserInfoFromKeycloak('')).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException if accessToken is only whitespace', async () => {
+      await expect(service.getUserInfoFromKeycloak('   ')).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException if KEYCLOAK_URL is not configured', async () => {
@@ -581,6 +669,51 @@ describe('AuthService', () => {
       );
       expect(mockLogger.error).toHaveBeenCalled();
     });
+
+    it('should handle Keycloak returning 500 error', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        text: async () => 'Internal Server Error',
+      });
+
+      await expect(service.getUserInfoFromKeycloak(mockAccessToken)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 500,
+        }),
+        'Failed to get user info from Keycloak',
+      );
+    });
+
+    it('should handle Keycloak returning 401 Unauthorized', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: false,
+        status: 401,
+        text: async () => 'Unauthorized',
+      });
+
+      await expect(service.getUserInfoFromKeycloak(mockAccessToken)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should handle malformed JSON response from Keycloak', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: async () => {
+          throw new Error('Invalid JSON');
+        },
+      });
+
+      await expect(service.getUserInfoFromKeycloak(mockAccessToken)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
   });
 
   describe('handleCallback', () => {
@@ -648,6 +781,67 @@ describe('AuthService', () => {
     it('should throw UnauthorizedException when state tokens do not match', async () => {
       await expect(
         service.handleCallback(mockCode, 'different-state', mockStoredState, mockRedirectUri),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should throw BadRequestException when code is empty', async () => {
+      await expect(
+        service.handleCallback('', mockState, mockStoredState, mockRedirectUri),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException when code is only whitespace', async () => {
+      await expect(
+        service.handleCallback('   ', mockState, mockStoredState, mockRedirectUri),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException when redirectUri is empty', async () => {
+      await expect(
+        service.handleCallback(mockCode, mockState, mockStoredState, ''),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException when redirectUri is only whitespace', async () => {
+      await expect(
+        service.handleCallback(mockCode, mockState, mockStoredState, '   '),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should propagate error from exchangeCodeForTokens', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        text: async () => 'Invalid code',
+      });
+
+      await expect(
+        service.handleCallback(mockCode, mockState, mockStoredState, mockRedirectUri),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should propagate error from getUserInfoFromKeycloak', async () => {
+      const mockTokenResponse = {
+        access_token: 'access-token-123',
+        refresh_token: 'refresh-token-123',
+        expires_in: 3600,
+        token_type: 'Bearer',
+      };
+
+      global.fetch = jest
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockTokenResponse,
+        })
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 401,
+          text: async () => 'Invalid token',
+        });
+
+      await expect(
+        service.handleCallback(mockCode, mockState, mockStoredState, mockRedirectUri),
       ).rejects.toThrow(UnauthorizedException);
     });
   });

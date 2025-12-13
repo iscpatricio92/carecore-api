@@ -966,20 +966,21 @@ Fase 1.8: Documentar setup de Keycloak
 - [x] **4.8** Implementar filtrado por paciente ✅
 - [x] **4.9** Implementar audit logging para SMART on FHIR ✅
 
-### Fase 5: Testing y Documentación
-- [ ] **5.1** Tests unitarios módulo auth
-- [ ] **5.2** Tests unitarios guards
-- [ ] **5.3** Tests unitarios strategies
-- [ ] **5.4** Tests E2E login
-- [ ] **5.5** Tests E2E OAuth2
-- [ ] **5.6** Tests E2E verificación
-- [ ] **5.7** Tests E2E SMART on FHIR
-- [ ] **5.8** Documentar flujo de autenticación
-- [ ] **5.9** Documentar configuración Keycloak
-- [ ] **5.10** Documentar roles y permisos
-- [x] **5.11** Documentar scopes (guía creada en `docs/SCOPES_SETUP_GUIDE.md`)
-- [ ] **5.12** Documentar SMART on FHIR
-- [ ] **5.13** Actualizar README
+### Fase 5: Testing y Documentación ✅ COMPLETADA
+- [x] **5.1** Tests unitarios módulo auth ✅
+- [x] **5.2** Tests unitarios guards ✅
+- [x] **5.3** Tests unitarios strategies ✅
+- [x] **5.4** Tests E2E login ✅ (39 tests)
+- [x] **5.5** Tests E2E OAuth2 ✅ (60 tests)
+- [x] **5.6** Tests E2E verificación ✅ (42 tests)
+- [x] **5.7** Tests E2E SMART on FHIR ✅ (40 tests)
+- [x] **5.8** Documentar flujo de autenticación ✅ (`docs/AUTHENTICATION_FLOW.md` - 941 líneas)
+- [x] **5.9** Documentar configuración Keycloak ✅ (`docs/KEYCLOAK_CONFIGURATION.md` - 836 líneas)
+- [x] **5.10** Documentar roles y permisos ✅ (`docs/ROLES_AND_PERMISSIONS.md` - 817 líneas)
+- [x] **5.11** Documentar scopes ✅ (`docs/SCOPES_SETUP_GUIDE.md` - 676 líneas)
+- [x] **5.12** Documentar SMART on FHIR ✅ (`docs/SMART_ON_FHIR_GUIDE.md` - 894 líneas)
+- [x] **5.13** Actualizar README ✅ (sección auth completa)
+- [x] **5.14** Crear guía desarrollo auth ✅ (`docs/DEVELOPER_GUIDE_AUTH.md` - 956 líneas)
 
 ---
 
