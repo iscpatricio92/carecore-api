@@ -15,6 +15,9 @@ import { DocumentStorageService } from './services/document-storage.service';
 import { KeycloakAdminService } from './services/keycloak-admin.service';
 import { ScopePermissionService } from './services/scope-permission.service';
 import { PractitionerVerificationEntity } from '../../entities/practitioner-verification.entity';
+import { CommonModule } from '../../common/common.module';
+import { forwardRef } from '@nestjs/common';
+import { FhirModule } from '../fhir/fhir.module';
 
 /**
  * Auth Module
@@ -37,6 +40,11 @@ import { PractitionerVerificationEntity } from '../../entities/practitioner-veri
     JwtModule.register({}),
     // TypeORM for PractitionerVerification entity
     TypeOrmModule.forFeature([PractitionerVerificationEntity]),
+    // CommonModule for EncryptionService
+    CommonModule,
+    // FhirModule for FhirService (to validate identifier uniqueness and create patient)
+    // Use forwardRef to avoid circular dependency (FhirModule imports AuthModule for guards)
+    forwardRef(() => FhirModule),
   ],
   controllers: [AuthController],
   providers: [

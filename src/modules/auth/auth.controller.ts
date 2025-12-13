@@ -60,6 +60,7 @@ import {
   DisableMFAResponseDto,
   MFAStatusResponseDto,
 } from './dto/mfa.dto';
+import { RegisterPatientDto, RegisterPatientResponseDto } from './dto/register-patient.dto';
 
 /**
  * Authentication Controller
@@ -76,6 +77,48 @@ export class AuthController {
     private readonly logger: PinoLogger,
   ) {
     this.logger.setContext(AuthController.name);
+  }
+
+  /**
+   * Patient registration endpoint - Creates a new patient account
+   * This endpoint is public and allows patients to register themselves.
+   * It creates a user in Keycloak, validates identifier uniqueness, encrypts sensitive data,
+   * and creates a Patient resource in the database.
+   */
+  @Post('register')
+  @Public()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Register a new patient',
+    description:
+      'Registers a new patient by creating a user account in Keycloak and a Patient resource in the database. ' +
+      'Validates uniqueness of identifiers (SSN, etc.) and encrypts sensitive information.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Patient registered successfully',
+    type: RegisterPatientResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid data, duplicate username/email, or duplicate identifier',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error during registration',
+  })
+  async register(@Body() registerDto: RegisterPatientDto): Promise<RegisterPatientResponseDto> {
+    try {
+      return await this.authService.registerPatient(registerDto);
+    } catch (error) {
+      this.logger.error({ error, username: registerDto.username }, 'Failed to register patient');
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException(
+        `Failed to register patient: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
   }
 
   /**

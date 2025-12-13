@@ -32,6 +32,10 @@ import {
   MFAStatusResponseDto,
 } from './dto/mfa.dto';
 import { ROLES } from '@/common/constants/roles';
+import { FhirService } from '../fhir/fhir.service';
+import { EncryptionService } from '@/common/services/encryption.service';
+import { RegisterPatientDto, RegisterPatientResponseDto } from './dto/register-patient.dto';
+import { CreatePatientDto } from '@/common/dto/fhir-patient.dto';
 
 /**
  * Auth Service
@@ -48,6 +52,8 @@ export class AuthService {
     private readonly logger: PinoLogger,
     private readonly documentStorageService: DocumentStorageService,
     private readonly keycloakAdminService: KeycloakAdminService,
+    private readonly fhirService: FhirService,
+    private readonly encryptionService: EncryptionService,
     @InjectRepository(PractitionerVerificationEntity)
     private readonly verificationRepository: Repository<PractitionerVerificationEntity>,
   ) {
@@ -974,5 +980,240 @@ export class AuthService {
             ? 'MFA is enabled and active'
             : 'MFA is optional for your role',
     };
+  }
+
+  /**
+   * Register a new patient
+   * Creates user in Keycloak, validates identifier uniqueness, encrypts sensitive data, and creates Patient resource
+   * @param registerDto Patient registration data
+   * @returns Registration response with user ID and patient ID
+   */
+  async registerPatient(registerDto: RegisterPatientDto): Promise<RegisterPatientResponseDto> {
+    try {
+      // Step 1: Check if username or email already exists in Keycloak
+      const userExists = await this.keycloakAdminService.checkUserExists(
+        registerDto.username,
+        registerDto.email,
+      );
+
+      if (userExists.usernameExists) {
+        throw new BadRequestException('Username already exists');
+      }
+
+      if (userExists.emailExists) {
+        throw new BadRequestException('Email already exists');
+      }
+
+      // Step 2: Validate uniqueness of patient identifiers (SSN, medical record number, etc.)
+      if (registerDto.identifier && registerDto.identifier.length > 0) {
+        await this.fhirService.validatePatientIdentifierUniqueness(registerDto.identifier);
+      }
+
+      // Step 3: Extract name parts for Keycloak
+      const firstName = registerDto.name?.[0]?.given?.[0] || '';
+      const lastName = registerDto.name?.[0]?.family || '';
+
+      // Step 4: Create user in Keycloak
+      const keycloakUserId = await this.keycloakAdminService.createUser({
+        username: registerDto.username,
+        email: registerDto.email,
+        password: registerDto.password,
+        firstName,
+        lastName,
+        enabled: true,
+        emailVerified: false, // User should verify email
+      });
+
+      if (!keycloakUserId) {
+        throw new BadRequestException('Failed to create user in Keycloak');
+      }
+
+      // Step 5: Assign 'patient' role to the user
+      const roleAssigned = await this.keycloakAdminService.addRoleToUser(
+        keycloakUserId,
+        ROLES.PATIENT,
+      );
+      if (!roleAssigned) {
+        this.logger.warn(
+          { userId: keycloakUserId },
+          'Failed to assign patient role, but user was created',
+        );
+        // Continue even if role assignment fails - user can be assigned role later
+      }
+
+      // Step 6: Encrypt sensitive information in patient data
+      const encryptedPatientData = await this.encryptSensitivePatientData(registerDto);
+
+      // Step 7: Create Patient resource in database
+      const createPatientDto: CreatePatientDto = {
+        identifier: encryptedPatientData.identifier as CreatePatientDto['identifier'],
+        name: registerDto.name,
+        telecom: encryptedPatientData.telecom as CreatePatientDto['telecom'],
+        gender: registerDto.gender,
+        birthDate: registerDto.birthDate,
+        address: encryptedPatientData.address as CreatePatientDto['address'],
+        active: registerDto.active ?? true,
+      };
+
+      // Create patient with the Keycloak user ID linked
+      const patient = await this.fhirService.createPatient(createPatientDto, {
+        id: keycloakUserId,
+        keycloakUserId: keycloakUserId,
+        username: registerDto.username,
+        email: registerDto.email,
+        roles: [ROLES.PATIENT],
+        scopes: [],
+      });
+
+      this.logger.info(
+        { userId: keycloakUserId, patientId: patient.id },
+        'Patient registered successfully',
+      );
+
+      return {
+        userId: keycloakUserId,
+        patientId: patient.id || '',
+        username: registerDto.username,
+        email: registerDto.email,
+        message: 'Patient registered successfully',
+      };
+    } catch (error) {
+      this.logger.error({ error, username: registerDto.username }, 'Failed to register patient');
+
+      // If error is already a BadRequestException, re-throw it
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      // For other errors, throw a generic error
+      throw new BadRequestException(
+        `Failed to register patient: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  }
+
+  /**
+   * Encrypt sensitive patient data
+   * Encrypts identifiers (SSN), addresses, and telecom information
+   * @param patientData Patient data to encrypt
+   * @returns Patient data with encrypted sensitive fields
+   */
+  private async encryptSensitivePatientData(patientData: RegisterPatientDto): Promise<{
+    identifier?: Array<{ system?: string; value?: string }>;
+    telecom?: Array<{ system?: string; value?: string; use?: string }>;
+    address?: Array<{
+      use?: string;
+      type?: string;
+      line?: string[];
+      city?: string;
+      state?: string;
+      postalCode?: string;
+      country?: string;
+    }>;
+  }> {
+    const encrypted: {
+      identifier?: CreatePatientDto['identifier'];
+      telecom?: CreatePatientDto['telecom'];
+      address?: CreatePatientDto['address'];
+    } = {};
+
+    // Encrypt identifier values (SSN, medical record numbers, etc.)
+    if (patientData.identifier && patientData.identifier.length > 0) {
+      encrypted.identifier = await Promise.all(
+        patientData.identifier.map(async (id) => {
+          if (id.value) {
+            // Only encrypt if it's a sensitive identifier (SSN, etc.)
+            const sensitiveSystems = [
+              'http://hl7.org/fhir/sid/us-ssn',
+              'http://hl7.org/fhir/sid/us-medicare',
+              'http://hl7.org/fhir/sid/us-drivers',
+            ];
+            if (sensitiveSystems.includes(id.system || '')) {
+              try {
+                const encryptedValue = await this.encryptionService.encrypt(id.value);
+                return { ...id, value: encryptedValue };
+              } catch (error) {
+                this.logger.warn(
+                  { error, identifier: id.value },
+                  'Failed to encrypt identifier, storing as plaintext',
+                );
+                return id; // Store as plaintext if encryption fails
+              }
+            }
+          }
+          return id;
+        }),
+      );
+    } else {
+      encrypted.identifier = patientData.identifier;
+    }
+
+    // Encrypt address information (street addresses, postal codes)
+    if (patientData.address && patientData.address.length > 0) {
+      encrypted.address = await Promise.all(
+        patientData.address.map(async (addr) => {
+          const encryptedAddr = { ...addr };
+          if (addr.line && addr.line.length > 0) {
+            try {
+              encryptedAddr.line = await Promise.all(
+                addr.line.map(async (line) => {
+                  try {
+                    return await this.encryptionService.encrypt(line);
+                  } catch (error) {
+                    this.logger.warn(
+                      { error, line },
+                      'Failed to encrypt address line, storing as plaintext',
+                    );
+                    return line;
+                  }
+                }),
+              );
+            } catch (error) {
+              this.logger.warn({ error }, 'Failed to encrypt address lines');
+            }
+          }
+          if (addr.postalCode) {
+            try {
+              encryptedAddr.postalCode = await this.encryptionService.encrypt(addr.postalCode);
+            } catch (error) {
+              this.logger.warn(
+                { error, postalCode: addr.postalCode },
+                'Failed to encrypt postal code, storing as plaintext',
+              );
+              // Keep original if encryption fails
+            }
+          }
+          return encryptedAddr;
+        }),
+      );
+    } else {
+      encrypted.address = patientData.address;
+    }
+
+    // Encrypt telecom information (phone numbers, but not emails - emails are needed for login)
+    if (patientData.telecom && patientData.telecom.length > 0) {
+      encrypted.telecom = await Promise.all(
+        patientData.telecom.map(async (contact) => {
+          // Only encrypt phone numbers, not emails
+          if (contact.system === 'phone' && contact.value) {
+            try {
+              const encryptedValue = await this.encryptionService.encrypt(contact.value);
+              return { ...contact, value: encryptedValue };
+            } catch (error) {
+              this.logger.warn(
+                { error, telecom: contact.value },
+                'Failed to encrypt telecom, storing as plaintext',
+              );
+              return contact;
+            }
+          }
+          return contact; // Keep email and other non-phone contacts as plaintext
+        }),
+      );
+    } else {
+      encrypted.telecom = patientData.telecom;
+    }
+
+    return encrypted;
   }
 }

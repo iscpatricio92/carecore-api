@@ -539,6 +539,7 @@ CareCore API implementa un sistema completo de autenticación y autorización ba
 
 | Endpoint | Método | Descripción | Autenticación |
 |----------|--------|-------------|---------------|
+| `/api/auth/register` | POST | Registro de nuevos pacientes | No requerida |
 | `/api/auth/login` | POST | Inicia flujo OAuth2 | No requerida |
 | `/api/auth/callback` | GET | Callback de Keycloak | No requerida |
 | `/api/auth/refresh` | POST | Renueva tokens | Refresh token |
@@ -574,24 +575,42 @@ Los scopes permiten control granular de acceso a recursos FHIR:
 
 #### Ejemplo de Uso Rápido
 
-**1. Iniciar Login:**
+**1. Registrar un Nuevo Paciente:**
+```bash
+curl -X POST "http://localhost:3000/api/auth/register" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "john.doe",
+    "email": "john.doe@example.com",
+    "password": "SecurePassword123!",
+    "name": [{
+      "given": ["John"],
+      "family": "Doe"
+    }],
+    "gender": "male",
+    "birthDate": "1990-01-15"
+  }'
+# Retorna: { "userId": "...", "patientId": "...", "username": "john.doe", "email": "john.doe@example.com", "message": "Patient registered successfully" }
+```
+
+**2. Iniciar Login:**
 ```bash
 curl -X POST "http://localhost:3000/api/auth/login?returnUrl=true"
 # Retorna: { "authorizationUrl": "http://keycloak:8080/realms/carecore/..." }
 ```
 
-**2. Autenticarse en Keycloak:**
+**3. Autenticarse en Keycloak:**
 - Abrir `authorizationUrl` en navegador
 - Ingresar credenciales
 - Autorizar aplicación
 
-**3. Usar Token en Requests:**
+**4. Usar Token en Requests:**
 ```bash
 curl -H "Authorization: Bearer <access-token>" \
      "http://localhost:3000/api/fhir/Patient"
 ```
 
-**4. Refrescar Token:**
+**5. Refrescar Token:**
 ```bash
 curl -X POST "http://localhost:3000/api/auth/refresh" \
      -H "Content-Type: application/json" \

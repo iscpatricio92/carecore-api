@@ -597,4 +597,139 @@ export class KeycloakAdminService {
       return false;
     }
   }
+
+  /**
+   * Create a new user in Keycloak
+   * @param userData User data including username, email, password, and optional attributes
+   * @returns Keycloak user ID if successful, null otherwise
+   */
+  async createUser(userData: {
+    username: string;
+    email: string;
+    password: string;
+    firstName?: string;
+    lastName?: string;
+    enabled?: boolean;
+    emailVerified?: boolean;
+  }): Promise<string | null> {
+    try {
+      await this.authenticate();
+
+      const newUser = {
+        username: userData.username,
+        email: userData.email,
+        emailVerified: userData.emailVerified ?? false,
+        enabled: userData.enabled ?? true,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        credentials: [
+          {
+            type: 'password',
+            value: userData.password,
+            temporary: false, // User must change password on first login if true
+          },
+        ],
+      };
+
+      const createdUser = await this.kcAdminClient.users.create(newUser);
+
+      // Keycloak Admin Client returns the created user with an id field
+      // The id is typically in the response headers (Location header) or in the response body
+      // We need to extract it from the response
+      if (createdUser && typeof createdUser === 'string') {
+        // If it returns a string (user ID), use it directly
+        this.logger.info(
+          { userId: createdUser, username: userData.username },
+          'User created in Keycloak',
+        );
+        return createdUser;
+      }
+
+      // If it returns an object with id property
+      if (createdUser && typeof createdUser === 'object' && 'id' in createdUser && createdUser.id) {
+        this.logger.info(
+          { userId: createdUser.id, username: userData.username },
+          'User created in Keycloak',
+        );
+        return createdUser.id as string;
+      }
+
+      // If we can't get the ID, try to find the user by username
+      try {
+        const users = await this.kcAdminClient.users.find({
+          username: userData.username,
+          exact: true,
+        });
+        if (users && users.length > 0 && users[0].id) {
+          this.logger.info(
+            { userId: users[0].id, username: userData.username },
+            'User created in Keycloak (found by username)',
+          );
+          return users[0].id;
+        }
+      } catch (findError) {
+        this.logger.warn(
+          { error: findError, username: userData.username },
+          'Failed to find created user',
+        );
+      }
+
+      this.logger.error({ username: userData.username }, 'User created but ID not found');
+      return null;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(
+        { error, username: userData.username, email: userData.email },
+        'Failed to create user in Keycloak',
+      );
+
+      // Check if user already exists (409 Conflict)
+      if (
+        errorMessage.includes('409') ||
+        errorMessage.includes('exists') ||
+        errorMessage.includes('duplicate')
+      ) {
+        throw new BadRequestException('User with this username or email already exists');
+      }
+
+      throw new BadRequestException(`Failed to create user: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * Check if a username or email already exists in Keycloak
+   * @param username Username to check
+   * @param email Email to check
+   * @returns Object with exists flags for username and email
+   */
+  async checkUserExists(
+    username?: string,
+    email?: string,
+  ): Promise<{ usernameExists: boolean; emailExists: boolean }> {
+    try {
+      await this.authenticate();
+
+      const result = { usernameExists: false, emailExists: false };
+
+      if (username) {
+        const usersByUsername = await this.kcAdminClient.users.find({ username });
+        if (usersByUsername && usersByUsername.length > 0) {
+          result.usernameExists = true;
+        }
+      }
+
+      if (email) {
+        const usersByEmail = await this.kcAdminClient.users.find({ email });
+        if (usersByEmail && usersByEmail.length > 0) {
+          result.emailExists = true;
+        }
+      }
+
+      return result;
+    } catch (error) {
+      this.logger.error({ error, username, email }, 'Failed to check if user exists in Keycloak');
+      // Return false on error to allow registration attempt
+      return { usernameExists: false, emailExists: false };
+    }
+  }
 }

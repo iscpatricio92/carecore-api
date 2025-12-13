@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull, SelectQueryBuilder } from 'typeorm';
@@ -43,6 +48,49 @@ export class FhirService {
     private readonly scopePermissionService: ScopePermissionService,
   ) {
     this.logger.setContext(FhirService.name);
+  }
+
+  /**
+   * Validate uniqueness of patient identifiers
+   * Checks if any identifier (SSN, medical record number, etc.) already exists
+   * @param identifiers Array of patient identifiers to validate
+   * @returns True if all identifiers are unique, throws BadRequestException if duplicate found
+   */
+  async validatePatientIdentifierUniqueness(
+    identifiers?: Array<{ system?: string; value?: string }>,
+  ): Promise<boolean> {
+    if (!identifiers || identifiers.length === 0) {
+      return true; // No identifiers to validate
+    }
+
+    // Check each identifier for uniqueness
+    for (const identifier of identifiers) {
+      if (!identifier.value) {
+        continue; // Skip empty values
+      }
+
+      // Search for existing patients with this identifier
+      const existingPatients = await this.patientRepository
+        .createQueryBuilder('patient')
+        .where('patient.deletedAt IS NULL')
+        .andWhere(`patient.fhirResource->'identifier' @> :identifier`, {
+          identifier: JSON.stringify([{ system: identifier.system, value: identifier.value }]),
+        })
+        .getCount();
+
+      if (existingPatients > 0) {
+        const identifierType = identifier.system || 'identifier';
+        this.logger.warn(
+          { identifier: identifier.value, system: identifier.system },
+          `Duplicate patient identifier found: ${identifierType}`,
+        );
+        throw new BadRequestException(
+          `A patient with this ${identifierType} (${identifier.value}) already exists`,
+        );
+      }
+    }
+
+    return true;
   }
 
   getCapabilityStatement() {
