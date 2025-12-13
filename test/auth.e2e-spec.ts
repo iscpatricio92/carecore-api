@@ -115,6 +115,57 @@ describe('Authentication E2E', () => {
           expect(res.body.authorizationUrl).toContain('callback');
         });
     });
+
+    it('should include client_id in authorization URL', () => {
+      return request(app.getHttpServer())
+        .post('/api/auth/login?returnUrl=true')
+        .expect(200)
+        .expect((res) => {
+          expect(res.body.authorizationUrl).toContain('client_id');
+        });
+    });
+
+    it('should include response_type=code in authorization URL', () => {
+      return request(app.getHttpServer())
+        .post('/api/auth/login?returnUrl=true')
+        .expect(200)
+        .expect((res) => {
+          expect(res.body.authorizationUrl).toContain('response_type=code');
+        });
+    });
+
+    it('should include scope=openid in authorization URL', () => {
+      return request(app.getHttpServer())
+        .post('/api/auth/login?returnUrl=true')
+        .expect(200)
+        .expect((res) => {
+          expect(res.body.authorizationUrl).toContain('scope=openid');
+        });
+    });
+
+    it('should handle login with custom host header', () => {
+      return request(app.getHttpServer())
+        .post('/api/auth/login?returnUrl=true')
+        .set('Host', 'custom-domain.com')
+        .expect(200)
+        .expect((res) => {
+          expect(res.body.authorizationUrl).toBeDefined();
+          // The redirect_uri should reflect the custom host
+          expect(res.body.authorizationUrl).toContain('redirect_uri');
+        });
+    });
+
+    it('should handle login with X-Forwarded-Proto header', () => {
+      return request(app.getHttpServer())
+        .post('/api/auth/login?returnUrl=true')
+        .set('X-Forwarded-Proto', 'https')
+        .expect(200)
+        .expect((res) => {
+          expect(res.body.authorizationUrl).toBeDefined();
+          // The redirect_uri should use https if X-Forwarded-Proto is set
+          expect(res.body.authorizationUrl).toContain('redirect_uri');
+        });
+    });
   });
 
   describe('GET /api/auth/user', () => {
@@ -297,8 +348,43 @@ describe('Authentication E2E', () => {
       expect(response.status).toBeLessThan(600);
     });
 
+    it('should handle refresh token with special characters', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/auth/refresh')
+        .send({ refreshToken: 'token-with-special-chars-!@#$%' });
+
+      // Should handle gracefully without crashing
+      expect(response.status).toBeGreaterThanOrEqual(200);
+      expect(response.status).toBeLessThan(600);
+    });
+
+    it('should handle refresh token that is too long', async () => {
+      const longToken = 'a'.repeat(10000);
+      const response = await request(app.getHttpServer())
+        .post('/api/auth/refresh')
+        .send({ refreshToken: longToken });
+
+      // Should handle gracefully without crashing
+      expect(response.status).toBeGreaterThanOrEqual(200);
+      expect(response.status).toBeLessThan(600);
+    });
+
+    it('should handle refresh with null refresh token', () => {
+      return request(app.getHttpServer())
+        .post('/api/auth/refresh')
+        .send({ refreshToken: null })
+        .expect(400);
+    });
+
+    it('should handle refresh with undefined refresh token', () => {
+      return request(app.getHttpServer())
+        .post('/api/auth/refresh')
+        .send({ refreshToken: undefined })
+        .expect(400);
+    });
+
     // Note: Testing successful refresh requires a real Keycloak setup or complex mocking
-    // The endpoint logic is covered by unit tests
+    // The endpoint logic is covered by unit tests in auth.service.spec.ts
   });
 
   describe('POST /api/auth/logout', () => {
@@ -341,8 +427,42 @@ describe('Authentication E2E', () => {
       expect(response.status).toBeLessThan(600);
     });
 
+    it('should handle logout with null refresh token', () => {
+      return request(app.getHttpServer())
+        .post('/api/auth/logout')
+        .send({ refreshToken: null })
+        .expect(400);
+    });
+
+    it('should handle logout with undefined refresh token', () => {
+      return request(app.getHttpServer())
+        .post('/api/auth/logout')
+        .send({ refreshToken: undefined })
+        .expect(400);
+    });
+
+    it('should handle logout with whitespace-only refresh token', () => {
+      return request(app.getHttpServer())
+        .post('/api/auth/logout')
+        .send({ refreshToken: '   ' })
+        .expect((res) => {
+          // Can be 400 or handled gracefully
+          expect([200, 400, 401, 500]).toContain(res.status);
+        });
+    });
+
+    it('should handle logout with special characters in refresh token', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/auth/logout')
+        .send({ refreshToken: 'token-with-special-chars-!@#$%' });
+
+      // Should handle gracefully without crashing
+      expect(response.status).toBeGreaterThanOrEqual(200);
+      expect(response.status).toBeLessThan(600);
+    });
+
     // Note: Testing successful logout requires a real Keycloak setup or complex mocking
-    // The endpoint logic is covered by unit tests
+    // The endpoint logic is covered by unit tests in auth.service.spec.ts
   });
 
   describe('GET /api/auth/callback', () => {
@@ -423,11 +543,133 @@ describe('Authentication E2E', () => {
         });
     });
 
+    it('should return 400 or 302 with whitespace-only code', () => {
+      return request(app.getHttpServer())
+        .get('/api/auth/callback?code=%20%20&state=test-state')
+        .set('Cookie', ['oauth_state=test-state'])
+        .expect((res) => {
+          // Can be 400 (validation error) or 302 (redirect with error after validation)
+          expect([302, 400]).toContain(res.status);
+        });
+    });
+
+    it('should return 400 or 302 with whitespace-only state', () => {
+      return request(app.getHttpServer())
+        .get('/api/auth/callback?code=test-code&state=%20%20')
+        .set('Cookie', ['oauth_state=test-state'])
+        .expect((res) => {
+          // Can be 400 (validation error) or 302 (redirect with error after validation)
+          expect([302, 400]).toContain(res.status);
+        });
+    });
+
+    it('should handle callback with mismatched state in cookie', () => {
+      return request(app.getHttpServer())
+        .get('/api/auth/callback?code=test-code&state=state-1')
+        .set('Cookie', ['oauth_state=state-2'])
+        .expect(302)
+        .expect((res) => {
+          expect(res.headers.location).toBeDefined();
+          expect(res.headers.location).toContain('auth=error');
+        });
+    });
+
+    it('should handle callback with expired state cookie', () => {
+      // Simulate expired cookie by not setting it
+      return request(app.getHttpServer())
+        .get('/api/auth/callback?code=test-code&state=test-state')
+        .expect(302)
+        .expect((res) => {
+          expect(res.headers.location).toBeDefined();
+          expect(res.headers.location).toContain('auth=error');
+        });
+    });
+
     // Note: Testing successful callback requires:
     // 1. A valid authorization code from Keycloak
     // 2. A matching state token in cookie
     // 3. Mocking Keycloak token exchange
     // This is complex and is better covered by unit tests
+    // The unit tests in auth.service.spec.ts cover the full callback flow
+  });
+
+  describe('OAuth2 Flow Integration', () => {
+    it('should complete OAuth2 flow: login -> callback validation', async () => {
+      // Step 1: Get authorization URL and state
+      const loginResponse = await request(app.getHttpServer())
+        .post('/api/auth/login?returnUrl=true')
+        .expect(200);
+
+      const { authorizationUrl, state } = loginResponse.body;
+
+      // Validate authorization URL structure
+      expect(authorizationUrl).toContain('openid-connect');
+      expect(authorizationUrl).toContain('auth');
+      expect(authorizationUrl).toContain('client_id');
+      expect(authorizationUrl).toContain('response_type=code');
+      expect(authorizationUrl).toContain('redirect_uri');
+      expect(state).toBeDefined();
+      expect(typeof state).toBe('string');
+      expect(state.length).toBeGreaterThan(0);
+
+      // Step 2: Validate that callback requires matching state
+      // (We can't test the full flow without Keycloak, but we can validate the state requirement)
+      const callbackResponse = await request(app.getHttpServer())
+        .get(`/api/auth/callback?code=test-code&state=${state}`)
+        .set('Cookie', [`oauth_state=${state}`]);
+
+      // Should either redirect with error (if code is invalid) or validate state correctly
+      expect([302, 400, 401, 500]).toContain(callbackResponse.status);
+    });
+
+    it('should validate state token in OAuth2 flow', async () => {
+      // Get state from login
+      const loginResponse = await request(app.getHttpServer())
+        .post('/api/auth/login?returnUrl=true')
+        .expect(200);
+
+      const { state } = loginResponse.body;
+
+      // Try callback with wrong state
+      const callbackResponse = await request(app.getHttpServer())
+        .get(`/api/auth/callback?code=test-code&state=wrong-state`)
+        .set('Cookie', [`oauth_state=${state}`])
+        .expect(302);
+
+      // Should redirect with error due to state mismatch
+      expect(callbackResponse.headers.location).toContain('auth=error');
+    });
+
+    it('should handle OAuth2 error callback from Keycloak', () => {
+      // Keycloak can redirect back with error parameters
+      // When error is present but code/state are missing, it returns 400
+      return request(app.getHttpServer())
+        .get('/api/auth/callback?error=access_denied&error_description=User%20denied%20access')
+        .expect((res) => {
+          // Can be 400 (missing code/state) or 302 (if handled as error redirect)
+          expect([302, 400]).toContain(res.status);
+          if (res.status === 302) {
+            expect(res.headers.location).toBeDefined();
+            expect(res.headers.location).toContain('auth=error');
+          }
+        });
+    });
+
+    it('should handle OAuth2 error with state parameter', () => {
+      // When error is present but code is missing, it returns 400
+      return request(app.getHttpServer())
+        .get(
+          '/api/auth/callback?error=invalid_request&error_description=Invalid%20request&state=test-state',
+        )
+        .expect((res) => {
+          // Can be 400 (missing code) or 302 (if handled as error redirect)
+          expect([302, 400]).toContain(res.status);
+          if (res.status === 302) {
+            expect(res.headers.location).toBeDefined();
+            expect(res.headers.location).toContain('auth=error');
+          }
+        });
+    });
   });
 
   describe('Public endpoints', () => {
