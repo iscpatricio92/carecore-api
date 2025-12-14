@@ -29,6 +29,8 @@ jest.mock('qrcode', () => ({
 import { AuthService } from './auth.service';
 import { DocumentStorageService } from './services/document-storage.service';
 import { KeycloakAdminService } from './services/keycloak-admin.service';
+import { FhirService } from '../fhir/fhir.service';
+import { EncryptionService } from '@/common/services/encryption.service';
 import {
   PractitionerVerificationEntity,
   VerificationStatus,
@@ -72,6 +74,18 @@ describe('AuthService', () => {
     verifyAndEnableTOTP: jest.fn(),
     verifyTOTPCode: jest.fn(),
     removeTOTPCredential: jest.fn(),
+    createUser: jest.fn(),
+    checkUserExists: jest.fn(),
+  };
+
+  const mockFhirService = {
+    validatePatientIdentifierUniqueness: jest.fn(),
+    createPatient: jest.fn(),
+  };
+
+  const mockEncryptionService = {
+    encrypt: jest.fn(),
+    decrypt: jest.fn(),
   };
 
   const mockVerificationRepository = {
@@ -107,6 +121,14 @@ describe('AuthService', () => {
         {
           provide: getRepositoryToken(PractitionerVerificationEntity),
           useValue: mockVerificationRepository,
+        },
+        {
+          provide: FhirService,
+          useValue: mockFhirService,
+        },
+        {
+          provide: EncryptionService,
+          useValue: mockEncryptionService,
         },
       ],
     }).compile();
@@ -1875,6 +1897,199 @@ describe('AuthService', () => {
       await expect(service.getMFAStatus('non-existent')).rejects.toThrow(
         'User with ID non-existent not found in Keycloak',
       );
+    });
+  });
+
+  describe('registerPatient', () => {
+    const mockRegisterDto = {
+      username: 'newpatient',
+      email: 'newpatient@example.com',
+      password: 'SecurePassword123!',
+      name: [
+        {
+          given: ['John'],
+          family: 'Doe',
+        },
+      ],
+      identifier: [
+        {
+          system: 'http://hl7.org/fhir/sid/us-ssn',
+          value: '123-45-6789',
+        },
+      ],
+      gender: 'male' as const,
+      birthDate: '1990-01-15',
+      address: [
+        {
+          use: 'home' as const,
+          line: ['123 Main St'],
+          city: 'Anytown',
+          state: 'CA',
+          postalCode: '12345',
+          country: 'US',
+        },
+      ],
+      telecom: [
+        {
+          system: 'phone' as const,
+          value: '+1-555-123-4567',
+          use: 'mobile' as const,
+        },
+      ],
+    };
+
+    beforeEach(() => {
+      mockKeycloakAdminService.checkUserExists.mockResolvedValue({
+        usernameExists: false,
+        emailExists: false,
+      });
+      mockFhirService.validatePatientIdentifierUniqueness.mockResolvedValue(true);
+      mockKeycloakAdminService.createUser.mockResolvedValue('keycloak-user-id-123');
+      mockKeycloakAdminService.addRoleToUser.mockResolvedValue(true);
+      mockEncryptionService.encrypt.mockImplementation(
+        async (value: string) => `encrypted-${value}`,
+      );
+      mockFhirService.createPatient.mockResolvedValue({
+        resourceType: 'Patient',
+        id: 'patient-id-123',
+        name: mockRegisterDto.name,
+        identifier: mockRegisterDto.identifier,
+        gender: mockRegisterDto.gender,
+        birthDate: mockRegisterDto.birthDate,
+      });
+    });
+
+    it('should successfully register a new patient', async () => {
+      const result = await service.registerPatient(mockRegisterDto);
+
+      expect(result).toHaveProperty('userId', 'keycloak-user-id-123');
+      expect(result).toHaveProperty('patientId', 'patient-id-123');
+      expect(result).toHaveProperty('username', 'newpatient');
+      expect(result).toHaveProperty('email', 'newpatient@example.com');
+      expect(result.message).toBe(
+        'Patient registered successfully. Please check your email to verify your account.',
+      );
+
+      expect(mockKeycloakAdminService.checkUserExists).toHaveBeenCalledWith(
+        'newpatient',
+        'newpatient@example.com',
+      );
+      expect(mockFhirService.validatePatientIdentifierUniqueness).toHaveBeenCalledWith(
+        mockRegisterDto.identifier,
+      );
+      expect(mockKeycloakAdminService.createUser).toHaveBeenCalled();
+      expect(mockKeycloakAdminService.addRoleToUser).toHaveBeenCalledWith(
+        'keycloak-user-id-123',
+        'patient',
+      );
+      expect(mockFhirService.createPatient).toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException if username already exists', async () => {
+      mockKeycloakAdminService.checkUserExists.mockResolvedValue({
+        usernameExists: true,
+        emailExists: false,
+      });
+
+      await expect(service.registerPatient(mockRegisterDto)).rejects.toThrow(BadRequestException);
+      await expect(service.registerPatient(mockRegisterDto)).rejects.toThrow(
+        'Username already exists',
+      );
+
+      expect(mockKeycloakAdminService.createUser).not.toHaveBeenCalled();
+      expect(mockFhirService.createPatient).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException if email already exists', async () => {
+      mockKeycloakAdminService.checkUserExists.mockResolvedValue({
+        usernameExists: false,
+        emailExists: true,
+      });
+
+      await expect(service.registerPatient(mockRegisterDto)).rejects.toThrow(BadRequestException);
+      await expect(service.registerPatient(mockRegisterDto)).rejects.toThrow(
+        'Email already exists',
+      );
+
+      expect(mockKeycloakAdminService.createUser).not.toHaveBeenCalled();
+      expect(mockFhirService.createPatient).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException if identifier already exists', async () => {
+      mockFhirService.validatePatientIdentifierUniqueness.mockRejectedValue(
+        new BadRequestException('A patient with this identifier already exists'),
+      );
+
+      await expect(service.registerPatient(mockRegisterDto)).rejects.toThrow(BadRequestException);
+      await expect(service.registerPatient(mockRegisterDto)).rejects.toThrow(
+        'identifier already exists',
+      );
+
+      expect(mockKeycloakAdminService.createUser).not.toHaveBeenCalled();
+      expect(mockFhirService.createPatient).not.toHaveBeenCalled();
+    });
+
+    it('should encrypt sensitive identifiers (SSN)', async () => {
+      await service.registerPatient(mockRegisterDto);
+
+      // Verify encryption was called for SSN
+      expect(mockEncryptionService.encrypt).toHaveBeenCalledWith('123-45-6789');
+    });
+
+    it('should encrypt phone numbers but not emails', async () => {
+      await service.registerPatient(mockRegisterDto);
+
+      // Verify encryption was called for phone number
+      expect(mockEncryptionService.encrypt).toHaveBeenCalledWith('+1-555-123-4567');
+    });
+
+    it('should encrypt address lines and postal codes', async () => {
+      await service.registerPatient(mockRegisterDto);
+
+      // Verify encryption was called for address line and postal code
+      expect(mockEncryptionService.encrypt).toHaveBeenCalledWith('123 Main St');
+      expect(mockEncryptionService.encrypt).toHaveBeenCalledWith('12345');
+    });
+
+    it('should handle encryption failures gracefully', async () => {
+      mockEncryptionService.encrypt.mockRejectedValueOnce(new Error('Encryption failed'));
+
+      // Should still succeed, storing as plaintext
+      const result = await service.registerPatient(mockRegisterDto);
+      expect(result).toBeDefined();
+      expect(mockLogger.warn).toHaveBeenCalled();
+    });
+
+    it('should handle Keycloak user creation failure', async () => {
+      mockKeycloakAdminService.createUser.mockResolvedValue(null);
+
+      await expect(service.registerPatient(mockRegisterDto)).rejects.toThrow(BadRequestException);
+      await expect(service.registerPatient(mockRegisterDto)).rejects.toThrow(
+        'Failed to create user in Keycloak',
+      );
+    });
+
+    it('should continue even if role assignment fails', async () => {
+      mockKeycloakAdminService.addRoleToUser.mockResolvedValue(false);
+
+      const result = await service.registerPatient(mockRegisterDto);
+
+      expect(result).toBeDefined();
+      expect(mockLogger.warn).toHaveBeenCalled();
+      expect(mockFhirService.createPatient).toHaveBeenCalled();
+    });
+
+    it('should register patient without identifiers', async () => {
+      const registerDtoWithoutIdentifiers = {
+        ...mockRegisterDto,
+        identifier: undefined,
+      };
+
+      const result = await service.registerPatient(registerDtoWithoutIdentifiers);
+
+      expect(result).toBeDefined();
+      expect(mockFhirService.validatePatientIdentifierUniqueness).not.toHaveBeenCalled();
+      expect(mockFhirService.createPatient).toHaveBeenCalled();
     });
   });
 });

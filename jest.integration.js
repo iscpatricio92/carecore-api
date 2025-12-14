@@ -23,7 +23,7 @@ module.exports = {
     '^@/modules/(.*)$': '<rootDir>/src/modules/$1',
   },
   moduleDirectories: ['node_modules', '<rootDir>/src'],
-  transformIgnorePatterns: ['node_modules/(?!(uuid|@nestjs-pino|@keycloak)/)'],
+  transformIgnorePatterns: ['node_modules/(?!(uuid|@nestjs-pino|@keycloak|url-template)/)'],
   collectCoverage: false,
   collectCoverageFrom: [
     'src/**/*.(t|j)s',

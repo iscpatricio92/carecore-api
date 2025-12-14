@@ -34,6 +34,7 @@ import { KeycloakAdminService } from './services/keycloak-admin.service';
 import { DocumentType } from './dto/verify-practitioner.dto';
 import { ReviewStatus } from './dto/review-verification.dto';
 import { VerificationStatus } from '../../entities/practitioner-verification.entity';
+import { RegisterPatientDto, RegisterPatientResponseDto } from './dto/register-patient.dto';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -53,6 +54,7 @@ describe('AuthController', () => {
     verifyMFASetup: jest.fn(),
     disableMFA: jest.fn(),
     getMFAStatus: jest.fn(),
+    registerPatient: jest.fn(),
   };
 
   const mockConfigService = {
@@ -1067,6 +1069,81 @@ describe('AuthController', () => {
       mockAuthService.getMFAStatus.mockRejectedValue(new Error('Network error'));
 
       await expect(controller.getMFAStatus(mockUser)).rejects.toThrow(BadRequestException);
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+  });
+
+  describe('register', () => {
+    const mockRegisterDto: RegisterPatientDto = {
+      username: 'newpatient',
+      email: 'newpatient@example.com',
+      password: 'SecurePassword123!',
+      name: [
+        {
+          given: ['John'],
+          family: 'Doe',
+        },
+      ],
+      identifier: [
+        {
+          system: 'http://hl7.org/fhir/sid/us-ssn',
+          value: '123-45-6789',
+        },
+      ],
+      gender: 'male',
+      birthDate: '1990-01-15',
+    };
+
+    const mockResponse: RegisterPatientResponseDto = {
+      userId: 'keycloak-user-id-123',
+      patientId: 'patient-id-123',
+      username: 'newpatient',
+      email: 'newpatient@example.com',
+      message: 'Patient registered successfully',
+    };
+
+    it('should register a new patient successfully', async () => {
+      mockAuthService.registerPatient.mockResolvedValue(mockResponse);
+
+      const result = await controller.register(mockRegisterDto);
+
+      expect(result).toEqual(mockResponse);
+      expect(mockAuthService.registerPatient).toHaveBeenCalledWith(mockRegisterDto);
+    });
+
+    it('should throw BadRequestException if username already exists', async () => {
+      mockAuthService.registerPatient.mockRejectedValue(
+        new BadRequestException('Username already exists'),
+      );
+
+      await expect(controller.register(mockRegisterDto)).rejects.toThrow(BadRequestException);
+      await expect(controller.register(mockRegisterDto)).rejects.toThrow('Username already exists');
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException if email already exists', async () => {
+      mockAuthService.registerPatient.mockRejectedValue(
+        new BadRequestException('Email already exists'),
+      );
+
+      await expect(controller.register(mockRegisterDto)).rejects.toThrow(BadRequestException);
+      await expect(controller.register(mockRegisterDto)).rejects.toThrow('Email already exists');
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException if identifier already exists', async () => {
+      mockAuthService.registerPatient.mockRejectedValue(
+        new BadRequestException('A patient with this identifier already exists'),
+      );
+
+      await expect(controller.register(mockRegisterDto)).rejects.toThrow(BadRequestException);
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException on generic error', async () => {
+      mockAuthService.registerPatient.mockRejectedValue(new Error('Network error'));
+
+      await expect(controller.register(mockRegisterDto)).rejects.toThrow(BadRequestException);
       expect(mockLogger.error).toHaveBeenCalled();
     });
   });

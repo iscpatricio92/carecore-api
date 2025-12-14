@@ -2,10 +2,15 @@ import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { PinoLogger } from 'nestjs-pino';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 import { AuthService } from '@/modules/auth/auth.service';
 import { DocumentStorageService } from '@/modules/auth/services/document-storage.service';
 import { KeycloakAdminService } from '@/modules/auth/services/keycloak-admin.service';
+import { FhirService } from '@/modules/fhir/fhir.service';
+import { EncryptionService } from '@/common/services/encryption.service';
+import { PractitionerVerificationEntity } from '@/entities/practitioner-verification.entity';
 
 // Evita cargar ESM de @keycloak/keycloak-admin-client en tests de integración
 jest.mock('@keycloak/keycloak-admin-client', () => {
@@ -71,8 +76,28 @@ describe('AuthService (integration)', () => {
           },
         },
         {
-          provide: 'PractitionerVerificationEntityRepository',
-          useValue: {},
+          provide: FhirService,
+          useValue: {
+            validatePatientIdentifierUniqueness: jest.fn(),
+            createPatient: jest.fn(),
+          },
+        },
+        {
+          provide: EncryptionService,
+          useValue: {
+            encrypt: jest.fn(),
+            decrypt: jest.fn(),
+          },
+        },
+        {
+          provide: getRepositoryToken(PractitionerVerificationEntity),
+          useValue: {
+            findOne: jest.fn(),
+            save: jest.fn(),
+            create: jest.fn(),
+            find: jest.fn(),
+            delete: jest.fn(),
+          } as unknown as Repository<PractitionerVerificationEntity>,
         },
       ],
     }).compile();

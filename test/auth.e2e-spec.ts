@@ -672,6 +672,85 @@ describe('Authentication E2E', () => {
     });
   });
 
+  describe('POST /api/auth/register', () => {
+    const validRegisterDto = {
+      username: 'testpatient',
+      email: 'testpatient@example.com',
+      password: 'SecurePassword123!',
+      name: [
+        {
+          given: ['John'],
+          family: 'Doe',
+        },
+      ],
+      gender: 'male',
+      birthDate: '1990-01-15',
+    };
+
+    it('should return 400 without required fields', () => {
+      return request(app.getHttpServer()).post('/api/auth/register').send({}).expect(400);
+    });
+
+    it('should return 400 without username', () => {
+      return request(app.getHttpServer())
+        .post('/api/auth/register')
+        .send({ ...validRegisterDto, username: undefined })
+        .expect(400);
+    });
+
+    it('should return 400 without email', () => {
+      return request(app.getHttpServer())
+        .post('/api/auth/register')
+        .send({ ...validRegisterDto, email: undefined })
+        .expect(400);
+    });
+
+    it('should return 400 without password', () => {
+      return request(app.getHttpServer())
+        .post('/api/auth/register')
+        .send({ ...validRegisterDto, password: undefined })
+        .expect(400);
+    });
+
+    it('should return 400 with password too short', () => {
+      return request(app.getHttpServer())
+        .post('/api/auth/register')
+        .send({ ...validRegisterDto, password: 'short' })
+        .expect(400);
+    });
+
+    it('should return 400 with invalid email', () => {
+      return request(app.getHttpServer())
+        .post('/api/auth/register')
+        .send({ ...validRegisterDto, email: 'invalid-email' })
+        .expect(400);
+    });
+
+    it('should return 400 without name', () => {
+      return request(app.getHttpServer())
+        .post('/api/auth/register')
+        .send({ ...validRegisterDto, name: undefined })
+        .expect(400);
+    });
+
+    it('should return 400 with empty name array', () => {
+      return request(app.getHttpServer())
+        .post('/api/auth/register')
+        .send({ ...validRegisterDto, name: [] })
+        .expect(400);
+    });
+
+    it('should return 400 with username too short', () => {
+      return request(app.getHttpServer())
+        .post('/api/auth/register')
+        .send({ ...validRegisterDto, username: 'ab' })
+        .expect(400);
+    });
+
+    // Note: Testing successful registration requires a real Keycloak setup
+    // The endpoint logic is covered by unit tests in auth.service.spec.ts
+  });
+
   describe('Public endpoints', () => {
     it('GET /api should be accessible without authentication', () => {
       return request(app.getHttpServer())
