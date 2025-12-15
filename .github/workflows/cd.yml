@@ -32,6 +32,7 @@ jobs:
         run: npm run build
 
       - name: Run database migrations
+        working-directory: packages/api
         env:
           NODE_ENV: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
           DB_HOST: ${{ secrets.DB_HOST }}
@@ -47,7 +48,8 @@ jobs:
         # Ejemplos: Docker, Kubernetes, AWS, Heroku, etc.
         run: |
           echo "🚀 Deploying to ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}"
-          echo "📦 Build artifacts ready in ./dist"
+          echo "📦 Build artifacts ready in ./packages/api/dist"
+          echo "📦 Shared package ready in ./packages/shared/dist"
           # Agrega aquí tus comandos de deployment
           # Ejemplo con Docker:
           # docker build -t carecore-api:${{ github.sha }} .

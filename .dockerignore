@@ -37,7 +37,8 @@ coverage
 *.test.ts
 *.spec.ts
 
-# Documentation
+# Documentation (not needed in production, contains sensitive info and development context)
+docs/
 *.md
 !README.md
 

@@ -1,14 +1,16 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-# Run lint-staged (ESLint + Prettier on staged files)
+# Run lint-staged to format and lint
 npx lint-staged
 
-# Check formatting (fail if files are not formatted)
-npm run format:check
+# Detect modified packages and run tests
+CHANGED_PACKAGES=$(bash scripts/detect-changed-packages.sh)
 
-# Run unit tests with coverage (rápido)
-npm run test:cov
-
-# Nota: integración y E2E se ejecutan en CI para evitar ralentizar commits locales.
-
+if [ -n "$CHANGED_PACKAGES" ]; then
+  echo ""
+  echo "🧪 Executing tests for modified packages: $CHANGED_PACKAGES"
+  bash scripts/run-tests-for-packages.sh $CHANGED_PACKAGES
+else
+  echo "✅ No packages modified, skipping tests"
+fi

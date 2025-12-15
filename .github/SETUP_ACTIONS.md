@@ -25,6 +25,7 @@ En la sección **"Workflow permissions"**:
 ### Paso 3: Verificar Configuración
 
 Después de guardar, los workflows deberían poder:
+
 - ✅ Crear comentarios en Pull Requests
 - ✅ Actualizar comentarios existentes
 - ✅ Acceder a información de PRs
@@ -84,4 +85,3 @@ Si no funciona, revisa los logs del workflow en la pestaña "Actions" de GitHub.
 - [GitHub Actions Permissions](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#permissions)
 - [GITHUB_TOKEN Permissions](https://docs.github.com/en/actions/security-guides/automatic-token-authentication#permissions-for-the-github_token)
 - [Troubleshooting GitHub Actions](https://docs.github.com/en/actions/using-workflows/troubleshooting-workflows)
-

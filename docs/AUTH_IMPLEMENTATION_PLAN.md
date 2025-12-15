@@ -9,6 +9,7 @@
 ### Decisión Recomendada: **Keycloak**
 
 **Para MVP:**
+
 - ✅ **Tiempo**: 12-18 días vs 25-44 días (ahorro de 2-3 semanas)
 - ✅ **Costo**: $0 desarrollo, $20-50/mes producción
 - ✅ **Arquitectura**: Misma infraestructura, bases de datos separadas, mismo repositorio
@@ -35,6 +36,7 @@
 ```
 
 **Respuestas a tus preguntas:**
+
 1. **¿Infraestructura diferente?** ❌ NO para MVP - Mismo servidor/container host
 2. **¿Bases de datos independientes?** ✅ SÍ - Bases separadas (`carecore_db` y `keycloak_db`), mismo servidor PostgreSQL
 3. **¿Repositorios distintos?** ❌ NO para MVP - Mismo repositorio, más simple
@@ -58,12 +60,14 @@
 **Para MVP (Desarrollo y Producción inicial):**
 
 ✅ **Misma infraestructura (recomendado para MVP)**
+
 - API y Keycloak en el mismo servidor/container host
 - Mismo `docker-compose.yml` (más simple, menor costo)
 - Misma red Docker (`carecore-network`)
 - **Ventaja**: Setup simple, costo mínimo, fácil de mantener
 
 ⚠️ **Infraestructura separada (solo cuando escale)**
+
 - API y Keycloak en servidores diferentes
 - Solo necesario cuando:
   - Alto tráfico (miles de usuarios concurrentes)
@@ -77,12 +81,14 @@
 **Para MVP:**
 
 ✅ **Bases de datos separadas, mismo servidor PostgreSQL (recomendado)**
+
 - `carecore_db` - Base de datos de la API (Patient, Practitioner, Encounter, etc.)
 - `keycloak_db` - Base de datos de Keycloak (usuarios, roles, tokens, etc.)
 - Mismo servidor PostgreSQL, diferentes bases de datos
 - **Ventaja**: Aislamiento de datos, fácil backup/restore, mismo servidor = menor costo
 
 ⚠️ **Bases de datos en servidores diferentes**
+
 - Solo necesario para:
   - Alto volumen de datos
   - Requisitos de seguridad específicos
@@ -94,12 +100,14 @@
 **Para MVP:**
 
 ✅ **Mismo repositorio (recomendado)**
+
 - Todo el código en `carecore-api`
 - Keycloak como servicio en `docker-compose.yml`
 - Configuración de Keycloak en el mismo repo
 - **Ventaja**: Desarrollo más simple, cambios coordinados, menos overhead
 
 ⚠️ **Repositorios separados**
+
 - Solo necesario si:
   - Equipos diferentes trabajan en cada parte
   - Diferentes ciclos de release
@@ -112,58 +120,59 @@
 
 ### Tabla Comparativa Completa
 
-| Aspecto | Keycloak | IdP Propio (NestJS) | Ganador MVP |
-|---------|----------|---------------------|-------------|
-| **💰 Costo Inicial** |
-| Software | Gratis (open source) | Gratis | Empate |
-| Desarrollo | 0 horas (ya existe) | 80-120 horas | ✅ Keycloak |
-| Infraestructura MVP | $0-20/mes (mismo servidor) | $0-20/mes (mismo servidor) | Empate |
-| Infraestructura Producción | $50-200/mes (servidor dedicado) | $30-100/mes (servidor dedicado) | ✅ IdP Propio |
+| Aspecto                         | Keycloak                              | IdP Propio (NestJS)             | Ganador MVP     |
+| ------------------------------- | ------------------------------------- | ------------------------------- | --------------- |
+| **💰 Costo Inicial**            |
+| Software                        | Gratis (open source)                  | Gratis                          | Empate          |
+| Desarrollo                      | 0 horas (ya existe)                   | 80-120 horas                    | ✅ Keycloak     |
+| Infraestructura MVP             | $0-20/mes (mismo servidor)            | $0-20/mes (mismo servidor)      | Empate          |
+| Infraestructura Producción      | $50-200/mes (servidor dedicado)       | $30-100/mes (servidor dedicado) | ✅ IdP Propio   |
 | **⏱️ Tiempo de Implementación** |
-| Setup inicial | 1-2 días | 0 días (ya en proyecto) | ✅ IdP Propio |
-| Configuración básica | 2-3 días | 5-7 días | ✅ Keycloak |
-| OAuth2/OIDC completo | 3-5 días | 10-15 días | ✅ Keycloak |
-| MFA | 1 día (configuración) | 5-7 días (desarrollo) | ✅ Keycloak |
-| Roles y permisos | 2-3 días | 3-5 días | ✅ Keycloak |
-| SMART on FHIR | 3-5 días | 7-10 días | ✅ Keycloak |
-| **TOTAL MVP** | **12-18 días** | **25-44 días** | ✅ **Keycloak** |
-| **🔧 Complejidad Técnica** |
-| Curva de aprendizaje | Media (documentación extensa) | Baja (ya conoces NestJS) | ✅ IdP Propio |
-| Mantenimiento | Medio (actualizaciones Keycloak) | Alto (todo el código propio) | ✅ Keycloak |
-| Debugging | Medio (logs de Keycloak) | Bajo (tu código) | ✅ IdP Propio |
-| Personalización | Alta (pero requiere conocimiento) | Total (tu código) | ✅ IdP Propio |
-| **🔒 Seguridad** |
-| Auditoría de seguridad | ✅ Comunidad activa, parches rápidos | ❌ Tu responsabilidad | ✅ Keycloak |
-| Vulnerabilidades conocidas | ✅ Documentadas y parcheadas | ❌ Debes descubrirlas | ✅ Keycloak |
-| Cumplimiento (HIPAA/GDPR) | ✅ Certificaciones disponibles | ⚠️ Debes implementar | ✅ Keycloak |
-| MFA | ✅ Integrado (TOTP, SMS, etc.) | ❌ Debes implementar | ✅ Keycloak |
-| Social logins | ✅ Integrado (Google, Facebook, etc.) | ❌ Debes implementar | ✅ Keycloak |
-| **📈 Escalabilidad** |
-| Usuarios concurrentes | ✅ Probado (miles) | ⚠️ Debes probar | ✅ Keycloak |
-| Escalado horizontal | ✅ Soporte nativo | ⚠️ Debes implementar | ✅ Keycloak |
-| Performance | ✅ Optimizado | ⚠️ Depende de tu código | ✅ Keycloak |
-| **🎯 Funcionalidades MVP** |
-| OAuth2/OIDC | ✅ Completo | ❌ Debes implementar | ✅ Keycloak |
-| Roles y grupos | ✅ Avanzado | ⚠️ Básico (debes extender) | ✅ Keycloak |
-| Scopes granulares | ✅ Completo | ⚠️ Debes implementar | ✅ Keycloak |
-| Refresh tokens | ✅ Integrado | ⚠️ Debes implementar | ✅ Keycloak |
-| Revocación de tokens | ✅ Integrado | ⚠️ Debes implementar | ✅ Keycloak |
-| Admin UI | ✅ Completa | ❌ Debes construir | ✅ Keycloak |
-| **🔌 Integración** |
-| SMART on FHIR | ✅ Soporte nativo | ⚠️ Debes implementar | ✅ Keycloak |
-| NestJS | ✅ SDK disponible | ✅ Nativo | Empate |
-| PostgreSQL | ✅ Soporte nativo | ✅ Ya lo usas | Empate |
-| **📊 Resumen MVP** |
-| **Tiempo total** | 12-18 días | 25-44 días | ✅ **Keycloak** |
-| **Costo total MVP** | $0-20/mes | $0-20/mes + tiempo dev | ✅ **Keycloak** |
-| **Riesgo técnico** | Bajo | Medio-Alto | ✅ **Keycloak** |
-| **Recomendación MVP** | ✅ **RECOMENDADO** | ⚠️ Solo si tienes tiempo | ✅ **Keycloak** |
+| Setup inicial                   | 1-2 días                              | 0 días (ya en proyecto)         | ✅ IdP Propio   |
+| Configuración básica            | 2-3 días                              | 5-7 días                        | ✅ Keycloak     |
+| OAuth2/OIDC completo            | 3-5 días                              | 10-15 días                      | ✅ Keycloak     |
+| MFA                             | 1 día (configuración)                 | 5-7 días (desarrollo)           | ✅ Keycloak     |
+| Roles y permisos                | 2-3 días                              | 3-5 días                        | ✅ Keycloak     |
+| SMART on FHIR                   | 3-5 días                              | 7-10 días                       | ✅ Keycloak     |
+| **TOTAL MVP**                   | **12-18 días**                        | **25-44 días**                  | ✅ **Keycloak** |
+| **🔧 Complejidad Técnica**      |
+| Curva de aprendizaje            | Media (documentación extensa)         | Baja (ya conoces NestJS)        | ✅ IdP Propio   |
+| Mantenimiento                   | Medio (actualizaciones Keycloak)      | Alto (todo el código propio)    | ✅ Keycloak     |
+| Debugging                       | Medio (logs de Keycloak)              | Bajo (tu código)                | ✅ IdP Propio   |
+| Personalización                 | Alta (pero requiere conocimiento)     | Total (tu código)               | ✅ IdP Propio   |
+| **🔒 Seguridad**                |
+| Auditoría de seguridad          | ✅ Comunidad activa, parches rápidos  | ❌ Tu responsabilidad           | ✅ Keycloak     |
+| Vulnerabilidades conocidas      | ✅ Documentadas y parcheadas          | ❌ Debes descubrirlas           | ✅ Keycloak     |
+| Cumplimiento (HIPAA/GDPR)       | ✅ Certificaciones disponibles        | ⚠️ Debes implementar            | ✅ Keycloak     |
+| MFA                             | ✅ Integrado (TOTP, SMS, etc.)        | ❌ Debes implementar            | ✅ Keycloak     |
+| Social logins                   | ✅ Integrado (Google, Facebook, etc.) | ❌ Debes implementar            | ✅ Keycloak     |
+| **📈 Escalabilidad**            |
+| Usuarios concurrentes           | ✅ Probado (miles)                    | ⚠️ Debes probar                 | ✅ Keycloak     |
+| Escalado horizontal             | ✅ Soporte nativo                     | ⚠️ Debes implementar            | ✅ Keycloak     |
+| Performance                     | ✅ Optimizado                         | ⚠️ Depende de tu código         | ✅ Keycloak     |
+| **🎯 Funcionalidades MVP**      |
+| OAuth2/OIDC                     | ✅ Completo                           | ❌ Debes implementar            | ✅ Keycloak     |
+| Roles y grupos                  | ✅ Avanzado                           | ⚠️ Básico (debes extender)      | ✅ Keycloak     |
+| Scopes granulares               | ✅ Completo                           | ⚠️ Debes implementar            | ✅ Keycloak     |
+| Refresh tokens                  | ✅ Integrado                          | ⚠️ Debes implementar            | ✅ Keycloak     |
+| Revocación de tokens            | ✅ Integrado                          | ⚠️ Debes implementar            | ✅ Keycloak     |
+| Admin UI                        | ✅ Completa                           | ❌ Debes construir              | ✅ Keycloak     |
+| **🔌 Integración**              |
+| SMART on FHIR                   | ✅ Soporte nativo                     | ⚠️ Debes implementar            | ✅ Keycloak     |
+| NestJS                          | ✅ SDK disponible                     | ✅ Nativo                       | Empate          |
+| PostgreSQL                      | ✅ Soporte nativo                     | ✅ Ya lo usas                   | Empate          |
+| **📊 Resumen MVP**              |
+| **Tiempo total**                | 12-18 días                            | 25-44 días                      | ✅ **Keycloak** |
+| **Costo total MVP**             | $0-20/mes                             | $0-20/mes + tiempo dev          | ✅ **Keycloak** |
+| **Riesgo técnico**              | Bajo                                  | Medio-Alto                      | ✅ **Keycloak** |
+| **Recomendación MVP**           | ✅ **RECOMENDADO**                    | ⚠️ Solo si tienes tiempo        | ✅ **Keycloak** |
 
 ### Análisis Detallado por Categoría
 
 #### 💰 Costo Total de Propiedad (TCO) - Primer Año
 
 **Keycloak:**
+
 - Desarrollo: 0 horas (ya existe)
 - Setup y configuración: 12-18 días de desarrollo
 - Infraestructura MVP: $0-20/mes (mismo servidor que API)
@@ -172,6 +181,7 @@
 - **TOTAL primer año**: ~$600-2,400 + 12-18 días desarrollo
 
 **IdP Propio:**
+
 - Desarrollo: 25-44 días de desarrollo
 - Setup: 0 días (ya en proyecto)
 - Infraestructura MVP: $0-20/mes (mismo servidor)
@@ -186,10 +196,12 @@
 #### ⏱️ Tiempo de Lanzamiento al Mercado
 
 **Keycloak:**
+
 - MVP funcional: 2-3 semanas
 - Producción lista: 3-4 semanas
 
 **IdP Propio:**
+
 - MVP funcional: 5-6 semanas
 - Producción lista: 8-10 semanas
 
@@ -200,6 +212,7 @@
 #### 🔒 Seguridad y Cumplimiento
 
 **Keycloak:**
+
 - ✅ Parches de seguridad regulares
 - ✅ Comunidad activa reportando vulnerabilidades
 - ✅ Certificaciones disponibles (FIPS, Common Criteria)
@@ -207,6 +220,7 @@
 - ✅ Best practices implementadas
 
 **IdP Propio:**
+
 - ⚠️ Debes implementar todas las medidas de seguridad
 - ⚠️ Debes mantenerte actualizado con vulnerabilidades
 - ⚠️ Debes probar y auditar tu código
@@ -219,6 +233,7 @@
 #### 🎯 Funcionalidades para MVP
 
 **Requisitos MVP:**
+
 - [x] OAuth2/OIDC
 - [x] Roles básicos (patient, practitioner, admin)
 - [x] JWT tokens
@@ -229,12 +244,14 @@
 - [ ] SMART on FHIR (Fase 2)
 
 **Keycloak:**
+
 - ✅ Todas las funcionalidades MVP incluidas
 - ✅ MFA disponible si se necesita
 - ✅ Social logins disponibles si se necesita
 - ✅ SMART on FHIR soportado
 
 **IdP Propio:**
+
 - ⚠️ Debes implementar cada funcionalidad
 - ⚠️ MFA requiere desarrollo adicional
 - ⚠️ Social logins requieren integraciones
@@ -281,6 +298,7 @@
 ```
 
 **Configuración:**
+
 - ✅ Mismo `docker-compose.yml`
 - ✅ Misma red Docker
 - ✅ Mismo servidor PostgreSQL (bases de datos separadas)
@@ -292,6 +310,7 @@
 ### ⚠️ Cuándo Considerar IdP Propio
 
 Solo considera IdP propio si:
+
 - ✅ Tienes 6+ semanas disponibles para desarrollo
 - ✅ Tienes experiencia en seguridad de autenticación
 - ✅ Requisitos muy específicos que Keycloak no puede cumplir
@@ -337,6 +356,7 @@ Solo considera IdP propio si:
 ```
 
 **Ventajas:**
+
 - ✅ Setup simple (un solo `docker-compose up`)
 - ✅ Costo mínimo (un solo servidor)
 - ✅ Fácil de mantener y debuggear
@@ -344,6 +364,7 @@ Solo considera IdP propio si:
 - ✅ Ideal para MVP (hasta ~1000 usuarios concurrentes)
 
 **Cuándo separar:**
+
 - ⚠️ Alto tráfico (>1000 usuarios concurrentes)
 - ⚠️ Requisitos de alta disponibilidad
 - ⚠️ Separación por regulación/seguridad
@@ -373,6 +394,7 @@ PostgreSQL (mismo servidor, puerto 5432)
 ```
 
 **Configuración en docker-compose.yml:**
+
 ```yaml
 services:
   postgres:
@@ -388,7 +410,7 @@ services:
     environment:
       DB_VENDOR: postgres
       DB_ADDR: postgres
-      DB_DATABASE: keycloak_db  # Base separada
+      DB_DATABASE: keycloak_db # Base separada
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
     depends_on:
@@ -396,6 +418,7 @@ services:
 ```
 
 **Ventajas:**
+
 - ✅ Aislamiento de datos (seguridad)
 - ✅ Backup/restore independiente
 - ✅ Mismo servidor = menor costo
@@ -403,6 +426,7 @@ services:
 - ✅ Performance adecuada para MVP
 
 **Cuándo usar servidores diferentes:**
+
 - ⚠️ Alto volumen de datos (>100GB)
 - ⚠️ Requisitos de performance específicos
 - ⚠️ Separación por regulación
@@ -430,6 +454,7 @@ carecore-api/
 ```
 
 **Ventajas:**
+
 - ✅ Cambios coordinados (API + Auth juntos)
 - ✅ Setup simple (un solo `git clone`)
 - ✅ Menos overhead de gestión
@@ -437,6 +462,7 @@ carecore-api/
 - ✅ Versionado coordinado
 
 **Cuándo separar:**
+
 - ⚠️ Equipos diferentes trabajan en cada parte
 - ⚠️ Diferentes ciclos de release
 - ⚠️ Keycloak se usa en múltiples proyectos
@@ -446,20 +472,22 @@ carecore-api/
 
 ### 2.4 Costo Estimado por Configuración
 
-| Configuración | Desarrollo | Producción MVP | Producción Escalada |
-|---------------|------------|----------------|---------------------|
-| **Misma infraestructura** | $0 (local) | $20-50/mes | $100-200/mes |
-| **Bases separadas, mismo servidor** | $0 (local) | $20-50/mes | $100-200/mes |
-| **Mismo repositorio** | $0 | $0 | $0 |
-| **TOTAL MVP** | **$0** | **$20-50/mes** | **$100-200/mes** |
+| Configuración                       | Desarrollo | Producción MVP | Producción Escalada |
+| ----------------------------------- | ---------- | -------------- | ------------------- |
+| **Misma infraestructura**           | $0 (local) | $20-50/mes     | $100-200/mes        |
+| **Bases separadas, mismo servidor** | $0 (local) | $20-50/mes     | $100-200/mes        |
+| **Mismo repositorio**               | $0         | $0             | $0                  |
+| **TOTAL MVP**                       | **$0**     | **$20-50/mes** | **$100-200/mes**    |
 
 **Desglose de costos producción:**
+
 - VPS básico (2 CPU, 4GB RAM): $10-20/mes
 - VPS medio (4 CPU, 8GB RAM): $30-50/mes
 - Cloud instance (AWS/GCP): $50-100/mes
 - Base de datos managed (opcional): +$20-50/mes
 
 **Recomendación MVP:**
+
 - Desarrollo: Local (Docker) = $0
 - Producción inicial: VPS básico = $10-20/mes
 - Producción escalada: VPS medio = $30-50/mes
@@ -512,6 +540,7 @@ carecore-api/
 6. **Comunidad**: Activa y bien mantenida
 
 **Alternativa si se necesita velocidad inicial:**
+
 - Empezar con Auth0 para MVP
 - Migrar a Keycloak cuando se necesite más control
 
@@ -524,17 +553,20 @@ carecore-api/
 #### 1.1 Instalación de Keycloak
 
 **Tareas:**
+
 - [ ] Agregar Keycloak a `docker-compose.yml`
 - [ ] Configurar variables de entorno para Keycloak
 - [ ] Crear script de inicialización
 - [ ] Documentar acceso y credenciales
 
 **Entregables:**
+
 - Keycloak corriendo en Docker
 - Admin console accesible
 - Documentación de setup
 
 **Criterios de aceptación:**
+
 - Keycloak accesible en `http://localhost:8080`
 - Admin login funcional
 - Base de datos de Keycloak persistente
@@ -544,6 +576,7 @@ carecore-api/
 #### 1.2 Configuración Básica de Keycloak
 
 **Tareas:**
+
 - [ ] Crear Realm para CareCore
 - [ ] Configurar clientes (confidential, public)
 - [ ] Configurar redirect URIs
@@ -551,12 +584,14 @@ carecore-api/
 - [ ] Configurar roles iniciales
 
 **Entregables:**
+
 - Realm "carecore" configurado
 - Cliente "carecore-api" (confidential)
 - Cliente "carecore-web" (public)
 - Roles base definidos
 
 **Criterios de aceptación:**
+
 - Realm funcional
 - Clientes creados y configurados
 - Roles visibles en admin console
@@ -568,6 +603,7 @@ carecore-api/
 #### 2.1 Módulo de Autenticación Base
 
 **Tareas:**
+
 - [ ] Crear módulo `auth` en NestJS
 - [ ] Instalar dependencias: `passport`, `passport-jwt`, `@nestjs/passport`
 - [ ] Configurar JWT strategy
@@ -576,6 +612,7 @@ carecore-api/
 - [ ] Integrar con `ConfigModule` para variables de Keycloak
 
 **Estructura:**
+
 ```
 src/modules/auth/
 ├── auth.module.ts
@@ -593,11 +630,13 @@ src/modules/auth/
 ```
 
 **Entregables:**
+
 - Módulo auth funcional
 - JWT strategy validando tokens de Keycloak
 - Guards aplicables a endpoints
 
 **Criterios de aceptación:**
+
 - Token de Keycloak validado correctamente
 - Guard protege endpoints
 - Decorador `@Public()` funciona
@@ -607,6 +646,7 @@ src/modules/auth/
 #### 2.2 Endpoints de Autenticación
 
 **Tareas:**
+
 - [ ] Crear `AuthController` con endpoints:
   - `POST /auth/login` - Login (redirige a Keycloak)
   - `GET /auth/callback` - Callback de Keycloak
@@ -618,11 +658,13 @@ src/modules/auth/
 - [ ] Integrar con Swagger (autenticación)
 
 **Entregables:**
+
 - Endpoints de auth funcionales
 - Flujo OAuth2 completo
 - Swagger con autenticación
 
 **Criterios de aceptación:**
+
 - Login redirige a Keycloak
 - Callback recibe código y obtiene tokens
 - Refresh token funciona
@@ -633,6 +675,7 @@ src/modules/auth/
 #### 2.3 Sistema de Roles y Permisos
 
 **Tareas:**
+
 - [ ] Definir roles en Keycloak:
   - `patient`
   - `practitioner`
@@ -648,11 +691,13 @@ src/modules/auth/
 - [ ] Documentar permisos por rol
 
 **Entregables:**
+
 - Roles definidos en Keycloak
 - Guard de roles funcional
 - Decorador `@Roles()` aplicable
 
 **Criterios de aceptación:**
+
 - Roles extraídos del token JWT
 - Guard valida roles correctamente
 - Endpoints protegidos por rol
@@ -664,6 +709,7 @@ src/modules/auth/
 #### 3.1 Verificación de Practitioners
 
 **Tareas:**
+
 - [ ] Crear endpoint `POST /auth/verify-practitioner`
 - [ ] Crear entidad `PractitionerVerification` en base de datos
 - [ ] Implementar upload de documentos (cédula/licencia)
@@ -672,6 +718,7 @@ src/modules/auth/
 - [ ] Notificaciones de estado de verificación
 
 **Estructura DB:**
+
 ```sql
 CREATE TABLE practitioner_verifications (
   id UUID PRIMARY KEY,
@@ -687,11 +734,13 @@ CREATE TABLE practitioner_verifications (
 ```
 
 **Entregables:**
+
 - Endpoint de verificación
 - Flujo completo de verificación
 - Integración con roles de Keycloak
 
 **Criterios de aceptación:**
+
 - Practitioners pueden subir documentos
 - Admins pueden revisar y aprobar
 - Rol se actualiza automáticamente
@@ -701,6 +750,7 @@ CREATE TABLE practitioner_verifications (
 #### 3.2 MFA (Multi-Factor Authentication)
 
 **Tareas:**
+
 - [x] Configurar MFA en Keycloak (TOTP)
 - [x] Crear endpoint `POST /auth/mfa/setup` - Setup MFA
 - [x] Crear endpoint `POST /auth/mfa/verify` - Verificar código
@@ -709,11 +759,13 @@ CREATE TABLE practitioner_verifications (
 - [x] Forzar MFA para roles críticos (admin, practitioner)
 
 **Entregables:**
+
 - MFA configurado en Keycloak
 - Endpoints para gestión de MFA
 - Política de MFA por rol
 
 **Criterios de aceptación:**
+
 - Usuarios pueden configurar MFA
 - Login requiere código MFA cuando está habilitado
 - Políticas de MFA funcionan
@@ -723,6 +775,7 @@ CREATE TABLE practitioner_verifications (
 #### 3.3 Scopes y Permisos Granulares
 
 **Tareas:**
+
 - [x] Crear guía de configuración de scopes (`docs/SCOPES_SETUP_GUIDE.md`)
 - [ ] Definir scopes en Keycloak (configuración manual - ver guía):
   - `patient:read`, `patient:write`
@@ -736,11 +789,13 @@ CREATE TABLE practitioner_verifications (
 - [x] Documentar scopes disponibles (guía creada)
 
 **Entregables:**
+
 - Scopes definidos en Keycloak
 - Guard de scopes funcional
 - Endpoints protegidos por scope
 
 **Criterios de aceptación:**
+
 - Scopes extraídos del token
 - Guard valida scopes correctamente
 - Acceso granular funciona
@@ -752,6 +807,7 @@ CREATE TABLE practitioner_verifications (
 #### 4.1 SMART on FHIR Launch Sequence
 
 **Tareas:**
+
 - [x] Implementar endpoint `GET /fhir/auth` - Authorization endpoint ✅
 - [x] Implementar endpoint `POST /fhir/token` - Token endpoint ✅
 - [x] Implementar endpoint `GET /fhir/authorize` - Launch endpoint ✅
@@ -760,11 +816,13 @@ CREATE TABLE practitioner_verifications (
 - [x] Documentar flujo SMART on FHIR (documentación básica completa) ✅
 
 **Entregables:**
+
 - Endpoints SMART on FHIR funcionales ✅
 - Flujo completo de launch ✅
 - CapabilityStatement actualizado ✅
 
 **Criterios de aceptación:**
+
 - Launch sequence funciona ✅
 - Tokens generados correctamente ✅
 - Integración con Keycloak completa ✅
@@ -774,6 +832,7 @@ CREATE TABLE practitioner_verifications (
 #### 4.2 Protección de Endpoints FHIR
 
 **Tareas:**
+
 - [x] Aplicar guards a todos los endpoints FHIR ✅
 - [x] Validar scopes en cada endpoint ✅
 - [x] Validar roles según recurso ✅
@@ -781,11 +840,13 @@ CREATE TABLE practitioner_verifications (
 - [x] Logging de accesos a recursos FHIR (incluyendo información SMART on FHIR) ✅
 
 **Entregables:**
+
 - Todos los endpoints FHIR protegidos ✅
 - Validación de permisos funcional ✅
 - Audit logging de accesos (con información SMART on FHIR) ✅
 
 **Criterios de aceptación:**
+
 - Endpoints requieren autenticación ✅
 - Permisos validados correctamente ✅
 - Logs de acceso generados (con información SMART on FHIR) ✅
@@ -797,6 +858,7 @@ CREATE TABLE practitioner_verifications (
 #### 5.1 Tests
 
 **Tareas:**
+
 - [ ] Tests unitarios para módulo auth
 - [ ] Tests unitarios para guards
 - [ ] Tests unitarios para strategies
@@ -806,10 +868,12 @@ CREATE TABLE practitioner_verifications (
 - [ ] Tests E2E para SMART on FHIR
 
 **Entregables:**
+
 - Suite completa de tests
 - Cobertura > 80%
 
 **Criterios de aceptación:**
+
 - Todos los tests pasan
 - Cobertura mínima alcanzada
 
@@ -818,6 +882,7 @@ CREATE TABLE practitioner_verifications (
 #### 5.2 Documentación
 
 **Tareas:**
+
 - [ ] Documentar flujo de autenticación
 - [ ] Documentar configuración de Keycloak
 - [ ] Documentar roles y permisos
@@ -827,11 +892,13 @@ CREATE TABLE practitioner_verifications (
 - [ ] Crear guía de desarrollo para auth
 
 **Entregables:**
+
 - Documentación completa
 - README actualizado
 - Guías de desarrollo
 
 **Criterios de aceptación:**
+
 - Documentación clara y completa
 - Ejemplos de uso incluidos
 
@@ -921,6 +988,7 @@ Fase 1.8: Documentar setup de Keycloak
 - [x] **1.8** Documentar setup ✅
 
 ### Fase 2: Integración NestJS
+
 - [x] **2.0** Definir estructura de carpetas y tipos FHIR (Patient, Practitioner, Encounter, Consent, DocumentReference)
 - [x] **2.1** Crear módulo `auth`
 - [x] **2.2** Instalar dependencias Passport
@@ -940,6 +1008,7 @@ Fase 1.8: Documentar setup de Keycloak
 - [x] **2.16** Mapear roles de Keycloak
 
 ### Fase 3: Funcionalidades Avanzadas
+
 - [x] **3.1** Crear entidad `PractitionerVerification`
 - [x] **3.2** Implementar endpoint `/auth/verify-practitioner`
 - [x] **3.3** Implementar upload de documentos
@@ -956,6 +1025,7 @@ Fase 1.8: Documentar setup de Keycloak
 - [x] **3.14** Mapear scopes a permisos FHIR ✅
 
 ### Fase 4: SMART on FHIR ✅ COMPLETADA
+
 - [x] **4.1** Implementar endpoint `/fhir/auth` ✅
 - [x] **4.2** Implementar endpoint `/fhir/token` ✅
 - [x] **4.3** Implementar endpoint `/fhir/authorize` ✅
@@ -967,6 +1037,7 @@ Fase 1.8: Documentar setup de Keycloak
 - [x] **4.9** Implementar audit logging para SMART on FHIR ✅
 
 ### Fase 5: Testing y Documentación ✅ COMPLETADA
+
 - [x] **5.1** Tests unitarios módulo auth ✅
 - [x] **5.2** Tests unitarios guards ✅
 - [x] **5.3** Tests unitarios strategies ✅
@@ -986,16 +1057,14 @@ Fase 1.8: Documentar setup de Keycloak
 
 ## 📊 Estimación de Tiempo
 
-| Fase | Tareas | Tiempo Estimado |
-|------|--------|-----------------|
-| Fase 1: Setup Keycloak | 8 tareas | 3-5 días |
-| Fase 2: Integración NestJS | 17 tareas | 5-7 días |
-| Fase 3: Funcionalidades Avanzadas | 13 tareas | 5-7 días |
-| Fase 4: SMART on FHIR | 9 tareas | 4-6 días |
-| Fase 5: Testing y Documentación | 13 tareas | 4-6 días |
-| **TOTAL** | **59 tareas** | **21-31 días** |
-
-
+| Fase                              | Tareas        | Tiempo Estimado |
+| --------------------------------- | ------------- | --------------- |
+| Fase 1: Setup Keycloak            | 8 tareas      | 3-5 días        |
+| Fase 2: Integración NestJS        | 17 tareas     | 5-7 días        |
+| Fase 3: Funcionalidades Avanzadas | 13 tareas     | 5-7 días        |
+| Fase 4: SMART on FHIR             | 9 tareas      | 4-6 días        |
+| Fase 5: Testing y Documentación   | 13 tareas     | 4-6 días        |
+| **TOTAL**                         | **59 tareas** | **21-31 días**  |
 
 ## 📚 Recursos y Referencias
 
@@ -1009,4 +1078,3 @@ Fase 1.8: Documentar setup de Keycloak
 
 **Última actualización**: 2025-01-27
 **Versión del plan**: 1.0.0
-

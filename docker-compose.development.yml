@@ -22,23 +22,31 @@ services:
     # Cambiar usuario a root temporalmente para desarrollo (necesario para escribir en volúmenes)
     user: root
     # Instalar dependencias primero (necesario porque el volumen anónimo sobrescribe node_modules)
-    # Limpiar dist si existe para evitar errores EBUSY
+    # Construir shared primero, luego limpiar dist si existe para evitar errores EBUSY
     # Luego ejecutar nest start --watch usando npx con configuración mejorada para hot reload
-    command: sh -c "npm ci && rm -rf /app/dist && npx nest start --watch --preserveWatchOutput"
+    # Nota: El build genera dist/packages/api/src/main.js, creamos symlink para que nest start lo encuentre
+    command: sh -c "npm ci && cd /app/packages/shared && npm run build && cd /app/packages/api && rm -rf dist && npm run build 2>&1 | grep -v 'scripts/' || true && sh /app/packages/api/scripts/create-main-symlink.sh && cd /app/packages/api && npx nest start --watch --preserveWatchOutput"
     volumes:
-      # Montar código fuente para hot-reload
-      - ./src:/app/src
+      # Montar código fuente para hot-reload (monorepo structure)
+      - ./packages/api/src:/app/packages/api/src
+      - ./packages/api/scripts:/app/packages/api/scripts:ro
+      - ./packages/shared/src:/app/packages/shared/src
       # Montar archivos de configuración para que los cambios se reflejen
       # IMPORTANTE: Montar tanto package.json como package-lock.json para asegurar consistencia
       # npm ci requiere que ambos archivos estén sincronizados
       - ./package.json:/app/package.json:ro
       - ./package-lock.json:/app/package-lock.json:ro
+      - ./tsconfig.base.json:/app/tsconfig.base.json:ro
       - ./tsconfig.json:/app/tsconfig.json:ro
-      - ./nest-cli.json:/app/nest-cli.json:ro
+      - ./packages/api/tsconfig.json:/app/packages/api/tsconfig.json:ro
+      - ./packages/shared/tsconfig.json:/app/packages/shared/tsconfig.json:ro
+      - ./packages/api/nest-cli.json:/app/packages/api/nest-cli.json:ro
       # Excluir node_modules del volumen (usar los del contenedor)
       # No excluir dist como volumen anónimo - dejamos que se cree normalmente
       # Esto evita problemas de bloqueo (EBUSY) cuando nest intenta limpiar/recrear dist
       - /app/node_modules
+      - /app/packages/api/node_modules
+      - /app/packages/shared/node_modules
     environment:
       NODE_ENV: development
       # Variables de base de datos (deben estar en .env.local)

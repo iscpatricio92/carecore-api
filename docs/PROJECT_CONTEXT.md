@@ -523,38 +523,49 @@ Flujo completo de verificación:
 
 ---
 
-## 📁 Estructura del Proyecto
+## 📁 Estructura del Proyecto (Monorepo)
 
 ```
-carecore-api/
-├── src/
-│   ├── modules/           # Módulos de negocio
-│   │   ├── auth/         # Autenticación y autorización
-│   │   ├── fhir/         # Endpoints FHIR y metadata
-│   │   ├── patients/     # Módulo de pacientes
-│   │   ├── practitioners/# Módulo de profesionales
-│   │   ├── encounters/   # Módulo de consultas
-│   │   ├── documents/    # Módulo de documentos
-│   │   └── consents/     # Módulo de consentimientos
-│   ├── entities/         # Entidades TypeORM (FHIR resources)
-│   ├── common/           # Utilidades compartidas
-│   │   ├── dto/          # Data Transfer Objects
-│   │   ├── interfaces/   # Interfaces TypeScript
-│   │   ├── guards/       # Guards de autorización
-│   │   ├── decorators/    # Decoradores personalizados
-│   │   └── services/     # Servicios compartidos
-│   ├── config/           # Configuraciones
-│   └── migrations/       # Migraciones TypeORM
-├── keycloak/             # Configuración de Keycloak
-│   ├── init/            # Scripts de inicialización
-│   └── realms/         # Configuración de realms
-├── docs/                # Documentación
-│   ├── tasks/          # Tareas temporales (fases)
-│   └── *.md           # Documentación permanente
-├── scripts/            # Scripts de utilidad
-├── test/              # Tests E2E
-└── docker-compose.yml # Configuración Docker
+carecore-api/                    # Monorepo root
+├── packages/
+│   ├── api/                    # Backend API (NestJS)
+│   │   ├── src/
+│   │   │   ├── modules/        # Módulos de negocio
+│   │   │   │   ├── auth/       # Autenticación y autorización
+│   │   │   │   ├── fhir/       # Endpoints FHIR y metadata
+│   │   │   │   ├── patients/   # Módulo de pacientes
+│   │   │   │   ├── practitioners/ # Módulo de profesionales
+│   │   │   │   ├── encounters/  # Módulo de consultas
+│   │   │   │   ├── documents/   # Módulo de documentos
+│   │   │   │   └── consents/    # Módulo de consentimientos
+│   │   │   ├── entities/        # Entidades TypeORM (FHIR resources)
+│   │   │   ├── common/          # Utilidades compartidas
+│   │   │   │   ├── dto/         # Data Transfer Objects
+│   │   │   │   ├── guards/      # Guards de autorización
+│   │   │   │   ├── decorators/  # Decoradores personalizados
+│   │   │   │   └── services/    # Servicios compartidos
+│   │   │   ├── config/          # Configuraciones
+│   │   │   └── migrations/      # Migraciones TypeORM
+│   │   ├── test/                # Tests (unit, e2e, integration)
+│   │   ├── keycloak/            # Configuración de Keycloak
+│   │   │   ├── init/            # Scripts de inicialización
+│   │   │   └── realms/          # Configuración de realms
+│   │   └── scripts/             # Scripts específicos de API
+│   ├── shared/                  # Código compartido
+│   │   └── src/
+│   │       ├── types/           # Interfaces TypeScript (FHIR, User, etc.)
+│   │       └── constants/       # Constantes (FHIR scopes, resource types)
+│   ├── web/                     # Frontend Web (Next.js) - ⏳ Futuro
+│   └── mobile/                  # Frontend Mobile (React Native) - ⏳ Futuro
+├── scripts/                     # Scripts compartidos del monorepo
+├── docs/                        # Documentación
+│   ├── tasks/                   # Tareas temporales (fases)
+│   └── *.md                     # Documentación permanente
+├── .github/workflows/           # CI/CD workflows
+└── docker-compose.yml           # Configuración Docker
 ```
+
+**Nota:** El proyecto utiliza NPM Workspaces para gestionar los paquetes del monorepo. Ver [MONOREPO_GUIDE.md](./MONOREPO_GUIDE.md) para más detalles.
 
 ---
 
@@ -574,15 +585,18 @@ carecore-api/
 git clone <repository-url>
 cd carecore-api
 
-# 2. Instalar dependencias
+# 2. Instalar dependencias (instala para todos los packages)
 npm install
 
-# 3. Configurar variables de entorno
+# 3. Construir paquete shared (requerido antes de iniciar API)
+npm run build:shared
+
+# 4. Configurar variables de entorno
 cp .env.development.example .env.development
 cp .env.development.example .env.local
 # Editar .env.local con tus configuraciones
 
-# 4. Iniciar servicios (PostgreSQL, Keycloak)
+# 5. Iniciar servicios (PostgreSQL, Keycloak)
 make docker-up
 
 # 5. Iniciar aplicación en modo desarrollo

@@ -4,20 +4,38 @@ node_modules/
 .pnp.js
 
 # Testing
-coverage
+coverage/
 coverage-e2e/
 coverage-integration/
+coverage/api/
+coverage/api-e2e/
+coverage/api-integration/
 .nyc_output/
-.jest-cache/
-.jest-e2e-cache/
-.jest-cache-integration/
+# Jest cache (obsolete root locations - removed, now in packages/api/)
+# .jest-cache/ (moved to packages/api/.jest-cache)
+# .jest-e2e-cache/ (moved to packages/api/.jest-e2e-cache)
+# .jest-cache-integration/ (moved to packages/api/.jest-cache-integration)
 storage/
-.jest-e2e-cache/
+.tmp/
+# Monorepo: coverage en packages
+packages/*/coverage/
+packages/*/coverage-*/
+packages/*/.jest-cache*/
+# Jest cache en packages/api (nuevas ubicaciones)
+packages/api/.jest-cache/
+packages/api/.jest-e2e-cache/
+packages/api/.jest-cache-integration/
+packages/api/.jest-cache/
+packages/api/.jest-e2e-cache/
+packages/api/.jest-cache-integration/
 
 # Production
 dist/
 build/
 tmp/
+# Monorepo: dist en packages
+packages/*/dist/
+packages/*/build/
 
 # Logs
 logs
@@ -59,11 +77,17 @@ lerna-debug.log*
 .temp/
 .tmp/
 *.tmp
+*.backup
+*.bak
+*.old
 .env.docker
 .tmp-issue-*.md
 
 # TypeScript
 *.tsbuildinfo
+# Monorepo: TypeScript build info en packages
+packages/*/*.tsbuildinfo
+packages/*/tsconfig.tsbuildinfo
 
 # Docker
 docker-compose.override.yml
@@ -76,12 +100,13 @@ docker-compose.override.yml
 
 # Keycloak exports (pueden contener información sensible)
 # Permitir solo la plantilla base, bloquear exports completos
-keycloak/realms/*-exported*.json
-keycloak/realms/*-backup*.json
-keycloak/realms/*-*.json
-!keycloak/realms/carecore-realm.json
-!keycloak/realms/.gitkeep
-!keycloak/realms/README.md
+# Actualizado para estructura de monorepo: packages/api/keycloak/
+packages/api/keycloak/realms/*-exported*.json
+packages/api/keycloak/realms/*-backup*.json
+packages/api/keycloak/realms/*-*.json
+!packages/api/keycloak/realms/carecore-realm.json
+!packages/api/keycloak/realms/.gitkeep
+!packages/api/keycloak/realms/README.md
 
 # Keycloak backups (contienen información sensible: usuarios, secrets, etc.)
-keycloak/backups/
+packages/api/keycloak/backups/

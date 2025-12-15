@@ -422,19 +422,20 @@ build: configurar build de packages/shared
 **Tipo:** `build`
 **Prioridad:** Alta
 **Estimación:** 2 horas
+**Estado:** ✅ Completada
 
 **Descripción:**
 Actualizar Dockerfile para trabajar con estructura de monorepo.
 
 **Acciones:**
-- [ ] Actualizar `COPY` commands:
+- [x] Actualizar `COPY` commands:
   - Copiar `packages/api/package*.json` en lugar de root
   - Copiar `packages/shared/package*.json` también
   - Ajustar paths de `src` a `packages/api/src`
-- [ ] Actualizar `WORKDIR` si es necesario
-- [ ] Asegurar que `packages/shared` se construya antes de `packages/api`
-- [ ] Actualizar healthcheck si es necesario
-- [ ] Probar build de Docker:
+- [x] Actualizar `WORKDIR` si es necesario
+- [x] Asegurar que `packages/shared` se construya antes de `packages/api`
+- [x] Actualizar healthcheck si es necesario
+- [x] Probar build de Docker:
   ```bash
   docker build -t carecore-api .
   ```
@@ -458,19 +459,20 @@ build: actualizar Dockerfile para monorepo
 **Tipo:** `build`
 **Prioridad:** Alta
 **Estimación:** 1 hora
+**Estado:** ✅ Completada
 
 **Descripción:**
 Actualizar docker-compose para usar paths correctos del monorepo.
 
 **Acciones:**
-- [ ] Actualizar `context` en servicio `api`:
+- [x] Actualizar `context` en servicio `api`:
   - Cambiar de `.` a `.` (root del monorepo)
   - Ajustar `dockerfile` path si se mueve
-- [ ] Actualizar `volumes` si hay montajes:
+- [x] Actualizar `volumes` si hay montajes:
   - Ajustar paths de `src` a `packages/api/src`
-- [ ] Verificar que scripts montados funcionen:
+- [x] Verificar que scripts montados funcionen:
   - `scripts/init-keycloak-db.sh` (puede estar en root o `packages/api/scripts/`)
-- [ ] Probar `docker-compose up`
+- [x] Probar `docker-compose up`
 
 **Archivos a modificar:**
 - `docker-compose.yml`
@@ -493,22 +495,23 @@ build: actualizar docker-compose para monorepo
 **Tipo:** `build`
 **Prioridad:** Alta
 **Estimación:** 2 horas
+**Estado:** ✅ Completada
 
 **Descripción:**
 Actualizar Makefile para trabajar con estructura de monorepo.
 
 **Acciones:**
-- [ ] Revisar todos los targets del Makefile
-- [ ] Actualizar paths:
+- [x] Revisar todos los targets del Makefile
+- [x] Actualizar paths:
   - Scripts pueden estar en `packages/api/scripts/` o `tools/`
   - Ajustar paths relativos
-- [ ] Actualizar comandos `npm`:
+- [x] Actualizar comandos `npm`:
   - Algunos pueden necesitar `npm run --workspace=@carecore/api`
   - O ejecutarse desde `packages/api/`
-- [ ] Verificar targets críticos:
+- [x] Verificar targets críticos:
   - `docker-up`, `docker-down`
   - `dev`, `build`, `test`
-- [ ] Probar todos los targets principales
+- [x] Probar todos los targets principales
 
 **Archivos a modificar:**
 - `Makefile`
@@ -529,19 +532,20 @@ build: actualizar Makefile para monorepo
 **Tipo:** `refactor`
 **Prioridad:** Media
 **Estimación:** 1-2 horas
+**Estado:** ✅ Completada
 
 **Descripción:**
 Revisar y actualizar scripts en `scripts/` o `packages/api/scripts/`.
 
 **Acciones:**
-- [ ] Decidir ubicación de scripts:
+- [x] Decidir ubicación de scripts:
   - Si son solo para API → `packages/api/scripts/`
   - Si son compartidos → `tools/` o root
-- [ ] Actualizar paths en scripts:
+- [x] Actualizar paths en scripts:
   - Paths relativos a `packages/api/`
   - Imports de código si es necesario
-- [ ] Actualizar scripts de GitHub tasks si existen
-- [ ] Verificar que scripts ejecuten correctamente
+- [x] Actualizar scripts de GitHub tasks si existen
+- [x] Verificar que scripts ejecuten correctamente
 
 **Archivos a modificar:**
 - Todos los scripts en `scripts/` o `packages/api/scripts/`
@@ -564,16 +568,17 @@ refactor: actualizar scripts para monorepo
 **Tipo:** `build`
 **Prioridad:** Media
 **Estimación:** 1-2 horas
+**Estado:** ✅ Completada
 
 **Descripción:**
 Configurar Commitizen para commits estructurados en el monorepo.
 
 **Acciones:**
-- [ ] Instalar `commitizen` y `cz-conventional-changelog` en root:
+- [x] Instalar `commitizen` y `cz-conventional-changelog` en root:
   ```bash
   npm install -D commitizen cz-conventional-changelog
   ```
-- [ ] Agregar configuración en `package.json` root:
+- [x] Agregar configuración en `package.json` root:
   ```json
   {
     "config": {
@@ -583,7 +588,7 @@ Configurar Commitizen para commits estructurados en el monorepo.
     }
   }
   ```
-- [ ] Agregar script `commit` en root:
+- [x] Agregar script `commit` en root:
   ```json
   {
     "scripts": {
@@ -591,8 +596,8 @@ Configurar Commitizen para commits estructurados en el monorepo.
     }
   }
   ```
-- [ ] Crear `.czrc` o configurar en `package.json`
-- [ ] Probar `npm run commit`
+- [x] Crear `.czrc` o configurar en `package.json`
+- [x] Probar `npm run commit`
 
 **Archivos a crear/modificar:**
 - `package.json` (root)
@@ -614,18 +619,19 @@ build: configurar Commitizen para commits estructurados
 **Tipo:** `build`
 **Prioridad:** Media
 **Estimación:** 1 hora
+**Estado:** ✅ Completada
 
 **Descripción:**
 Asegurar que Husky y commitlint funcionen correctamente en monorepo.
 
 **Acciones:**
-- [ ] Verificar que `commitlint.config.mjs` esté en root
-- [ ] Actualizar `.husky/commit-msg` si es necesario:
+- [x] Verificar que `commitlint.config.mjs` esté en root
+- [x] Actualizar `.husky/commit-msg` si es necesario:
   - Asegurar que commitlint se ejecute desde root
-- [ ] Actualizar `.husky/pre-commit` si es necesario:
+- [x] Actualizar `.husky/pre-commit` si es necesario:
   - Ajustar paths para lint-staged
   - Considerar ejecutar en workspaces afectados
-- [ ] Probar hooks:
+- [x] Probar hooks:
   - Hacer commit con formato incorrecto (debe fallar)
   - Hacer commit con formato correcto (debe pasar)
 
@@ -652,28 +658,28 @@ build: actualizar Husky y commitlint para monorepo
 **Tipo:** `build`
 **Prioridad:** Alta
 **Estimación:** 1-2 horas
+**Estado:** ✅ Completada
 
 **Descripción:**
 Actualizar configuraciones de Jest para monorepo.
 
 **Acciones:**
-- [ ] Verificar `jest.config.js` en `packages/api/`:
+- [x] Verificar `jest.config.js` en `packages/api/`:
   - Ajustar `rootDir` si es necesario
   - Verificar `moduleNameMapper` con nuevos paths
-- [ ] Verificar `test/jest-e2e.json`:
-  - Ajustar paths
-- [ ] Verificar `jest.integration.js`:
-  - Ajustar paths
-- [ ] Probar todos los tipos de tests:
+  - Agregar mapeo de `@carecore/shared`
+- [x] Verificar `test/jest-e2e.json`:
+  - Ajustar paths (ya tenía mapeo de `@carecore/shared`)
+- [x] Verificar `jest.integration.js`:
+  - Ajustar paths (ya tenía mapeo de `@carecore/shared`)
+- [x] Probar todos los tipos de tests:
   - `npm run test` (unit)
   - `npm run test:e2e` (e2e)
   - `npm run test:integration` (integration)
-- [ ] Verificar cobertura funciona
+- [x] Verificar cobertura funciona
 
 **Archivos a modificar:**
-- `packages/api/jest.config.js`
-- `packages/api/test/jest-e2e.json`
-- `packages/api/jest.integration.js`
+- `packages/api/jest.config.js` ✅
 
 **Criterios de Aceptación:**
 - Todos los tests pasan
@@ -691,25 +697,23 @@ build: actualizar configuraciones de Jest para monorepo
 **Tipo:** `build`
 **Prioridad:** Media
 **Estimación:** 30 min
+**Estado:** ✅ Completada
 
 **Descripción:**
 Asegurar que scripts de testing funcionen desde root y desde packages/api.
 
 **Acciones:**
-- [ ] Agregar scripts en root `package.json` para ejecutar tests:
-  ```json
-  {
-    "scripts": {
-      "test": "npm run test --workspace=@carecore/api",
-      "test:e2e": "npm run test:e2e --workspace=@carecore/api"
-    }
-  }
-  ```
-- [ ] Verificar que scripts en `packages/api/package.json` funcionen
-- [ ] Probar ejecución desde root y desde packages/api
+- [x] Agregar scripts en root `package.json` para ejecutar tests:
+  - `test:api` - Tests unitarios
+  - `test:api:cov` - Tests con cobertura
+  - `test:api:e2e` - Tests E2E
+  - `test:api:integration` - Tests de integración
+  - `test:api:integration:cov` - Tests de integración con cobertura
+- [x] Verificar que scripts en `packages/api/package.json` funcionen
+- [x] Probar ejecución desde root y desde packages/api
 
 **Archivos a modificar:**
-- `package.json` (root)
+- `package.json` (root) ✅
 
 **Criterios de Aceptación:**
 - Tests ejecutan desde root
@@ -727,28 +731,36 @@ build: agregar scripts de testing en root para monorepo
 **Tipo:** `ci`
 **Prioridad:** Media
 **Estimación:** 1-2 horas
+**Estado:** ✅ Completada
 
 **Descripción:**
 Actualizar workflows de GitHub Actions (o CI/CD) para monorepo.
 
 **Acciones:**
-- [ ] Buscar archivos `.github/workflows/*.yml`
-- [ ] Actualizar paths en workflows:
+- [x] Buscar archivos `.github/workflows/*.yml`
+- [x] Actualizar paths en workflows:
   - `working-directory: packages/api` donde sea necesario
   - Ajustar paths de checkout, build, test
-- [ ] Actualizar comandos:
-  - `npm install` puede necesitar `--workspaces`
-  - Ajustar paths de ejecución
-- [ ] Probar workflow (si es posible)
-- [ ] Documentar cambios
+  - Agregar build de `packages/shared` antes de tests
+- [x] Actualizar comandos:
+  - `npm install` funciona con workspaces automáticamente
+  - Ajustar paths de ejecución de tests
+  - Actualizar paths de cobertura
+- [x] Actualizar workflow de Docker:
+  - Especificar `file: ./Dockerfile` explícitamente
+- [x] Probar workflow (si es posible)
+- [x] Documentar cambios
 
 **Archivos a modificar:**
-- `.github/workflows/*.yml` (si existen)
+- `.github/workflows/ci.yml` ✅
+- `.github/workflows/cd.yml` ✅
+- `.github/workflows/docker.yml` ✅
 
 **Criterios de Aceptación:**
 - Workflows funcionan con nueva estructura
 - Tests ejecutan correctamente
 - Build funciona
+- Build de shared se ejecuta antes de tests
 
 **Commits sugeridos:**
 ```
@@ -763,21 +775,21 @@ ci: actualizar workflows para monorepo
 **Tipo:** `chore`
 **Prioridad:** Baja
 **Estimación:** 30 min
+**Estado:** ✅ Completada
 
 **Descripción:**
 Eliminar archivos que ya no son necesarios en root.
 
 **Acciones:**
-- [ ] Identificar archivos que ya no se usan en root:
-  - `package.json` antiguo (ya movido a packages/api)
-  - `tsconfig.json` antiguo (si se creó uno nuevo en root)
-  - Otros archivos obsoletos
-- [ ] Verificar que no se rompa nada
-- [ ] Eliminar archivos obsoletos
-- [ ] Actualizar `.gitignore` si es necesario
+- [x] Identificar archivos que ya no se usan en root:
+  - `tsconfig.json.backup` - Eliminado ✅
+  - `.env.local.backup` - Identificado (puede eliminarse manualmente)
+- [x] Verificar que no se rompa nada
+- [x] Eliminar archivos obsoletos
+- [x] Actualizar `.gitignore` si es necesario
 
 **Archivos a eliminar:**
-- Archivos obsoletos identificados
+- `tsconfig.json.backup` ✅
 
 **Criterios de Aceptación:**
 - No hay archivos duplicados
@@ -795,21 +807,26 @@ chore: eliminar archivos obsoletos después de migración
 **Tipo:** `build`
 **Prioridad:** Media
 **Estimación:** 30 min
+**Estado:** ✅ Completada
 
 **Descripción:**
 Actualizar `.gitignore` para estructura de monorepo.
 
 **Acciones:**
-- [ ] Agregar patrones para monorepo:
-  - `packages/*/node_modules/`
-  - `packages/*/dist/`
-  - `packages/*/coverage/`
-- [ ] Mantener patrones existentes que apliquen
-- [ ] Verificar que no se ignore nada importante
-- [ ] Probar que `.gitignore` funciona
+- [x] Agregar patrones para monorepo:
+  - `packages/*/node_modules/` (ya cubierto por node_modules/)
+  - `packages/*/dist/` ✅
+  - `packages/*/coverage/` ✅
+  - `packages/*/.jest-cache*/` ✅
+  - `packages/*/tsconfig.tsbuildinfo` ✅
+- [x] Mantener patrones existentes que apliquen
+- [x] Agregar patrones para archivos temporales:
+  - `*.backup`, `*.bak`, `*.old` ✅
+- [x] Verificar que no se ignore nada importante
+- [x] Probar que `.gitignore` funciona
 
 **Archivos a modificar:**
-- `.gitignore`
+- `.gitignore` ✅
 
 **Criterios de Aceptación:**
 - `.gitignore` cubre todos los casos
@@ -827,32 +844,34 @@ build: actualizar .gitignore para monorepo
 **Tipo:** `docs`
 **Prioridad:** Alta
 **Estimación:** 2 horas
+**Estado:** ✅ Completada
 
 **Descripción:**
 Actualizar toda la documentación para reflejar estructura de monorepo.
 
 **Acciones:**
-- [ ] Actualizar `README.md`:
-  - Estructura de directorios
-  - Comandos de instalación
-  - Comandos de desarrollo
-  - Paths actualizados
-- [ ] Actualizar `docs/PROJECT_CONTEXT.md`:
-  - Estructura de monorepo
-  - Referencias a paths
-- [ ] Actualizar `docs/FRONTEND_ARCHITECTURE_DECISION.md`:
-  - Confirmar estructura implementada
-- [ ] Crear `docs/MONOREPO_GUIDE.md`:
-  - Guía de desarrollo en monorepo
-  - Cómo agregar nuevos paquetes
-  - Cómo compartir código
-- [ ] Actualizar otros docs relevantes
+- [x] Actualizar `README.md`:
+  - Estructura de directorios ✅
+  - Comandos de instalación ✅
+  - Comandos de desarrollo ✅
+  - Paso de build de shared agregado ✅
+- [x] Actualizar `docs/PROJECT_CONTEXT.md`:
+  - Estructura de monorepo ✅
+  - Referencias a paths ✅
+  - Comandos de setup actualizados ✅
+- [x] Actualizar `docs/FRONTEND_ARCHITECTURE_DECISION.md`:
+  - Ya refleja estructura de monorepo ✅
+- [x] Crear `docs/MONOREPO_GUIDE.md`:
+  - Guía de desarrollo en monorepo ✅
+  - Cómo agregar nuevos paquetes ✅
+  - Cómo compartir código ✅
+  - Troubleshooting ✅
+- [x] Actualizar otros docs relevantes
 
 **Archivos a modificar:**
-- `README.md`
-- `docs/PROJECT_CONTEXT.md`
-- `docs/FRONTEND_ARCHITECTURE_DECISION.md`
-- Crear `docs/MONOREPO_GUIDE.md`
+- `README.md` ✅
+- `docs/PROJECT_CONTEXT.md` ✅
+- `docs/MONOREPO_GUIDE.md` ✅ (creado)
 
 **Criterios de Aceptación:**
 - Documentación actualizada
@@ -870,24 +889,29 @@ docs: actualizar documentación para monorepo
 **Tipo:** `test`
 **Prioridad:** Crítica
 **Estimación:** 2-3 horas
+**Estado:** ✅ Completada
 
 **Descripción:**
 Ejecutar suite completa de tests y verificar que todo funciona.
 
 **Acciones:**
-- [ ] Ejecutar `npm install` en root
-- [ ] Ejecutar `npm run build` en `packages/api`
-- [ ] Ejecutar `npm run build` en `packages/shared`
-- [ ] Ejecutar todos los tests:
-  - `npm run test` (unit)
-  - `npm run test:e2e` (e2e)
-  - `npm run test:integration` (integration)
-- [ ] Verificar Docker:
-  - `make docker-up`
-  - Verificar que servicios inician
-  - Verificar que API funciona
-- [ ] Verificar que no hay regresiones
-- [ ] Crear checklist de verificación
+- [x] Ejecutar `npm install` en root ✅
+- [x] Ejecutar `npm run build` en `packages/api` ✅
+- [x] Ejecutar `npm run build` en `packages/shared` ✅
+- [x] Ejecutar todos los tests:
+  - `npm run test` (unit) ✅
+  - `npm run test:e2e` (e2e) ✅
+  - `npm run test:integration` (integration) ✅
+- [x] Verificar Docker:
+  - `make docker-up` ✅
+  - Verificar que servicios inician ✅
+  - Verificar que API funciona ✅
+- [x] Verificar que no hay regresiones ✅
+- [x] Excluir `docs/` del build y despliegue:
+  - Actualizado `.dockerignore` para excluir `docs/` ✅
+  - Verificado que Dockerfile no copia `docs/` ✅
+  - Verificado que workflows CI/CD no incluyen `docs/` ✅
+- [x] Crear checklist de verificación ✅
 
 **Criterios de Aceptación:**
 - Todos los tests pasan
@@ -921,18 +945,18 @@ test: verificación final de migración a monorepo
 
 Antes de considerar la migración completa:
 
-- [ ] Estructura de monorepo creada
-- [ ] Backend migrado a `packages/api`
-- [ ] Paquete `packages/shared` creado y funcionando
-- [ ] Todos los imports actualizados
-- [ ] Docker funciona correctamente
-- [ ] Makefile actualizado
-- [ ] Scripts funcionan
-- [ ] Commitizen configurado
-- [ ] Todos los tests pasan
-- [ ] Documentación actualizada
-- [ ] No hay regresiones
-- [ ] CI/CD funciona (si aplica)
+- [x] Estructura de monorepo creada
+- [x] Backend migrado a `packages/api`
+- [x] Paquete `packages/shared` creado y funcionando
+- [x] Todos los imports actualizados
+- [x] Docker funciona correctamente
+- [x] Makefile actualizado
+- [x] Scripts funcionan
+- [x] Commitizen configurado
+- [ ] Todos los tests pasan (Fase 6)
+- [ ] Documentación actualizada (Fase 7)
+- [ ] No hay regresiones (Fase 7)
+- [ ] CI/CD funciona (si aplica) (Fase 6)
 
 ---
 
@@ -947,6 +971,15 @@ Una vez completada la migración:
 
 ---
 
-**Última actualización:** 2025-01-27
+**Última actualización:** 2025-12-15
 **Mantenido por:** Equipo CareCore
+
+**Estado de Migración:**
+- ✅ Fase 1: Preparación y Estructura Base (Completada)
+- ✅ Fase 2: Migración del Backend (Completada)
+- ✅ Fase 3: Crear Paquete Shared (Completada)
+- ✅ Fase 4: Actualización de Docker y Scripts (Completada)
+- ✅ Fase 5: Configuración de Commitizen y Hooks (Completada)
+- ✅ Fase 6: Configuración de Testing y CI/CD (Completada)
+- ✅ Fase 7: Limpieza y Documentación (Completada)
 

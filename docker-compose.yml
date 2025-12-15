@@ -53,10 +53,10 @@ services:
       - postgres_data:/var/lib/postgresql/data
       # Script que crea la base de datos de Keycloak al inicializar PostgreSQL
       # Requiere KEYCLOAK_DB_NAME en las variables de entorno
-      - ./scripts/init-keycloak-db.sh:/docker-entrypoint-initdb.d/99-init-keycloak-db.sh:ro
+      - ./packages/api/scripts/init-keycloak-db.sh:/docker-entrypoint-initdb.d/99-init-keycloak-db.sh:ro
       # Script auxiliar para asegurar que la BD de Keycloak existe (cuando el volumen ya existe)
       # Se monta en /usr/local/bin para que esté disponible en el PATH
-      - ./scripts/ensure-keycloak-db.sh:/usr/local/bin/ensure-keycloak-db.sh:ro
+      - ./packages/api/scripts/ensure-keycloak-db.sh:/usr/local/bin/ensure-keycloak-db.sh:ro
     healthcheck:
       # Verificar que PostgreSQL esté listo usando el usuario y base de datos correctos
       # Las variables de entorno están disponibles dentro del contenedor

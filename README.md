@@ -24,7 +24,7 @@ This repository contains the backend API, built with NestJS, FHIR, and an archit
 ### Prerequisites
 
 - Node.js >= 18.x
-- npm or yarn
+- npm >= 9.0.0 (for workspaces support)
 - Docker and Docker Compose
 - Git
 
@@ -36,7 +36,7 @@ This repository contains the backend API, built with NestJS, FHIR, and an archit
    cd carecore-api
    ```
 
-2. **Install dependencies**
+2. **Install dependencies** (installs for all packages in monorepo)
    ```bash
    npm install
    # or
@@ -69,14 +69,21 @@ This repository contains the backend API, built with NestJS, FHIR, and an archit
    make docker-up
    ```
 
-5. **Start the application in development mode**
+5. **Build shared package** (required before starting API)
+   ```bash
+   npm run build:shared
+   ```
+
+6. **Start the application in development mode**
    ```bash
    npm run start:dev
    # or
    make dev
    ```
 
-6. **Access documentation**
+   **Note:** The Makefile automatically builds the shared package before starting the API.
+
+7. **Access documentation**
    - API: http://localhost:3000/api
    - Swagger: http://localhost:3000/api/docs
    - PgAdmin: http://localhost:5050
@@ -145,35 +152,37 @@ Creamos una plataforma móvil y web que centraliza el perfil médico del pacient
   - Aseguradoras
   - Sistemas clínicos externos (SMART on FHIR)
 
-### Arquitectura Backend
+### Arquitectura del Monorepo
 
 ```
-/src
-  /modules
-    /auth          ✅ Implementado (estructura base, autenticación en progreso)
-    /fhir          ✅ Implementado (FHIR endpoints y metadata)
-    /patients      ✅ Implementado (CRUD completo)
-    /practitioners ✅ Implementado (CRUD completo)
-    /encounters    ✅ Implementado (CRUD completo)
-    /documents     ✅ Implementado (CRUD completo)
-    /consents      ✅ Implementado (CRUD completo)
-    /audit         ⏳ (to be implemented)
-    /ai            ⏳ (to be implemented)
-  /entities        ✅ Implementado (TypeORM entities para FHIR resources)
-    /patient.entity.ts
-    /practitioner.entity.ts
-    /encounter.entity.ts
-    /consent.entity.ts
-    /document-reference.entity.ts
-  /common
-    /dto           ✅ Implementado (DTOs para todos los recursos FHIR)
-    /interfaces    ✅ Implementado (TypeScript interfaces FHIR)
-    /filters       ✅ Implementado
-    /interceptors  ✅ Implementado
-    /middleware    ✅ Implementado
-    /services      ✅ Implementado (FhirService, EncryptionService, etc.)
-  /config          ✅ Implementado
-  /migrations      ✅ Implementado (TypeORM migrations)
+carecore-api/
+├── packages/
+│   ├── api/                    # Backend API (NestJS)
+│   │   ├── src/
+│   │   │   ├── modules/
+│   │   │   │   ├── auth/       ✅ Implementado
+│   │   │   │   ├── fhir/       ✅ Implementado
+│   │   │   │   ├── patients/   ✅ Implementado
+│   │   │   │   ├── practitioners/ ✅ Implementado
+│   │   │   │   ├── encounters/ ✅ Implementado
+│   │   │   │   ├── documents/  ✅ Implementado
+│   │   │   │   ├── consents/   ✅ Implementado
+│   │   │   │   ├── audit/      ⏳ (to be implemented)
+│   │   │   │   └── ai/         ⏳ (to be implemented)
+│   │   │   ├── entities/      ✅ TypeORM entities (FHIR resources)
+│   │   │   ├── common/         ✅ Shared utilities
+│   │   │   ├── config/         ✅ Configurations
+│   │   │   └── migrations/     ✅ TypeORM migrations
+│   │   └── test/               ✅ Tests (unit, e2e, integration)
+│   ├── shared/                 # Shared code (types, constants, utils)
+│   │   └── src/
+│   │       ├── types/          ✅ FHIR interfaces
+│   │       └── constants/      ✅ FHIR scopes, resource types
+│   ├── web/                    # Frontend Web (Next.js) - ⏳ Placeholder
+│   └── mobile/                 # Frontend Mobile (React Native) - ⏳ Placeholder
+├── scripts/                    # Shared scripts
+├── docs/                       # Documentation
+└── tools/                      # Shared tools
 ```
 
 **Stack Base:**
@@ -741,65 +750,50 @@ npm run test:cov       # Tests with coverage
 npm run migration:run  # Run migrations
 ```
 
-### Project Structure
+### Project Structure (Monorepo)
 
 ```
-carecore-api/
-├── src/
-│   ├── main.ts                 # Entry point
-│   ├── app.module.ts           # Main module
-│   ├── config/                 # Configurations
-│   │   ├── database.config.ts  # TypeORM database configuration
-│   │   ├── data-source.ts      # TypeORM CLI data source
-│   │   └── fhir.config.ts      # FHIR configuration
-│   ├── entities/               # TypeORM entities (FHIR resources)
-│   │   ├── patient.entity.ts
-│   │   ├── practitioner.entity.ts
-│   │   ├── encounter.entity.ts
-│   │   ├── consent.entity.ts
-│   │   └── document-reference.entity.ts
-│   ├── migrations/             # TypeORM migrations
-│   │   ├── EnablePgcrypto*.ts
-│   │   └── CreateFhirEntities*.ts
-│   ├── common/                 # Shared utilities
-│   │   ├── dto/                # Data Transfer Objects
-│   │   │   ├── fhir-patient.dto.ts
-│   │   │   ├── fhir-practitioner.dto.ts
-│   │   │   ├── fhir-encounter.dto.ts
-│   │   │   ├── fhir-consent.dto.ts
-│   │   │   └── fhir-document-reference.dto.ts
-│   │   ├── interfaces/         # TypeScript interfaces
-│   │   │   └── fhir.interface.ts
-│   │   ├── filters/           # Exception filters
-│   │   ├── interceptors/      # Request/Response interceptors
-│   │   ├── middleware/        # Custom middleware
-│   │   └── services/          # Shared services
-│   │       ├── encryption.service.ts
-│   │       └── fhir-error.service.ts
-│   └── modules/                # Business modules
-│       ├── fhir/               # FHIR endpoints and metadata
-│       ├── patients/           # Patient module (CRUD)
-│       ├── practitioners/      # Practitioner module (CRUD)
-│       ├── encounters/         # Encounter module (CRUD)
-│       ├── documents/          # DocumentReference module (CRUD)
-│       ├── consents/           # Consent module (CRUD)
-│       ├── audit/              # (to be implemented)
-│       └── ai/                 # (to be implemented)
-├── keycloak/                   # Keycloak configuration
-│   ├── init/                   # Initialization scripts
-│   └── realms/                 # Realm exports
-├── docs/                       # Documentation
-│   ├── tasks/                  # Task documentation (temporary)
-│   └── *.md                    # Permanent documentation
-├── scripts/                    # Utility scripts
-│   ├── verify-encryption.ts
-│   └── create-github-tasks-*.js
-├── docker-compose.yml          # Docker configuration
-├── .eslintrc.js               # ESLint configuration
-├── .prettierrc                # Prettier configuration
-├── tsconfig.json              # TypeScript configuration
-└── package.json               # Dependencies
+carecore-api/                   # Monorepo root
+├── packages/
+│   ├── api/                    # Backend API (NestJS)
+│   │   ├── src/
+│   │   │   ├── main.ts         # Entry point
+│   │   │   ├── app.module.ts   # Main module
+│   │   │   ├── config/         # Configurations
+│   │   │   ├── entities/       # TypeORM entities (FHIR resources)
+│   │   │   ├── migrations/     # TypeORM migrations
+│   │   │   ├── common/          # Shared utilities
+│   │   │   │   ├── dto/         # Data Transfer Objects
+│   │   │   │   ├── filters/     # Exception filters
+│   │   │   │   ├── interceptors/
+│   │   │   │   ├── middleware/
+│   │   │   │   └── services/    # Shared services
+│   │   │   └── modules/         # Business modules
+│   │   │       ├── auth/        # Authentication
+│   │   │       ├── fhir/        # FHIR endpoints
+│   │   │       ├── patients/    # Patient module
+│   │   │       ├── practitioners/
+│   │   │       ├── encounters/
+│   │   │       ├── documents/
+│   │   │       └── consents/
+│   │   ├── test/                # Tests (unit, e2e, integration)
+│   │   ├── keycloak/            # Keycloak configuration
+│   │   └── scripts/             # API-specific scripts
+│   ├── shared/                  # Shared code
+│   │   └── src/
+│   │       ├── types/          # TypeScript interfaces (FHIR)
+│   │       └── constants/      # Constants (scopes, resource types)
+│   ├── web/                     # Frontend Web (Next.js) - ⏳ Placeholder
+│   └── mobile/                  # Frontend Mobile (React Native) - ⏳ Placeholder
+├── scripts/                     # Shared scripts (monorepo)
+├── docs/                        # Documentation
+├── .github/workflows/           # CI/CD workflows
+├── docker-compose.yml           # Docker configuration
+├── tsconfig.base.json           # Base TypeScript config
+└── package.json                 # Root package.json (workspaces)
 ```
+
+**Ver [MONOREPO_GUIDE.md](docs/MONOREPO_GUIDE.md) para más detalles sobre el monorepo.**
 
 **Estructura de Datos:**
 - **Entidades TypeORM**: Almacenan recursos FHIR completos en JSONB (PostgreSQL)
@@ -874,6 +868,7 @@ Access FHIR metadata at: `/api/fhir/metadata`
 - [docs/DATABASE_ENCRYPTION.md](docs/DATABASE_ENCRYPTION.md) - Guía completa de cifrado de datos en reposo
 - [ENV_VARIABLES.md](ENV_VARIABLES.md) - Configuración detallada de variables de entorno
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Guías de contribución y convenciones
+- [docs/COMMIT_CONVENTIONS.md](docs/COMMIT_CONVENTIONS.md) - **📝 Convenciones de Commits** - Guía completa de formato de commits con scopes
 
 ### Documentación Temporal ⚠️
 
@@ -905,12 +900,36 @@ The project follows [Conventional Commits](https://www.conventionalcommits.org/)
 <type>(<scope>): <description>
 ```
 
-**Examples:**
-- `feat(patients): add search endpoint`
-- `fix(auth): fix token validation`
-- `docs: update configuration guide`
+**Scopes disponibles:**
+- `api` - Backend API (NestJS)
+- `web` - Frontend Web (Next.js)
+- `mobile` - Frontend Mobile (React Native)
+- `shared` - Código compartido (types, constants, utils)
+- `infra` - Infraestructura (Docker, scripts, config, CI/CD)
+- `keycloak` - Configuración de Keycloak
+- `root` - Cambios en root (docs, package.json, etc.)
 
-For more details, see [CONTRIBUTING.md](CONTRIBUTING.md)
+**Examples:**
+- `feat(api): agregar endpoint para crear pacientes`
+- `fix(web): corregir error de login con Keycloak`
+- `docs(docs): actualizar guía de instalación`
+- `refactor(shared): mover interfaces FHIR a packages/shared`
+- `build(docker): actualizar Dockerfile para monorepo`
+
+**Usar Commitizen:**
+```bash
+npm run commit
+```
+
+**Crear branch con formato correcto:**
+```bash
+./scripts/create-branch.sh <tipo> <scope> <iniciales> <numero-tarea> <descripcion>
+# Ejemplo: ./scripts/create-branch.sh feat api ps 123 agregar-endpoint-pacientes
+```
+
+For more details, see:
+- [CONTRIBUTING.md](CONTRIBUTING.md) - Guía de contribución
+- [docs/COMMIT_CONVENTIONS.md](docs/COMMIT_CONVENTIONS.md) - Convenciones de commits y branches completas
 
 ---
 

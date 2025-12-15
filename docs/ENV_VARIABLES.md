@@ -104,8 +104,11 @@ FRONTEND_URL=http://localhost:3000
 RATE_LIMIT_TTL=60
 RATE_LIMIT_MAX=100
 
+# Document Storage (FHIR DocumentReference attachments)
+DOCUMENTS_STORAGE_PATH=.tmp/storage/documents
+
 # Practitioner Verification Documents Storage
-VERIFICATION_DOCUMENTS_PATH=storage/verifications
+VERIFICATION_DOCUMENTS_PATH=.tmp/storage/verifications
 MAX_DOCUMENT_SIZE=10485760
 
 # PgAdmin (Optional)
@@ -182,11 +185,20 @@ KEYCLOAK_HTTP_ENABLED=true
 - `RATE_LIMIT_TTL`: Time window in seconds for rate limiting
 - `RATE_LIMIT_MAX`: Maximum number of requests per window
 
-### Practitioner Verification Documents Storage
-- `VERIFICATION_DOCUMENTS_PATH`: Path where verification documents (cedula/licencia) are stored (default: `storage/verifications`)
-  - Documents are stored temporarily on local disk (not committed to git)
+### Document Storage (FHIR DocumentReference)
+- `DOCUMENTS_STORAGE_PATH`: Path where FHIR DocumentReference attachments are stored (default: `.tmp/storage/documents`)
+  - Attachments provided as base64 are saved to disk and the resource is updated with the generated URL
+  - Documents are stored temporarily on local disk (not committed to git, see `.gitignore`)
   - TODO: Migrate to cloud storage (S3/MinIO) in the future for production
   - Can be absolute or relative to project root
+  - Used by `DocumentsService` to store binary attachments from FHIR DocumentReference resources
+
+### Practitioner Verification Documents Storage
+- `VERIFICATION_DOCUMENTS_PATH`: Path where verification documents (cedula/licencia) are stored (default: `.tmp/storage/verifications`)
+  - Documents are stored temporarily on local disk (not committed to git, see `.gitignore`)
+  - TODO: Migrate to cloud storage (S3/MinIO) in the future for production
+  - Can be absolute or relative to project root
+  - Used by `DocumentStorageService` for practitioner verification workflow
 - `MAX_DOCUMENT_SIZE`: Maximum file size in bytes for verification documents (default: `10485760` = 10MB)
   - Used to validate uploaded documents before storage
   - Documents exceeding this size will be rejected

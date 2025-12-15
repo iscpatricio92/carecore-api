@@ -25,6 +25,8 @@ export default {
     'type-empty': [2, 'never'],
     // El scope es opcional pero debe estar en minúsculas si existe
     'scope-case': [2, 'always', 'lower-case'],
+    // Scopes permitidos (opcional, pero recomendado para consistencia)
+    'scope-enum': [1, 'always', ['api', 'web', 'mobile', 'shared', 'infra', 'keycloak', 'root']],
     // El subject no puede estar vacío
     'subject-empty': [2, 'never'],
     // El subject debe terminar con punto

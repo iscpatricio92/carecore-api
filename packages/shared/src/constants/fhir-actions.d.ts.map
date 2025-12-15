@@ -1,0 +1,1 @@
+{"version":3,"file":"fhir-actions.d.ts","sourceRoot":"","sources":["fhir-actions.ts"],"names":[],"mappings":"AAkBA,eAAO,MAAM,YAAY;;;;CAmBf,CAAC;AAKX,MAAM,MAAM,UAAU,GAAG,CAAC,OAAO,YAAY,CAAC,CAAC,MAAM,OAAO,YAAY,CAAC,CAAC;AAM1E,eAAO,MAAM,gBAAgB,EAAE,SAAS,UAAU,EAAgC,CAAC;AAOnF,wBAAgB,iBAAiB,CAAC,MAAM,EAAE,MAAM,GAAG,MAAM,IAAI,UAAU,CAEtE"}
