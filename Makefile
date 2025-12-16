@@ -79,6 +79,43 @@ docker-up: ## Iniciar contenedores Docker (PostgreSQL + Keycloak + API)
 	echo "📋 Para ver los logs del API en tiempo real, ejecuta:"; \
 	echo "   make docker-logs-api"
 
+docker-build: ## Reconstruir imágenes Docker
+	@ENV_BASE=$$(echo .env.$${NODE_ENV:-development}); \
+	ENV_LOCAL=.env.local; \
+	ENV_COMBINED=.env.docker; \
+	COMPOSE_ENV=$$(echo docker-compose.$${NODE_ENV:-development}.yml); \
+	echo "📦 Combinando archivos de entorno (igual que NestJS):"; \
+	if [ -f "$$ENV_BASE" ]; then \
+		echo "   1. Base: $$ENV_BASE"; \
+		cat $$ENV_BASE > $$ENV_COMBINED; \
+		if [ -f "$$ENV_LOCAL" ]; then \
+			echo "   2. Local: $$ENV_LOCAL (sobrescribe valores)"; \
+			echo "" >> $$ENV_COMBINED; \
+			echo "# Valores de .env.local (sobrescriben valores base)" >> $$ENV_COMBINED; \
+			cat $$ENV_LOCAL >> $$ENV_COMBINED; \
+		else \
+			echo "   2. Local: $$ENV_LOCAL (no existe, usando solo base)"; \
+		fi; \
+	elif [ -f "$$ENV_LOCAL" ]; then \
+		echo "   1. Local: $$ENV_LOCAL (usando solo archivo local)"; \
+		cat $$ENV_LOCAL > $$ENV_COMBINED; \
+	else \
+		echo "⚠️  Error: No se encontró ningún archivo de entorno."; \
+		echo "   Crea al menos uno de estos archivos:"; \
+		echo "   - $$ENV_BASE (desde $$ENV_BASE.example)"; \
+		echo "   - $$ENV_LOCAL (desde $$ENV_BASE.example)"; \
+		exit 1; \
+	fi; \
+	echo "✅ Archivo combinado: $$ENV_COMBINED"; \
+	if [ -f "$$COMPOSE_ENV" ]; then \
+		echo "🔨 Reconstruyendo imágenes: docker-compose.yml + $$COMPOSE_ENV"; \
+		docker-compose -f docker-compose.yml -f $$COMPOSE_ENV --env-file $$ENV_COMBINED build --no-cache; \
+	else \
+		echo "🔨 Reconstruyendo imágenes: docker-compose.yml (sin override)"; \
+		docker-compose --env-file $$ENV_COMBINED build --no-cache; \
+	fi; \
+	echo "✅ Imágenes reconstruidas"
+
 docker-down: ## Detener contenedores Docker
 	@ENV_BASE=$$(echo .env.$${NODE_ENV:-development}); \
 	ENV_LOCAL=.env.local; \
