@@ -1,0 +1,32 @@
+{
+  "name": "CareCore",
+  "slug": "carecore",
+  "scheme": "carecore",
+  "version": "0.1.0",
+  "orientation": "portrait",
+  "icon": "./assets/images/logo.png",
+  "userInterfaceStyle": "light",
+  "newArchEnabled": true,
+  "splash": {
+    "image": "./assets/images/logo.png",
+    "resizeMode": "contain",
+    "backgroundColor": "#ffffff"
+  },
+  "ios": {
+    "supportsTablet": true,
+    "bundleIdentifier": "com.anonymous.carecoremobile",
+    "icon": "./assets/images/logo.png"
+  },
+  "android": {
+    "package": "com.anonymous.carecoremobile",
+    "adaptiveIcon": {
+      "foregroundImage": "./assets/images/logo.png",
+      "backgroundColor": "#ffffff"
+    }
+  },
+  "web": {
+    "favicon": "./assets/images/logo.png",
+    "bundler": "metro"
+  },
+  "plugins": ["expo-router", "expo-web-browser", "expo-secure-store"]
+}
