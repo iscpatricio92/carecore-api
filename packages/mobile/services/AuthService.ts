@@ -27,42 +27,95 @@ export class AuthService {
   // ===================================================================
 
   /**
-   * Llama al endpoint de tu API de NestJS para intercambiar el código
-   * de autorización de Keycloak por los tokens JWT.
-   * @param code El código de autorización recibido de expo-auth-session.
-   * @param codeVerifier El verificador PKCE.
+   * Intercambia el código de autorización por tokens usando PKCE
+   *
+   * Para aplicaciones móviles con PKCE, intercambiamos directamente con Keycloak
+   * ya que PKCE no requiere client_secret (más seguro para mobile).
+   *
+   * @param code El código de autorización recibido de expo-auth-session
+   * @param codeVerifier El verificador PKCE (generado por expo-auth-session)
+   * @param redirectUri La URI de redirección usada en la solicitud de autorización
    */
-  async exchangeCodeForTokens(code: string, codeVerifier: string): Promise<TokensResponse> {
-    const url = `${appConfig.api.authUrl}/exchange-code`;
+  async exchangeCodeForTokens(
+    code: string,
+    codeVerifier: string,
+    redirectUri: string = appConfig.keycloak.redirectUri,
+  ): Promise<TokensResponse> {
+    // Construir URL del token endpoint de Keycloak
+    const tokenUrl = `${appConfig.keycloak.issuer}/protocol/openid-connect/token`;
 
     try {
-      const response = await fetch(url, {
+      // Preparar el body para el intercambio de tokens (form-urlencoded)
+      const body = new URLSearchParams();
+      body.append('grant_type', 'authorization_code');
+      body.append('code', code);
+      body.append('client_id', appConfig.keycloak.clientId);
+      body.append('code_verifier', codeVerifier); // PKCE: code_verifier en lugar de client_secret
+      body.append('redirect_uri', redirectUri);
+
+      const response = await fetch(tokenUrl, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: JSON.stringify({
-          code: code,
-          code_verifier: codeVerifier,
-        }),
+        body: body.toString(),
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage =
-          errorData.message || `Error al intercambiar el código. Estado: ${response.status}`;
-        ErrorService.handleAuthError(new Error(errorMessage), { status: response.status });
+        const errorText = await response.text();
+        let errorMessage = `Error al intercambiar el código. Estado: ${response.status}`;
+
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.error_description || errorData.error || errorMessage;
+        } catch {
+          // Si no es JSON, usar el texto del error
+          errorMessage = errorText || errorMessage;
+        }
+
+        ErrorService.handleAuthError(new Error(errorMessage), {
+          status: response.status,
+          operation: 'exchangeCodeForTokens',
+        });
         throw new Error(errorMessage);
       }
 
-      const data: TokensResponse = await response.json();
+      const tokenData = (await response.json()) as {
+        access_token?: string;
+        refresh_token?: string;
+        expires_in?: number;
+        token_type?: string;
+        id_token?: string;
+      };
 
-      // Una vez recibidos, guardar de forma segura.
-      await this.saveTokens(data);
-      return data;
+      if (!tokenData.access_token) {
+        const error = new Error('Invalid token response from Keycloak: missing access_token');
+        ErrorService.handleAuthError(error, { operation: 'exchangeCodeForTokens' });
+        throw error;
+      }
+
+      // Construir respuesta en el formato esperado
+      const tokens: TokensResponse = {
+        access_token: tokenData.access_token,
+        refresh_token: tokenData.refresh_token || '',
+        expires_in: tokenData.expires_in || 3600,
+        token_type: tokenData.token_type || 'Bearer',
+        id_token: tokenData.id_token,
+        // user_info se obtendrá decodificando el JWT o llamando al endpoint /user
+        user_info: {
+          sub: '', // Se llenará después
+          roles: [],
+        },
+      };
+
+      // Guardar tokens de forma segura
+      await this.saveTokens(tokens);
+      return tokens;
     } catch (error) {
       if (error instanceof Error && error.message.includes('fetch')) {
         ErrorService.handleNetworkError(error, { operation: 'exchangeCodeForTokens' });
+      } else if (error instanceof Error) {
+        ErrorService.handleAuthError(error, { operation: 'exchangeCodeForTokens' });
       }
       throw error;
     }
@@ -139,7 +192,25 @@ export class AuthService {
       });
 
       if (response.ok) {
-        const newTokens: TokensResponse = await response.json();
+        const tokenData = await response.json();
+
+        // El API devuelve tokens en formato { accessToken, refreshToken, expiresIn, tokenType }
+        // Normalizar al formato TokensResponse
+        const newTokens: TokensResponse = {
+          access_token: tokenData.accessToken || tokenData.access_token || '',
+          refresh_token: tokenData.refreshToken || tokenData.refresh_token || '',
+          expires_in: tokenData.expiresIn || tokenData.expires_in || 3600,
+          token_type: tokenData.tokenType || tokenData.token_type || 'Bearer',
+          user_info: {
+            sub: '',
+            roles: [],
+          },
+        };
+
+        if (!newTokens.access_token) {
+          throw new Error('Invalid token response: missing access_token');
+        }
+
         await this.saveTokens(newTokens);
         return true; // Éxito
       } else {

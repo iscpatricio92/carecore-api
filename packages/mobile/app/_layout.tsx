@@ -4,22 +4,12 @@
 /* It also handles the authentication state and redirects the user to the login screen if they are not authenticated */
 import { Stack } from 'expo-router';
 import { ErrorBoundary } from '../components/common/ErrorBoundary';
-//import { AuthProvider, useAuth } from '../hooks/useAuth'; // Importa el hook de autenticación
+import { AuthProvider } from '../hooks/useAuth';
 
-// 1. Componente que contiene la lógica de redirección
+// 1. Componente que contiene las rutas de la aplicación
 function RootLayoutContent() {
-  //const { isAuthenticated, isLoading } = useAuth();
-
-  /*  if (isLoading) {
-    return <Text>Cargando sesión de CareCore...</Text>;
-  } */
-
-  // Redirige al Login si no está autenticado (debes crear la ruta 'login.tsx')
-  /*   if (!isAuthenticated) {
-    return <Redirect href="/auth/login" />;
-  } */
-
   // Muestra las rutas de la aplicación (incluyendo las tabs)
+  // La redirección de auth se maneja en app/index.tsx
   return <Stack screenOptions={{ headerShown: false }} />;
 }
 
@@ -27,9 +17,9 @@ function RootLayoutContent() {
 export default function RootLayout() {
   return (
     <ErrorBoundary>
-      {/* <AuthProvider> */}
-      <RootLayoutContent />
-      {/* </AuthProvider> */}
+      <AuthProvider>
+        <RootLayoutContent />
+      </AuthProvider>
     </ErrorBoundary>
   );
 }

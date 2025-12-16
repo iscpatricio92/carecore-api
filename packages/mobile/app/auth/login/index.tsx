@@ -1,16 +1,36 @@
-// carecore-frontend/app/login/index.tsx
+// carecore-frontend/app/auth/login/index.tsx
 
-import React from 'react';
-import { View, Text, StyleSheet, Image, SafeAreaView } from 'react-native';
-//import { useAuth } from '../../../hooks/useAuth';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  SafeAreaView,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
+import { useAuth } from '../../../hooks/useAuth';
 import { PrimaryButton } from '../../../components/ui/PrimaryButton';
 import { Link } from 'expo-router';
+import { ErrorService } from '../../../services/ErrorService';
 import logoImage from '../../../assets/images/logo.png';
-import { router } from 'expo-router';
-export default function LoginScreen() {
-  //const { login } = useAuth();
 
-  // Usaremos un estilo simple de 'botón de acción' para iniciar el flujo OIDC/Keycloak
+export default function LoginScreen() {
+  const { login, isLoading } = useAuth();
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  const handleLogin = async () => {
+    try {
+      setIsLoggingIn(true);
+      await login();
+    } catch (error) {
+      const errorInfo = ErrorService.handleAuthError(error, { operation: 'handleLogin' });
+      Alert.alert('Error de Autenticación', ErrorService.getUserFriendlyMessage(errorInfo));
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -19,14 +39,19 @@ export default function LoginScreen() {
         <Text style={styles.title}>Bienvenido a CareCore</Text>
         <Text style={styles.subtitle}>Control absoluto sobre tu historial clínico FHIR.</Text>
 
-        {/* 1. BOTÓN PRINCIPAL: INICIA SESIÓN CON KEYCLOAK */}
+        {/* Botón de inicio de sesión */}
         <PrimaryButton
-          title="Iniciar Sesión"
-          onPress={() => router.replace(true ? '/(tabs)' : '/auth/login')} // Llama al useAuth().login() que invoca promptAsync()
+          title={isLoggingIn || isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+          onPress={handleLogin}
+          disabled={isLoggingIn || isLoading}
           style={styles.button}
         />
 
-        {/* 2. ENLACE A REGISTRO */}
+        {(isLoggingIn || isLoading) && (
+          <ActivityIndicator size="small" color="#00796B" style={styles.loader} />
+        )}
+
+        {/* Enlace a registro */}
         <View style={styles.linkContainer}>
           <Text style={styles.linkText}>¿Aún no tienes cuenta?</Text>
           <Link href="/auth/register" style={styles.link}>
