@@ -34,7 +34,8 @@ module.exports = {
     // Icons and splash
     icon: './assets/images/logo.png',
     userInterfaceStyle: 'light',
-    newArchEnabled: true,
+    // Disabled new architecture for now - requires native rebuild
+    // Enable when ready: newArchEnabled: true,
     splash: {
       image: './assets/images/logo.png',
       resizeMode: 'contain',
@@ -46,6 +47,8 @@ module.exports = {
       supportsTablet: true,
       bundleIdentifier: 'com.anonymous.carecoremobile',
       icon: './assets/images/logo.png',
+      // Disable new architecture for iOS until native code is properly configured
+      newArchEnabled: false,
     },
 
     // Android configuration
@@ -64,7 +67,7 @@ module.exports = {
     },
 
     // Expo plugins
-    plugins: ['expo-router', 'expo-web-browser', 'expo-secure-store'],
+    plugins: ['expo-router', 'expo-dev-client', 'expo-web-browser', 'expo-secure-store'],
 
     // Extra configuration - injected into app via expo-constants
     // These variables are available in the app via Constants.expoConfig.extra

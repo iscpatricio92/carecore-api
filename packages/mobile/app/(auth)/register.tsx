@@ -1,12 +1,13 @@
-// carecore-frontend/app/register/index.tsx (MODIFICADO)
+// carecore-frontend/app/(auth)/register.tsx
+// Register screen - accessible at /register (not /auth/register)
 
 import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Alert, Image } from 'react-native';
-import { router, Link } from 'expo-router';
-import { useRegisterForm } from '../../../hooks/useRegisterForm'; // NUEVO HOOK
-import { PrimaryButton } from '../../../components/ui/PrimaryButton';
-import { FormInput } from '../../../components/ui/FormInput'; // Componente de input que debes crear
-import logoImage from '../../../assets/images/logo.png';
+import { router } from 'expo-router';
+import { useRegisterForm } from '../../hooks/useRegisterForm';
+import { PrimaryButton } from '../../components/ui/PrimaryButton';
+import { FormInput } from '../../components/ui/FormInput';
+import logoImage from '../../assets/images/logo.png';
 
 export default function RegisterScreen() {
   const { formData, isLoading, error, handleChange, handleSubmit } = useRegisterForm();
@@ -65,9 +66,14 @@ export default function RegisterScreen() {
           style={styles.button}
         />
 
-        <Link href="/auth/login" style={styles.backLink}>
+        <Text
+          onPress={() => {
+            router.push('/login');
+          }}
+          style={styles.backLink}
+        >
           ← Volver a Iniciar Sesión
-        </Link>
+        </Text>
       </View>
     </SafeAreaView>
   );
@@ -97,6 +103,9 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     marginBottom: 40,
+  },
+  loader: {
+    marginTop: 10,
   },
   button: {
     width: '100%',

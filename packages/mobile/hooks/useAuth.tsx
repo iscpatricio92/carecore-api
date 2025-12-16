@@ -111,7 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await authService.removeTokens();
 
       // 3. Redirigir al login
-      router.replace('/auth/login');
+      router.replace('/login');
     } catch (error) {
       ErrorService.handleAuthError(error, { operation: 'logout' });
     }

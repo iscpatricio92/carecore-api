@@ -51,6 +51,23 @@ export default function DashboardScreen() {
       .slice(0, 5); // Limitar a 5 más recientes
   }, [encounters, documents]);
 
+  // Si no hay registros, mostrar estado vacío
+  if (!recentRecords || recentRecords.length === 0) {
+    return (
+      <View style={styles.container}>
+        <AppHeader title="CareCore Records" />
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <ConsentStatusCard
+            activeConsentsCount={consents?.length || 0}
+            onManagePress={() => {
+              /* Navegar a la pantalla de consentimientos */
+            }}
+          />
+        </ScrollView>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {/* 2. HEADER: Se integra aquí en cada pantalla si no usas Stack.Screen options */}

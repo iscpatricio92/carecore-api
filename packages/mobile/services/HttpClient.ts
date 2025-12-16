@@ -65,7 +65,7 @@ export class HttpClient {
           ErrorService.handleAuthError(new Error('No se encontró token de acceso'), {
             operation: 'request',
           });
-          router.replace('/auth/login');
+          router.replace('/login');
           throw new Error('No se encontró token de acceso');
         }
       }
@@ -118,7 +118,7 @@ export class HttpClient {
                 ErrorService.handleAuthError(new Error('Token inválido después de refresh'), {
                   operation: 'requestWithRetry',
                 });
-                router.replace('/auth/login');
+                router.replace('/login');
                 throw new Error('Token inválido. Por favor, inicia sesión nuevamente.');
               }
             }
@@ -127,7 +127,7 @@ export class HttpClient {
             ErrorService.handleAuthError(new Error('Sesión expirada'), {
               operation: 'requestWithRetry',
             });
-            router.replace('/auth/login');
+            router.replace('/login');
             throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.');
           }
         }

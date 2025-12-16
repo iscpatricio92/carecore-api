@@ -1,4 +1,5 @@
-// carecore-frontend/app/auth/login/index.tsx
+// carecore-frontend/app/(auth)/login.tsx
+// Login screen - accessible at /login (not /auth/login)
 
 import React, { useState } from 'react';
 import {
@@ -10,11 +11,11 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { useAuth } from '../../../hooks/useAuth';
-import { PrimaryButton } from '../../../components/ui/PrimaryButton';
-import { Link } from 'expo-router';
-import { ErrorService } from '../../../services/ErrorService';
-import logoImage from '../../../assets/images/logo.png';
+import { useAuth } from '../../hooks/useAuth';
+import { PrimaryButton } from '../../components/ui/PrimaryButton';
+import { router } from 'expo-router';
+import { ErrorService } from '../../services/ErrorService';
+import logoImage from '../../assets/images/logo.png';
 
 export default function LoginScreen() {
   const { login, isLoading } = useAuth();
@@ -54,9 +55,14 @@ export default function LoginScreen() {
         {/* Enlace a registro */}
         <View style={styles.linkContainer}>
           <Text style={styles.linkText}>¿Aún no tienes cuenta?</Text>
-          <Link href="/auth/register" style={styles.link}>
+          <Text
+            onPress={() => {
+              router.push('/register');
+            }}
+            style={styles.link}
+          >
             Regístrate aquí
-          </Link>
+          </Text>
         </View>
       </View>
     </SafeAreaView>
@@ -88,6 +94,9 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     marginBottom: 40,
+  },
+  loader: {
+    marginTop: 10,
   },
   button: {
     width: '100%',

@@ -20,7 +20,7 @@ export default function Index() {
 
   // Redirigir según el estado de autenticación
   if (!isAuthenticated) {
-    return <Redirect href="/auth/login" />;
+    return <Redirect href="/login" />;
   }
 
   return <Redirect href="/(tabs)" />;

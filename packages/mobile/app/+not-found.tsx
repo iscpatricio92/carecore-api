@@ -12,7 +12,7 @@ export default function NotFoundScreen() {
 
         <PrimaryButton
           title="Volver al inicio"
-          onPress={() => router.replace('/auth/login')}
+          onPress={() => router.replace('/login')}
           style={styles.button}
         />
       </View>
