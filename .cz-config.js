@@ -18,7 +18,8 @@ module.exports = {
     { name: 'web', description: 'Frontend Web (Next.js)' },
     { name: 'mobile', description: 'Frontend Mobile (React Native)' },
     { name: 'shared', description: 'Código compartido (types, constants, utils)' },
-    { name: 'infra', description: 'Infraestructura (Docker, scripts, config, CI/CD)' },
+    { name: 'infra', description: 'Infraestructura (scripts, config, CI/CD)' },
+    { name: 'docker', description: 'Docker (Dockerfile, docker-compose, Makefile)' },
     { name: 'keycloak', description: 'Configuración de Keycloak' },
     { name: 'root', description: 'Cambios en root (docs, package.json, etc.)' },
   ],
@@ -30,7 +31,7 @@ module.exports = {
     feat: [{ name: 'api' }, { name: 'web' }, { name: 'mobile' }, { name: 'shared' }],
     fix: [{ name: 'api' }, { name: 'web' }, { name: 'mobile' }, { name: 'shared' }],
     docs: [{ name: 'api' }, { name: 'web' }, { name: 'mobile' }, { name: 'root' }],
-    build: [{ name: 'infra' }, { name: 'keycloak' }, { name: 'root' }],
+    build: [{ name: 'infra' }, { name: 'docker' }, { name: 'keycloak' }, { name: 'root' }],
   },
 
   // Permitir scope personalizado
