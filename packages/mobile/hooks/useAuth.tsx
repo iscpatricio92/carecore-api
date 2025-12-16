@@ -14,13 +14,12 @@ import React, {
   useCallback,
   useRef,
 } from 'react';
-import * as SecureStore from 'expo-secure-store';
 import { useAuthRequest, ResponseType, useAutoDiscovery } from 'expo-auth-session';
 import { router } from 'expo-router';
 import { authService } from '../services/AuthService';
 import { appConfig } from '../config/AppConfig';
-import { ErrorService, ErrorType } from '../services/ErrorService';
-import { User, AUTH_TOKEN_STORAGE_KEY } from '@carecore/shared';
+import { ErrorService } from '../services/ErrorService';
+import { User } from '@carecore/shared';
 
 // ====================================================================
 // 1. DEFINICIÓN DEL CONTEXTO Y TIPOS
@@ -195,7 +194,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const userInfo = await fetchUserInfo(accessToken);
             setUser(userInfo);
             setIsAuthenticated(true);
-          } catch (error) {
+          } catch {
             // Token inválido o expirado, intentar refrescar
             const refreshed = await authService.refreshAccessToken();
             if (refreshed) {
@@ -232,21 +231,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // 8. FUNCIÓN AUXILIAR PARA OBTENER INFORMACIÓN DEL USUARIO
   // ====================================================================
 
-  const fetchUserInfo = async (accessToken: string): Promise<User> => {
+  const fetchUserInfo = async (_accessToken: string): Promise<User> => {
     try {
-      const response = await fetch(`${appConfig.api.authUrl}/user`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch user info: ${response.statusText}`);
-      }
-
-      const userData = await response.json();
-      return userData as User;
+      // Usar HttpClient para obtener información del usuario
+      // HttpClient maneja automáticamente el token y refresh
+      // Nota: accessToken se recibe pero no se usa directamente porque httpClient
+      // obtiene el token automáticamente desde authService
+      const { httpClient } = await import('../services/HttpClient');
+      const userData = await httpClient.get<User>(`${appConfig.api.authUrl}/user`);
+      return userData;
     } catch (error) {
       ErrorService.handleNetworkError(error, { operation: 'fetchUserInfo' });
       throw error;

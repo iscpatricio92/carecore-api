@@ -1,91 +1,73 @@
 // carecore-frontend/services/FHIRClientService.ts
 
-import { authService } from './AuthService';
+import { httpClient } from './HttpClient';
 import { appConfig } from '../config/AppConfig';
-import { ErrorService, ErrorType } from './ErrorService';
+import { ErrorService } from './ErrorService';
 import { Patient, Bundle, Resource } from '@carecore/shared';
 
 export class FHIRClientService {
-  /**
-   * Crea las cabeceras estándar (Authorization, Content-Type) para las llamadas FHIR.
-   */
-  private async getHeaders(contentType: string = 'application/json'): Promise<HeadersInit> {
-    const accessToken = await authService.getAccessToken();
-
-    if (!accessToken) {
-      const error = new Error('Acceso no autorizado. No se encontró el token de acceso.');
-      ErrorService.handleAuthError(error, { operation: 'getHeaders' });
-      throw error;
-    }
-
-    return {
-      'Content-Type': contentType,
-      Authorization: `Bearer ${accessToken}`,
-    };
-  }
-
   // ===================================================================
   // A. Operaciones de LECTURA (GET)
   // ===================================================================
 
   /**
    * Obtiene un Bundle de Recursos FHIR (Ej: Encounter, DocumentReference).
-   * @param resourceType El tipo de recurso FHIR a buscar.
-   * @param patientId El ID del paciente (el sub del JWT).
-   * @param params Parámetros de búsqueda opcionales (ej: _count=10, date=gt2024).
+   *
+   * Nota: El backend filtra automáticamente por el paciente autenticado usando el token JWT.
+   * No es necesario pasar patientId como parámetro.
+   *
+   * @param resourceType El tipo de recurso FHIR a buscar (ej: 'Encounter', 'DocumentReference').
+   * @param params Parámetros de búsqueda opcionales (ej: _count=10, _sort=-date, date=gt2024-01-01).
    */
   async getResources<T extends Resource>(
     resourceType: string,
-    patientId: string,
     params: Record<string, string> = {},
   ): Promise<T[]> {
-    // Convertir parámetros a URLSearchParams
-    const queryParams = new URLSearchParams({
-      patient: patientId, // CRÍTICO: Buscar por el paciente actual
-      ...params,
-    }).toString();
-
-    const url = `${appConfig.api.fhirUrl}/${resourceType}?${queryParams}`;
+    // Construir URL con parámetros de búsqueda
+    const queryParams = new URLSearchParams(params).toString();
+    const url = `${appConfig.api.fhirUrl}/${resourceType}${queryParams ? `?${queryParams}` : ''}`;
 
     try {
-      const headers = await this.getHeaders();
-      const response = await fetch(url, { headers });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage =
-          errorData.message || `Error al obtener recursos ${resourceType}: ${response.statusText}`;
-        ErrorService.handleFHIRError(new Error(errorMessage), {
-          resourceType,
-          status: response.status,
-        });
-        throw new Error(errorMessage);
-      }
-
-      const bundle: Bundle<T> = await response.json();
+      // HttpClient maneja automáticamente:
+      // - Agregar token JWT
+      // - Refresh automático si expira
+      // - Reintentos en caso de error
+      const bundle: Bundle<T> = await httpClient.get<Bundle<T>>(url);
 
       // Extraer los recursos del Bundle
+      // El backend ya filtró por paciente, así que todos los recursos son del paciente autenticado
       return bundle.entry?.map((entry) => entry.resource).filter((r): r is T => !!r) || [];
     } catch (error) {
-      if (error instanceof Error && error.message.includes('fetch')) {
-        ErrorService.handleNetworkError(error, { resourceType, operation: 'getResources' });
-      } else if (error instanceof Error) {
-        ErrorService.handleFHIRError(error, { resourceType });
+      if (error instanceof Error) {
+        ErrorService.handleFHIRError(error, {
+          resourceType,
+          operation: 'getResources',
+        });
       }
       throw error;
     }
   }
 
   /**
-   * Obtiene los detalles del Patient logueado.
-   * @param patientId El ID del recurso Patient (normalmente el sub del JWT).
+   * Obtiene los detalles del Patient autenticado.
+   * El backend devuelve automáticamente el Patient del usuario autenticado.
    */
-  async getPatient(patientId: string): Promise<Patient> {
-    const resources = await this.getResources<Patient>('Patient', patientId, { _id: patientId });
-    if (resources.length === 0) {
-      throw new Error(`Recurso Patient con ID ${patientId} no encontrado.`);
+  async getPatient(): Promise<Patient> {
+    try {
+      const resources = await this.getResources<Patient>('Patient');
+      if (resources.length === 0) {
+        throw new Error('Recurso Patient no encontrado para el usuario autenticado.');
+      }
+      return resources[0];
+    } catch (error) {
+      if (error instanceof Error) {
+        ErrorService.handleFHIRError(error, {
+          resourceType: 'Patient',
+          operation: 'getPatient',
+        });
+      }
+      throw error;
     }
-    return resources[0];
   }
 
   // ===================================================================
@@ -93,48 +75,76 @@ export class FHIRClientService {
   // ===================================================================
 
   /**
+   * Obtiene un recurso FHIR específico por ID.
+   * @param resourceType El tipo de recurso (ej: 'Encounter', 'DocumentReference').
+   * @param id El ID del recurso.
+   */
+  async getResourceById<T extends Resource>(resourceType: string, id: string): Promise<T> {
+    const url = `${appConfig.api.fhirUrl}/${resourceType}/${id}`;
+
+    try {
+      const resource = await httpClient.get<T>(url);
+      return resource;
+    } catch (error) {
+      if (error instanceof Error) {
+        ErrorService.handleFHIRError(error, {
+          resourceType,
+          operation: 'getResourceById',
+          resourceId: id,
+        });
+      }
+      throw error;
+    }
+  }
+
+  /**
    * Crea o actualiza un recurso FHIR.
+   *
+   * Nota: Los pacientes solo pueden crear/actualizar recursos Consent.
+   * Otros recursos (Encounter, DocumentReference) solo pueden ser creados por practitioners.
+   *
    * @param resource El objeto recurso FHIR completo.
    */
   async saveResource(resource: Resource): Promise<Resource> {
     const isUpdate = !!resource.id;
-    const method = isUpdate ? 'PUT' : 'POST';
-
     const url = isUpdate
       ? `${appConfig.api.fhirUrl}/${resource.resourceType}/${resource.id}`
       : `${appConfig.api.fhirUrl}/${resource.resourceType}`;
 
     try {
-      const headers = await this.getHeaders();
+      const savedResource = isUpdate
+        ? await httpClient.put<Resource>(url, resource)
+        : await httpClient.post<Resource>(url, resource);
 
-      const response = await fetch(url, {
-        method: method,
-        headers: headers,
-        body: JSON.stringify(resource),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage =
-          errorData.message ||
-          `Error al ${isUpdate ? 'actualizar' : 'crear'} recurso: ${response.statusText}`;
-        ErrorService.handleFHIRError(new Error(errorMessage), {
-          resourceType: resource.resourceType,
-          operation: isUpdate ? 'update' : 'create',
-          status: response.status,
-        });
-        throw new Error(errorMessage);
-      }
-
-      return response.json() as Promise<Resource>;
+      return savedResource;
     } catch (error) {
-      if (error instanceof Error && error.message.includes('fetch')) {
-        ErrorService.handleNetworkError(error, {
+      if (error instanceof Error) {
+        ErrorService.handleFHIRError(error, {
           resourceType: resource.resourceType,
           operation: isUpdate ? 'update' : 'create',
         });
-      } else if (error instanceof Error) {
-        ErrorService.handleFHIRError(error, { resourceType: resource.resourceType });
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Elimina un recurso FHIR (soft delete).
+   * @param resourceType El tipo de recurso.
+   * @param id El ID del recurso.
+   */
+  async deleteResource(resourceType: string, id: string): Promise<void> {
+    const url = `${appConfig.api.fhirUrl}/${resourceType}/${id}`;
+
+    try {
+      await httpClient.delete<void>(url);
+    } catch (error) {
+      if (error instanceof Error) {
+        ErrorService.handleFHIRError(error, {
+          resourceType,
+          operation: 'delete',
+          resourceId: id,
+        });
       }
       throw error;
     }

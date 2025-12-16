@@ -89,6 +89,13 @@ lerna-debug.log*
 packages/*/*.tsbuildinfo
 packages/*/tsconfig.tsbuildinfo
 
+# TypeScript compiled files (should not be in src/)
+# Ignore .d.ts, .js, and source maps in src directories
+packages/*/src/**/*.d.ts
+packages/*/src/**/*.js
+packages/*/src/**/*.js.map
+packages/*/src/**/*.d.ts.map
+
 # Docker
 docker-compose.override.yml
 

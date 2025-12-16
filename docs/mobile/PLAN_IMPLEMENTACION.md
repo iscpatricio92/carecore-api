@@ -24,14 +24,20 @@
   - Intercambio de tokens con Keycloak
   - Refresh automático de tokens
   - Pantallas de login/register funcionales
+- ✅ **FASE 3 COMPLETADA**: Integración con Backend API
+  - HttpClient con interceptores y refresh automático
+  - Servicios actualizados (FHIRClientService, RegisterService)
+  - useFHIRData hook completo con cache y paginación
+  - Dashboard conectado con datos reales del API
+  - Pull-to-refresh y manejo de estados
 
 ### ⏳ Lo que falta o está incompleto:
 - **Pantallas incompletas**: History y Settings son placeholders
 - **Navegación**: Rutas de detalle de registros no implementadas
-- **Integración con API**: Falta conectar con datos reales del backend (FASE 3)
-- **Loading states**: Falta feedback visual durante cargas en algunas pantallas
+- **Loading states**: Falta feedback visual durante cargas en algunas pantallas (mejorar componentes)
 - **Validación de formularios**: Validación básica en formularios (mejorar)
-- **Cache y paginación**: Falta implementar en useFHIRData
+- **Pantalla de Consentimientos**: Falta crear pantalla para gestionar consentimientos
+- **Pantalla de Detalle**: Falta crear pantalla de detalle de registros clínicos
 
 ---
 
@@ -117,57 +123,73 @@
 
 ---
 
-### **FASE 3: Integración con Backend API** 🌐
+### **FASE 3: Integración con Backend API** 🌐 ✅ **COMPLETADA**
 **Objetivo**: Conectar la app con el backend NestJS para obtener datos reales del paciente
 
-> **Importante:** Todos los endpoints FHIR deben filtrar automáticamente por el paciente autenticado. El backend ya implementa esto mediante el token JWT que incluye el `patient` claim.
+> **Importante:** Todos los endpoints FHIR filtran automáticamente por el paciente autenticado. El backend implementa esto mediante el token JWT que incluye el `patient` claim.
 
 #### Tareas:
-1. **Configurar cliente HTTP**
-   - Crear servicio HTTP base (`services/HttpClient.ts`) con interceptores
-   - Implementar refresh automático de tokens cuando expiran
-   - Agregar token JWT automáticamente en header `Authorization: Bearer <token>`
-   - Manejar timeouts y reintentos para requests fallidos
-   - Agregar headers comunes (Content-Type: application/json)
-   - Manejar errores 401 (no autorizado) y 403 (prohibido)
-   - Redirigir a login si el token es inválido
+1. **Configurar cliente HTTP** ✅
+   - ✅ Creado servicio HTTP base (`services/HttpClient.ts`) con interceptores
+   - ✅ Implementado refresh automático de tokens cuando expiran (401)
+   - ✅ Agregado token JWT automáticamente en header `Authorization: Bearer <token>`
+   - ✅ Manejo de timeouts y reintentos para requests fallidos (máx 3 intentos con backoff exponencial)
+   - ✅ Headers comunes (Content-Type: application/json)
+   - ✅ Manejo de errores 401 (no autorizado) y 403 (prohibido)
+   - ✅ Redirección a login si el token es inválido después de refresh
 
-2. **Actualizar servicios existentes**
-   - `FHIRClientService`: Usar HttpClient y filtrar por paciente
-   - `RegisterService`: Usar HttpClient
-   - Agregar manejo de errores específicos (red, autenticación, FHIR)
-   - Implementar retry logic para requests fallidos (máx 3 intentos)
-   - Validar que las respuestas FHIR sean del paciente autenticado
+2. **Actualizar servicios existentes** ✅
+   - ✅ `FHIRClientService`: Actualizado para usar HttpClient
+   - ✅ Eliminado parámetro `patientId` (backend filtra automáticamente por token JWT)
+   - ✅ Agregado método `getResourceById` para obtener recursos por ID
+   - ✅ Agregado método `deleteResource` para eliminar recursos
+   - ✅ `RegisterService`: Actualizado para usar HttpClient con `skipAuth`
+   - ✅ `useAuth`: Actualizado `fetchUserInfo` para usar HttpClient
+   - ✅ Manejo de errores específicos (red, autenticación, FHIR) con ErrorService
 
-3. **Implementar useFHIRData hook**
-   - Completar integración con `FHIRClientService`
-   - Agregar cache básico en memoria (evitar requests duplicados)
-   - Implementar paginación para listas grandes
-   - Manejar estados de carga (`isLoading`), error (`error`) y datos (`data`)
-   - Implementar invalidación de cache cuando sea necesario
-   - Soporte para diferentes tipos de recursos FHIR (Encounter, DocumentReference, Consent)
+3. **Implementar useFHIRData hook** ✅
+   - ✅ Integración completa con `FHIRClientService`
+   - ✅ Cache básico en memoria con TTL de 5 minutos
+   - ✅ Paginación opcional para listas grandes (`enablePagination`, `loadMore`)
+   - ✅ Estados de carga (`isLoading`), error (`error`) y datos (`data`)
+   - ✅ Invalidación de cache con `refetch()`
+   - ✅ Soporte para diferentes tipos de recursos FHIR (Encounter, DocumentReference, Consent)
+   - ✅ Cancelación de requests cuando el componente se desmonta (AbortController)
 
-4. **Testing de integración**
-   - Probar endpoints de autenticación (`/api/auth/*`)
-   - Probar endpoints FHIR (`/api/fhir/Encounter`, `/api/fhir/DocumentReference`, `/api/fhir/Consent`)
-   - Verificar que los datos se filtren correctamente por paciente
-   - Verificar manejo de errores (red, autenticación, autorización)
-   - Verificar refresh automático de tokens
+4. **Actualizar Dashboard con datos reales** ✅
+   - ✅ Dashboard usa `useFHIRData` para obtener Encounters y DocumentReferences
+   - ✅ Obtiene consentimientos activos del paciente
+   - ✅ Combina y ordena registros por fecha (más recientes primero)
+   - ✅ Pull-to-refresh implementado
+   - ✅ Estados de carga y error con UI apropiada
+   - ✅ Manejo de estados vacíos
 
-**Archivos a crear/modificar:**
-- `services/HttpClient.ts` - Cliente HTTP base con interceptores (crear)
-- `services/FHIRClientService.ts` - Actualizar para usar HttpClient y filtrar por paciente
-- `services/RegisterService.ts` - Actualizar para usar HttpClient
-- `hooks/useFHIRData.ts` - Completar implementación con cache y paginación
-- `app/(tabs)/index.tsx` - Reemplazar datos dummy con `useFHIRData` para obtener registros reales del paciente
+**Archivos creados/modificados:**
+- ✅ `services/HttpClient.ts` - Cliente HTTP base con interceptores (creado)
+- ✅ `services/FHIRClientService.ts` - Actualizado para usar HttpClient (sin patientId)
+- ✅ `services/RegisterService.ts` - Actualizado para usar HttpClient
+- ✅ `hooks/useFHIRData.ts` - Implementación completa con cache y paginación
+- ✅ `hooks/useAuth.tsx` - Actualizado `fetchUserInfo` para usar HttpClient
+- ✅ `app/(tabs)/index.tsx` - Actualizado para usar datos reales del API
 
-**Endpoints del API que se usarán:**
-- `GET /api/fhir/Encounter` - Obtener consultas médicas del paciente
-- `GET /api/fhir/DocumentReference` - Obtener documentos clínicos del paciente
-- `GET /api/fhir/Consent` - Obtener consentimientos del paciente
-- `GET /api/fhir/Patient/[id]` - Obtener perfil del paciente
-- `POST /api/fhir/Consent` - Crear nuevo consentimiento
-- `PATCH /api/fhir/Consent/[id]` - Revocar consentimiento
+**Endpoints del API utilizados:**
+- ✅ `GET /api/fhir/Encounter` - Obtener consultas médicas del paciente (filtrado automático por token JWT)
+- ✅ `GET /api/fhir/DocumentReference` - Obtener documentos clínicos del paciente (filtrado automático)
+- ✅ `GET /api/fhir/Consent` - Obtener consentimientos del paciente (filtrado automático)
+- ✅ `GET /api/auth/user` - Obtener información del usuario autenticado
+- ✅ `GET /api/auth/refresh` - Refrescar tokens de acceso (usado automáticamente por HttpClient)
+- ⏳ `GET /api/fhir/Patient/[id]` - Obtener perfil del paciente (pendiente usar en Settings - FASE 4)
+- ⏳ `GET /api/fhir/{resourceType}/{id}` - Obtener recurso por ID (pendiente usar en pantalla de detalle - FASE 4)
+- ⏳ `POST /api/fhir/Consent` - Crear nuevo consentimiento (pendiente implementar en FASE 4)
+- ⏳ `PATCH /api/fhir/Consent/[id]` - Revocar consentimiento (pendiente implementar en FASE 4)
+
+**Características implementadas:**
+- ✅ Refresh automático de tokens cuando expiran (sin interrumpir al usuario)
+- ✅ Reintentos automáticos para errores de red (máx 3 intentos con backoff exponencial)
+- ✅ Cache en memoria con TTL de 5 minutos para evitar requests duplicados
+- ✅ Paginación opcional para listas grandes de recursos
+- ✅ Manejo robusto de errores (401, 403, red, timeout)
+- ✅ Redirección automática a login cuando el token es inválido
 
 ---
 
@@ -420,8 +442,8 @@ packages/mobile/
 
 1. ✅ **FASE 1** → Configuración base (permite desarrollo sin errores) - **COMPLETADA**
 2. ✅ **FASE 2** → Autenticación (necesario para todo lo demás) - **COMPLETADA**
-3. **FASE 3** → Integración API (permite datos reales) - **EN PROGRESO**
-4. **FASE 4** → Pantallas (completa funcionalidad)
+3. ✅ **FASE 3** → Integración API (permite datos reales) - **COMPLETADA**
+4. **FASE 4** → Pantallas (completa funcionalidad) - **EN PROGRESO**
 5. **FASE 5** → UX (mejora experiencia)
 6. **FASE 6** → Testing (asegura calidad)
 

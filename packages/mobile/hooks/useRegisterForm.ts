@@ -3,14 +3,14 @@
 import { useState, useCallback } from 'react';
 import { PatientRegisterPayload } from '@carecore/shared';
 import { registerService } from '../services/RegisterService';
-//import { useAuth } from './useAuth';
+import { useAuth } from './useAuth';
 
-// Simplificamos la forma inicial del estado (deberías completarla)
+// Estado inicial del formulario
 const initialFormState: PatientRegisterPayload = {
   username: '',
   email: '',
   password: '',
-  name: [], // Inicialmente vacío o con datos dummy
+  name: [], // Inicialmente vacío, se debe completar
   identifier: [],
   telecom: [],
   gender: 'unknown',
@@ -20,13 +20,13 @@ const initialFormState: PatientRegisterPayload = {
 };
 
 export const useRegisterForm = () => {
-  //const { setUser, setIsAuthenticated } = useAuth(); // Para actualizar el estado global
+  const { login } = useAuth();
   const [formData, setFormData] = useState<PatientRegisterPayload>(initialFormState);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Función para actualizar cualquier campo del formulario
-  const handleChange = useCallback((key: keyof PatientRegisterPayload, value: any) => {
+  const handleChange = useCallback((key: keyof PatientRegisterPayload, value: unknown) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   }, []);
 
@@ -35,28 +35,50 @@ export const useRegisterForm = () => {
     setError(null);
     setIsLoading(true);
 
-    // **AÑADIR LÓGICA DE VALIDACIÓN AQUÍ** (Ej: password, email format)
+    // Validación básica
+    if (!formData.username || formData.username.length < 3) {
+      setError('El nombre de usuario debe tener al menos 3 caracteres');
+      setIsLoading(false);
+      return false;
+    }
+
+    if (!formData.email || !formData.email.includes('@')) {
+      setError('Por favor ingresa un email válido');
+      setIsLoading(false);
+      return false;
+    }
+
+    if (!formData.password || formData.password.length < 8) {
+      setError('La contraseña debe tener al menos 8 caracteres');
+      setIsLoading(false);
+      return false;
+    }
+
+    if (!formData.name || formData.name.length === 0) {
+      setError('Por favor ingresa al menos un nombre');
+      setIsLoading(false);
+      return false;
+    }
 
     try {
-      // Llamar al servicio
-      const tokens = await registerService.registerPatient(formData);
+      // 1. Registrar al paciente (esto NO devuelve tokens)
+      await registerService.registerPatient(formData);
 
-      // Actualizar el estado global de la aplicación (usando useAuth)
-      //setIsAuthenticated(true);
-      //setUser(tokens.user_info);
+      // 2. Después del registro exitoso, hacer login automáticamente para obtener tokens
+      // El login iniciará el flujo OAuth2/PKCE que obtendrá los tokens
+      await login();
 
       return true; // Éxito
-    } catch (err: any) {
-      console.error('Fallo de registro:', err.message);
-      setError(err.message || 'Error desconocido durante el registro.');
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Error desconocido durante el registro';
+      console.error('Fallo de registro:', errorMessage);
+      setError(errorMessage);
       return false;
     } finally {
       setIsLoading(false);
     }
-  }, [
-    formData,
-    //,setIsAuthenticated, setUser
-  ]);
+  }, [formData, login]);
 
   return {
     formData,

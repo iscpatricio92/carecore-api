@@ -1,0 +1,13 @@
+# TypeScript compiled output
+dist/
+
+# TypeScript build info
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# Compiled files (should not be in src/)
+# These should only be in dist/ after build
+src/**/*.d.ts
+src/**/*.js
+src/**/*.js.map
+src/**/*.d.ts.map

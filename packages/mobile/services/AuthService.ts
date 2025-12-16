@@ -2,23 +2,8 @@
 
 import * as SecureStore from 'expo-secure-store';
 import { appConfig } from '../config/AppConfig';
-import { ErrorService, ErrorType } from './ErrorService';
-import { AUTH_TOKEN_STORAGE_KEY } from '@carecore/shared';
-
-// 1. Tipos de datos que Keycloak devuelve a tu API (y que tu API devuelve a la App)
-interface TokensResponse {
-  access_token: string;
-  expires_in: number;
-  refresh_token: string;
-  token_type: string;
-  id_token?: string;
-  // Opcional: información del usuario (Ej: roles, fhirUser ID)
-  user_info: {
-    sub: string;
-    roles: string[];
-    // Otros claims del JWT que necesites
-  };
-}
+import { ErrorService } from './ErrorService';
+import { AUTH_TOKEN_STORAGE_KEY, TokensResponse } from '@carecore/shared';
 
 // 2. Definición de la clase AuthService
 export class AuthService {
@@ -103,7 +88,7 @@ export class AuthService {
         id_token: tokenData.id_token,
         // user_info se obtendrá decodificando el JWT o llamando al endpoint /user
         user_info: {
-          sub: '', // Se llenará después
+          sub: '', // Se llenará después al obtener información del usuario
           roles: [],
         },
       };
@@ -202,7 +187,7 @@ export class AuthService {
           expires_in: tokenData.expiresIn || tokenData.expires_in || 3600,
           token_type: tokenData.tokenType || tokenData.token_type || 'Bearer',
           user_info: {
-            sub: '',
+            sub: '', // Se llenará después al obtener información del usuario
             roles: [],
           },
         };

@@ -1,50 +1,38 @@
 // carecore-frontend/services/RegisterService.ts
 
-import { PatientRegisterPayload, TokensResponse } from '@carecore/shared';
-import { authService } from './AuthService';
+import { PatientRegisterPayload, PatientRegisterResponse } from '@carecore/shared';
 import { appConfig } from '../config/AppConfig';
-import { ErrorService, ErrorType } from './ErrorService';
+import { ErrorService } from './ErrorService';
+import { httpClient } from './HttpClient';
 
 export class RegisterService {
   /**
    * Envía los datos complejos del formulario de registro del paciente (que incluye datos FHIR)
    * al endpoint de NestJS para la creación de la cuenta y el recurso Patient.
-   * * @param payload Los datos de registro, incluyendo Patient FHIR y credenciales.
-   * @returns Los tokens de sesión (access_token, refresh_token) si el registro fue exitoso.
+   *
+   * Nota: El endpoint de registro NO devuelve tokens. Después del registro exitoso,
+   * el usuario debe hacer login para obtener tokens. Este método solo registra al usuario.
+   *
+   * @param payload Los datos de registro, incluyendo Patient FHIR y credenciales.
+   * @returns La respuesta del registro (userId, patientId, username, email, message).
    */
-  async registerPatient(payload: PatientRegisterPayload): Promise<TokensResponse> {
+  async registerPatient(payload: PatientRegisterPayload): Promise<PatientRegisterResponse> {
     try {
-      const response = await fetch(`${appConfig.api.authUrl}/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+      // El registro no requiere autenticación, así que usamos skipAuth
+      const response: PatientRegisterResponse = await httpClient.post<PatientRegisterResponse>(
+        `${appConfig.api.authUrl}/register`,
+        payload,
+        { skipAuth: true },
+      );
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.message || `Error al registrar. Estado: ${response.status}`;
-        ErrorService.handleAuthError(new Error(errorMessage), {
-          status: response.status,
+      // El registro fue exitoso, pero NO devuelve tokens
+      // El usuario debe hacer login después del registro para obtener tokens
+      return response;
+    } catch (error) {
+      if (error instanceof Error) {
+        ErrorService.handleAuthError(error, {
           operation: 'registerPatient',
         });
-        throw new Error(errorMessage);
-      }
-
-      const tokens: TokensResponse = await response.json();
-
-      if (tokens.access_token) {
-        await authService.saveTokens(tokens);
-        return tokens;
-      } else {
-        const error = new Error('Registro exitoso, pero no se recibieron tokens de sesión.');
-        ErrorService.handleAuthError(error, { operation: 'registerPatient' });
-        throw error;
-      }
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('fetch')) {
-        ErrorService.handleNetworkError(error, { operation: 'registerPatient' });
       }
       throw error;
     }
