@@ -27,7 +27,9 @@
     "format:check": "prettier --check \"**/*.{ts,js,json,md,yml,yaml}\" --ignore-path .gitignore",
     "commit": "cz",
     "prepare": "husky install",
-    "test:changed": "bash scripts/run-tests-for-packages.sh"
+    "test:changed": "bash scripts/run-tests-for-packages.sh",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "lint-staged": {
     "packages/api/**/*.{ts,js}": [
