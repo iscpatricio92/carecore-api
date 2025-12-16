@@ -17,7 +17,7 @@ module.exports = {
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
-  coverageThresholds: {
+  coverageThreshold: {
     global: {
       branches: 1,
       functions: 1,
@@ -25,4 +25,14 @@ module.exports = {
       statements: 1,
     },
   },
+  // Force Jest to exit after tests complete
+  forceExit: true,
+  // Clear mocks between tests
+  clearMocks: true,
+  // Reset mocks between tests
+  resetMocks: true,
+  // Restore mocks to original implementation
+  restoreMocks: true,
+  // Test timeout
+  testTimeout: 10000,
 };

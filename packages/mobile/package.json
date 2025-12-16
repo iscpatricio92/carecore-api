@@ -9,7 +9,9 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "test": "bash -c 'source ~/.nvm/nvm.sh && nvm exec 18 jest --watchAll'",
+    "test": "bash -c 'source ~/.nvm/nvm.sh && nvm exec 18 jest --watchAll=false'",
+    "test:watch": "bash -c 'source ~/.nvm/nvm.sh && nvm exec 18 jest --watchAll'",
+    "test:debug": "bash -c 'source ~/.nvm/nvm.sh && nvm exec 18 jest --watchAll=false --detectOpenHandles'",
     "lint": "expo lint",
     "test:cov": "bash -c 'source ~/.nvm/nvm.sh && nvm exec 18 jest --coverage --config jest.config.js'"
   },
