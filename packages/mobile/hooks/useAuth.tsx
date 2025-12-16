@@ -20,7 +20,9 @@ import { storage } from '../storage/secureStorage';
 // ====================================================================
 
 // Guarda los tokens bajo estas claves en el SecureStore del dispositivo
-const TOKEN_KEY = 'carecore_auth_token';
+// Import from shared package when uncommented
+// import { AUTH_TOKEN_STORAGE_KEY } from '@carecore/shared';
+const TOKEN_KEY = 'carecore_auth_token'; // TODO: Replace with AUTH_TOKEN_STORAGE_KEY when uncommented
 
 // Configuración de tu Keycloak/OIDC (ESTO DEBES REEMPLAZARLO)
 const discovery = {

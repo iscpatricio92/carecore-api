@@ -1,10 +1,9 @@
 // carecore-frontend/services/AuthService.ts
 
 import * as SecureStore from 'expo-secure-store';
-
-// Clave segura para el almacenamiento del token
-const TOKEN_KEY = 'carecore_auth_token';
-const API_BASE_URL = 'http://localhost:3000/api/auth'; // <--- AJUSTA TU URL LOCAL
+import { appConfig } from '../config/AppConfig';
+import { ErrorService, ErrorType } from './ErrorService';
+import { AUTH_TOKEN_STORAGE_KEY } from '@carecore/shared';
 
 // 1. Tipos de datos que Keycloak devuelve a tu API (y que tu API devuelve a la App)
 interface TokensResponse {
@@ -34,31 +33,39 @@ export class AuthService {
    * @param codeVerifier El verificador PKCE.
    */
   async exchangeCodeForTokens(code: string, codeVerifier: string): Promise<TokensResponse> {
-    const url = `${API_BASE_URL}/exchange-code`; // <--- Tu endpoint en NestJS
+    const url = `${appConfig.api.authUrl}/exchange-code`;
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      // Tu API de NestJS espera estos datos
-      body: JSON.stringify({
-        code: code,
-        code_verifier: codeVerifier,
-        // Tu API ya conoce el redirect_uri y client_id
-      }),
-    });
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          code: code,
+          code_verifier: codeVerifier,
+        }),
+      });
 
-    if (!response.ok) {
-      // Manejo de errores de Keycloak/API
-      throw new Error(`Error al intercambiar el código. Estado: ${response.status}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage =
+          errorData.message || `Error al intercambiar el código. Estado: ${response.status}`;
+        ErrorService.handleAuthError(new Error(errorMessage), { status: response.status });
+        throw new Error(errorMessage);
+      }
+
+      const data: TokensResponse = await response.json();
+
+      // Una vez recibidos, guardar de forma segura.
+      await this.saveTokens(data);
+      return data;
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('fetch')) {
+        ErrorService.handleNetworkError(error, { operation: 'exchangeCodeForTokens' });
+      }
+      throw error;
     }
-
-    const data: TokensResponse = await response.json();
-
-    // Una vez recibidos, guardar de forma segura.
-    await this.saveTokens(data);
-    return data;
   }
 
   // ===================================================================
@@ -69,10 +76,10 @@ export class AuthService {
    * Guarda los tokens de forma segura en el dispositivo (keychain/encriptación Android).
    * @param tokens El objeto de tokens recibido.
    */
-  private async saveTokens(tokens: TokensResponse): Promise<void> {
+  async saveTokens(tokens: TokensResponse): Promise<void> {
     // Nota: Solo guardamos el access_token y el refresh_token
     await SecureStore.setItemAsync(
-      TOKEN_KEY,
+      AUTH_TOKEN_STORAGE_KEY,
       JSON.stringify({
         accessToken: tokens.access_token,
         refreshToken: tokens.refresh_token,
@@ -85,7 +92,7 @@ export class AuthService {
    * Recupera el token de acceso del almacenamiento seguro.
    */
   async getAccessToken(): Promise<string | null> {
-    const tokensJson = await SecureStore.getItemAsync(TOKEN_KEY);
+    const tokensJson = await SecureStore.getItemAsync(AUTH_TOKEN_STORAGE_KEY);
     if (!tokensJson) return null;
 
     try {
@@ -101,7 +108,7 @@ export class AuthService {
    * Elimina todos los tokens del almacenamiento.
    */
   async removeTokens(): Promise<void> {
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
+    await SecureStore.deleteItemAsync(AUTH_TOKEN_STORAGE_KEY);
   }
 
   // ===================================================================
@@ -112,32 +119,42 @@ export class AuthService {
    * Usa el refresh_token para obtener un nuevo access_token sin reautenticar.
    */
   async refreshAccessToken(): Promise<boolean> {
-    // 1. Obtener el refresh_token del SecureStore...
-    const tokensJson = await SecureStore.getItemAsync(TOKEN_KEY);
-    if (!tokensJson) return false;
+    try {
+      // 1. Obtener el refresh_token del SecureStore...
+      const tokensJson = await SecureStore.getItemAsync(AUTH_TOKEN_STORAGE_KEY);
+      if (!tokensJson) return false;
 
-    const tokens = JSON.parse(tokensJson);
-    const refreshToken = tokens.refreshToken;
+      const tokens = JSON.parse(tokensJson);
+      const refreshToken = tokens.refreshToken;
 
-    if (!refreshToken) return false;
+      if (!refreshToken) return false;
 
-    // 2. Llamar al endpoint de tu NestJS API para refrescar el token
-    const url = `${API_BASE_URL}/refresh`; // <--- Tu endpoint de refresco
+      // 2. Llamar al endpoint de tu NestJS API para refrescar el token
+      const url = `${appConfig.api.authUrl}/refresh`;
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken }),
-    });
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
 
-    if (response.ok) {
-      const newTokens: TokensResponse = await response.json();
-      await this.saveTokens(newTokens);
-      return true; // Éxito
-    } else {
-      console.error('Fallo al refrescar el token. Se requiere re-autenticación.');
-      await this.removeTokens(); // Borrar tokens si falla el refresh
-      return false; // Fallo
+      if (response.ok) {
+        const newTokens: TokensResponse = await response.json();
+        await this.saveTokens(newTokens);
+        return true; // Éxito
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        ErrorService.handleAuthError(
+          new Error(errorData.message || 'Fallo al refrescar el token'),
+          { status: response.status },
+        );
+        await this.removeTokens(); // Borrar tokens si falla el refresh
+        return false; // Fallo
+      }
+    } catch (error) {
+      ErrorService.handleNetworkError(error, { operation: 'refreshAccessToken' });
+      await this.removeTokens();
+      return false;
     }
   }
 }

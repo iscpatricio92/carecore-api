@@ -1,11 +1,9 @@
 // carecore-frontend/services/FHIRClientService.ts
 
-import { authService } from './AuthService'; // Necesario para obtener el token
-// Asumimos que puedes importar tus tipos FHIR del paquete compartido
+import { authService } from './AuthService';
+import { appConfig } from '../config/AppConfig';
+import { ErrorService, ErrorType } from './ErrorService';
 import { Patient, Bundle, Resource } from '@carecore/shared';
-
-// URL base de tu API NestJS que maneja las rutas FHIR
-const FHIR_API_BASE_URL = 'http://localhost:3000/api/fhir';
 
 export class FHIRClientService {
   /**
@@ -15,13 +13,14 @@ export class FHIRClientService {
     const accessToken = await authService.getAccessToken();
 
     if (!accessToken) {
-      // En un entorno de producción, esto debería disparar un error o una redirección de login
-      throw new Error('Acceso no autorizado. No se encontró el token de acceso.');
+      const error = new Error('Acceso no autorizado. No se encontró el token de acceso.');
+      ErrorService.handleAuthError(error, { operation: 'getHeaders' });
+      throw error;
     }
 
     return {
       'Content-Type': contentType,
-      Authorization: `Bearer ${accessToken}`, // 🔑 CRÍTICO: Token de seguridad
+      Authorization: `Bearer ${accessToken}`,
     };
   }
 
@@ -46,22 +45,33 @@ export class FHIRClientService {
       ...params,
     }).toString();
 
-    const url = `${FHIR_API_BASE_URL}/${resourceType}?${queryParams}`;
+    const url = `${appConfig.api.fhirUrl}/${resourceType}?${queryParams}`;
 
     try {
       const headers = await this.getHeaders();
       const response = await fetch(url, { headers });
 
       if (!response.ok) {
-        throw new Error(`Error al obtener recursos ${resourceType}: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage =
+          errorData.message || `Error al obtener recursos ${resourceType}: ${response.statusText}`;
+        ErrorService.handleFHIRError(new Error(errorMessage), {
+          resourceType,
+          status: response.status,
+        });
+        throw new Error(errorMessage);
       }
 
       const bundle: Bundle<T> = await response.json();
 
-      // Extraer los recursos del Bundle (asumiendo que tu API devuelve un Bundle)
+      // Extraer los recursos del Bundle
       return bundle.entry?.map((entry) => entry.resource).filter((r): r is T => !!r) || [];
     } catch (error) {
-      console.error(`FHIR GET Error en ${resourceType}:`, error);
+      if (error instanceof Error && error.message.includes('fetch')) {
+        ErrorService.handleNetworkError(error, { resourceType, operation: 'getResources' });
+      } else if (error instanceof Error) {
+        ErrorService.handleFHIRError(error, { resourceType });
+      }
       throw error;
     }
   }
@@ -91,24 +101,43 @@ export class FHIRClientService {
     const method = isUpdate ? 'PUT' : 'POST';
 
     const url = isUpdate
-      ? `${FHIR_API_BASE_URL}/${resource.resourceType}/${resource.id}`
-      : `${FHIR_API_BASE_URL}/${resource.resourceType}`;
+      ? `${appConfig.api.fhirUrl}/${resource.resourceType}/${resource.id}`
+      : `${appConfig.api.fhirUrl}/${resource.resourceType}`;
 
-    const headers = await this.getHeaders();
+    try {
+      const headers = await this.getHeaders();
 
-    const response = await fetch(url, {
-      method: method,
-      headers: headers,
-      body: JSON.stringify(resource),
-    });
+      const response = await fetch(url, {
+        method: method,
+        headers: headers,
+        body: JSON.stringify(resource),
+      });
 
-    if (!response.ok) {
-      throw new Error(
-        `Error al ${isUpdate ? 'actualizar' : 'crear'} recurso: ${response.statusText}`,
-      );
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage =
+          errorData.message ||
+          `Error al ${isUpdate ? 'actualizar' : 'crear'} recurso: ${response.statusText}`;
+        ErrorService.handleFHIRError(new Error(errorMessage), {
+          resourceType: resource.resourceType,
+          operation: isUpdate ? 'update' : 'create',
+          status: response.status,
+        });
+        throw new Error(errorMessage);
+      }
+
+      return response.json() as Promise<Resource>;
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('fetch')) {
+        ErrorService.handleNetworkError(error, {
+          resourceType: resource.resourceType,
+          operation: isUpdate ? 'update' : 'create',
+        });
+      } else if (error instanceof Error) {
+        ErrorService.handleFHIRError(error, { resourceType: resource.resourceType });
+      }
+      throw error;
     }
-
-    return response.json() as Promise<Resource>; // Retorna el recurso guardado
   }
 }
 

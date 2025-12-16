@@ -3,6 +3,7 @@
 /* This file is the root layout of the app, it wraps the app in the AuthProvider and the Layout component */
 /* It also handles the authentication state and redirects the user to the login screen if they are not authenticated */
 import { Stack } from 'expo-router';
+import { ErrorBoundary } from '../components/common/ErrorBoundary';
 //import { AuthProvider, useAuth } from '../hooks/useAuth'; // Importa el hook de autenticación
 
 // 1. Componente que contiene la lógica de redirección
@@ -22,11 +23,13 @@ function RootLayoutContent() {
   return <Stack screenOptions={{ headerShown: false }} />;
 }
 
-// 2. El exportador principal envuelve todo con el AuthProvider
+// 2. El exportador principal envuelve todo con el AuthProvider y ErrorBoundary
 export default function RootLayout() {
   return (
-    //<AuthProvider>
-    <RootLayoutContent />
-    //</AuthProvider>
+    <ErrorBoundary>
+      {/* <AuthProvider> */}
+      <RootLayoutContent />
+      {/* </AuthProvider> */}
+    </ErrorBoundary>
   );
 }

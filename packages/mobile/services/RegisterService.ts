@@ -1,10 +1,9 @@
 // carecore-frontend/services/RegisterService.ts
 
-// Asegúrate de importar la interfaz de registro de tu paquete compartido
 import { PatientRegisterPayload, TokensResponse } from '@carecore/shared';
-import { authService } from './AuthService'; // Necesario para guardar los tokens después del registro
-
-const REGISTER_API_URL = 'http://localhost:3000/api/auth/register';
+import { authService } from './AuthService';
+import { appConfig } from '../config/AppConfig';
+import { ErrorService, ErrorType } from './ErrorService';
 
 export class RegisterService {
   /**
@@ -14,31 +13,40 @@ export class RegisterService {
    * @returns Los tokens de sesión (access_token, refresh_token) si el registro fue exitoso.
    */
   async registerPatient(payload: PatientRegisterPayload): Promise<TokensResponse> {
-    // 1. Llamada a la API de NestJS para registro
-    const response = await fetch(REGISTER_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
+    try {
+      const response = await fetch(`${appConfig.api.authUrl}/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
 
-    if (!response.ok) {
-      // Intentar obtener un mensaje de error detallado del backend
-      const errorData = await response.json();
-      const errorMessage = errorData.message || `Error al registrar. Estado: ${response.status}`;
-      throw new Error(errorMessage);
-    }
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.message || `Error al registrar. Estado: ${response.status}`;
+        ErrorService.handleAuthError(new Error(errorMessage), {
+          status: response.status,
+          operation: 'registerPatient',
+        });
+        throw new Error(errorMessage);
+      }
 
-    // 2. Si el registro es exitoso, la API debe devolver los tokens de sesión
-    const tokens: TokensResponse = await response.json();
+      const tokens: TokensResponse = await response.json();
 
-    // 3. Guardar los tokens y establecer la sesión
-    if (tokens.access_token) {
-      await authService.saveTokens(tokens);
-      return tokens;
-    } else {
-      throw new Error('Registro exitoso, pero no se recibieron tokens de sesión.');
+      if (tokens.access_token) {
+        await authService.saveTokens(tokens);
+        return tokens;
+      } else {
+        const error = new Error('Registro exitoso, pero no se recibieron tokens de sesión.');
+        ErrorService.handleAuthError(error, { operation: 'registerPatient' });
+        throw error;
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('fetch')) {
+        ErrorService.handleNetworkError(error, { operation: 'registerPatient' });
+      }
+      throw error;
     }
   }
 }
