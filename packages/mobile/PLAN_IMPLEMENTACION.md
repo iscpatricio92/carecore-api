@@ -9,7 +9,7 @@
 - Servicios base (AuthService, FHIRClientService, RegisterService)
 - Hooks base (useFHIRData, useRegisterForm)
 - Pantallas básicas (Login, Register, Dashboard, History, Settings)
-- Configuración de Expo (app.json, babel, jest)
+- Configuración de Expo (app.config.js, babel, jest)
 - Integración con @carecore/shared para tipos FHIR
 
 ### ❌ Lo que falta o está incompleto:

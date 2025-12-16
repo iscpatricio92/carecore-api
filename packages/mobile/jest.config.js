@@ -11,7 +11,7 @@ module.exports = {
     '!**/__mocks__/**',
     '!**/babel.config.js',
     '!**/jest*.js',
-    '!**/app.json',
+    '!**/app.config.js',
     '!**/app/**/_layout.tsx',
     '!**/app/**/index.tsx',
   ],
