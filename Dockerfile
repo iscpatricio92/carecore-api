@@ -84,7 +84,9 @@ RUN addgroup -g 1001 -S nodejs && \
 # Copy production dependencies from dependencies stage
 COPY --from=dependencies --chown=nestjs:nodejs /app/node_modules ./node_modules
 COPY --from=dependencies --chown=nestjs:nodejs /app/packages/api/node_modules ./packages/api/node_modules
-COPY --from=dependencies --chown=nestjs:nodejs /app/packages/shared/node_modules ./packages/shared/node_modules
+# Create shared directory structure (shared has no production deps, so node_modules doesn't exist in dependencies stage)
+# We only need the directory structure, not the node_modules since shared has no production dependencies
+RUN mkdir -p ./packages/shared/node_modules
 
 # Copy built application from build stage
 COPY --from=build --chown=nestjs:nodejs /app/packages/api/dist ./packages/api/dist
