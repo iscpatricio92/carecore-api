@@ -113,11 +113,7 @@ import {
 ### Ejemplo: Importar tipos de autenticación
 
 ```typescript
-import {
-  TokensResponse,
-  PatientRegisterPayload,
-  PatientRegisterResponse,
-} from '@carecore/shared';
+import { TokensResponse, PatientRegisterPayload, PatientRegisterResponse } from '@carecore/shared';
 ```
 
 ### Ejemplo: Importar tipos de consentimiento
@@ -133,21 +129,13 @@ import {
 ### Ejemplo: Importar tipos de paginación
 
 ```typescript
-import {
-  PaginationParams,
-  PaginationMeta,
-  PaginatedResponse,
-} from '@carecore/shared';
+import { PaginationParams, PaginationMeta, PaginatedResponse } from '@carecore/shared';
 ```
 
 ### Ejemplo: Importar constantes
 
 ```typescript
-import {
-  FHIR_RESOURCE_TYPES,
-  FhirResourceType,
-  AUTH_TOKEN_STORAGE_KEY,
-} from '@carecore/shared';
+import { FHIR_RESOURCE_TYPES, FhirResourceType, AUTH_TOKEN_STORAGE_KEY } from '@carecore/shared';
 ```
 
 ## Notas

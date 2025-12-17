@@ -5,6 +5,7 @@
 ## 📋 Estado Actual
 
 ### ✅ Lo que ya está implementado:
+
 - ✅ Estructura básica de Expo Router con tabs
 - ✅ Componentes UI básicos (PrimaryButton, FormInput, AppHeader)
 - ✅ Componentes de cards (ConsentStatusCard, ClinicalRecordCard)
@@ -32,6 +33,7 @@
   - Pull-to-refresh y manejo de estados
 
 ### ⏳ Lo que falta o está incompleto:
+
 - **Pantallas incompletas**: History y Settings son placeholders
 - **Navegación**: Rutas de detalle de registros no implementadas
 - **Loading states**: Falta feedback visual durante cargas en algunas pantallas (mejorar componentes)
@@ -44,9 +46,11 @@
 ## 🎯 Fases de Implementación
 
 ### **FASE 1: Configuración Base y Entorno** ⚙️ ✅ **COMPLETADA**
+
 **Objetivo**: Configurar el entorno de desarrollo y variables de configuración
 
 #### Tareas:
+
 1. **Configurar variables de entorno** ✅
    - ✅ Variables de entorno desde monorepo root (`.env.development`, `.env.production`, `.env.local`)
    - ✅ Instalado y configurado `expo-constants` y `dotenv`
@@ -67,6 +71,7 @@
    - ✅ Documentación movida a `docs/MOBILE_ENV_VARIABLES.md`
 
 **Archivos creados:**
+
 - ✅ `config/AppConfig.ts` - Configuración centralizada
 - ✅ `components/common/ErrorBoundary.tsx` - Manejo de errores
 - ✅ `services/ErrorService.ts` - Servicio de errores
@@ -74,6 +79,7 @@
 - ✅ `docs/MOBILE_ENV_VARIABLES.md` - Documentación de variables
 
 **Archivos modificados:**
+
 - ✅ `services/AuthService.ts` - Usa AppConfig y ErrorService
 - ✅ `services/FHIRClientService.ts` - Usa AppConfig y ErrorService
 - ✅ `services/RegisterService.ts` - Usa AppConfig y ErrorService
@@ -81,14 +87,17 @@
 - ✅ `.env.development.example`, `.env.production.example`, `.env.local.example` - Variables MOBILE agregadas
 
 **Archivos eliminados:**
+
 - ✅ `app.json` - Reemplazado por `app.config.js`
 
 ---
 
 ### **FASE 2: Sistema de Autenticación** 🔐 ✅ **COMPLETADA**
+
 **Objetivo**: Implementar autenticación completa con Keycloak
 
 #### Tareas:
+
 1. **Implementar useAuth hook** ✅
    - ✅ Implementado `hooks/useAuth.tsx` completo
    - ✅ Configurado OAuth2/Keycloak con `expo-auth-session`
@@ -115,6 +124,7 @@
    - ✅ Agregados estados de carga
 
 **Archivos creados/modificados:**
+
 - ✅ `hooks/useAuth.tsx` - Implementado completo con PKCE
 - ✅ `app/_layout.tsx` - AuthProvider activado con ErrorBoundary
 - ✅ `app/auth/login/index.tsx` - Lógica de login implementada
@@ -124,11 +134,13 @@
 ---
 
 ### **FASE 3: Integración con Backend API** 🌐 ✅ **COMPLETADA**
+
 **Objetivo**: Conectar la app con el backend NestJS para obtener datos reales del paciente
 
 > **Importante:** Todos los endpoints FHIR filtran automáticamente por el paciente autenticado. El backend implementa esto mediante el token JWT que incluye el `patient` claim.
 
 #### Tareas:
+
 1. **Configurar cliente HTTP** ✅
    - ✅ Creado servicio HTTP base (`services/HttpClient.ts`) con interceptores
    - ✅ Implementado refresh automático de tokens cuando expiran (401)
@@ -165,6 +177,7 @@
    - ✅ Manejo de estados vacíos
 
 **Archivos creados/modificados:**
+
 - ✅ `services/HttpClient.ts` - Cliente HTTP base con interceptores (creado)
 - ✅ `services/FHIRClientService.ts` - Actualizado para usar HttpClient (sin patientId)
 - ✅ `services/RegisterService.ts` - Actualizado para usar HttpClient
@@ -173,6 +186,7 @@
 - ✅ `app/(tabs)/index.tsx` - Actualizado para usar datos reales del API
 
 **Endpoints del API utilizados:**
+
 - ✅ `GET /api/fhir/Encounter` - Obtener consultas médicas del paciente (filtrado automático por token JWT)
 - ✅ `GET /api/fhir/DocumentReference` - Obtener documentos clínicos del paciente (filtrado automático)
 - ✅ `GET /api/fhir/Consent` - Obtener consentimientos del paciente (filtrado automático)
@@ -184,6 +198,7 @@
 - ⏳ `PATCH /api/fhir/Consent/[id]` - Revocar consentimiento (pendiente implementar en FASE 4)
 
 **Características implementadas:**
+
 - ✅ Refresh automático de tokens cuando expiran (sin interrumpir al usuario)
 - ✅ Reintentos automáticos para errores de red (máx 3 intentos con backoff exponencial)
 - ✅ Cache en memoria con TTL de 5 minutos para evitar requests duplicados
@@ -194,11 +209,13 @@
 ---
 
 ### **FASE 4: Pantallas Principales del Paciente** 📱
+
 **Objetivo**: Completar todas las pantallas que el paciente necesita para gestionar su información médica
 
 > **Enfoque:** Todas las pantallas están diseñadas desde la perspectiva del paciente. El paciente solo puede ver y gestionar su propia información médica.
 
 #### Tareas:
+
 1. **Pantalla Dashboard (Home)** - `app/(tabs)/index.tsx`
    - Reemplazar datos dummy con `useFHIRData` para obtener registros reales
    - Obtener últimos 5 Encounters y DocumentReferences del paciente
@@ -246,6 +263,7 @@
    - Implementar navegación de regreso al Dashboard
 
 **Archivos a crear/modificar:**
+
 - `app/(tabs)/index.tsx` - Completar con datos reales del paciente
 - `app/(tabs)/history.tsx` - Implementar completamente (actualmente placeholder)
 - `app/(tabs)/settings.tsx` - Implementar completamente (actualmente placeholder)
@@ -256,6 +274,7 @@
 - `components/ui/EmptyState.tsx` - Componente para estados vacíos (crear)
 
 **Recursos FHIR que el paciente puede ver:**
+
 - `Patient` - Solo su propio perfil (solo lectura)
 - `Encounter` - Solo sus propias consultas médicas
 - `DocumentReference` - Solo sus propios documentos clínicos
@@ -264,9 +283,11 @@
 ---
 
 ### **FASE 5: UX y Pulido** ✨
+
 **Objetivo**: Mejorar la experiencia de usuario
 
 #### Tareas:
+
 1. **Estados de carga**
    - Crear componente LoadingSpinner
    - Agregar skeletons para listas
@@ -293,6 +314,7 @@
    - Lazy loading de pantallas
 
 **Archivos a crear/modificar:**
+
 - `components/ui/LoadingSpinner.tsx` - Nuevo componente
 - `components/ui/ErrorMessage.tsx` - Nuevo componente
 - `components/ui/SkeletonLoader.tsx` - Nuevo componente
@@ -302,9 +324,11 @@
 ---
 
 ### **FASE 6: Testing y Documentación** 🧪
+
 **Objetivo**: Asegurar calidad y documentar
 
 #### Tareas:
+
 1. **Testing unitario**
    - Completar tests de componentes
    - Agregar tests de hooks
@@ -322,6 +346,7 @@
    - Documentar configuración de entorno
 
 **Archivos a crear/modificar:**
+
 - `__tests__/` - Agregar más tests
 - `README.md` - Documentación completa
 - `docs/` - Documentación adicional
@@ -384,9 +409,9 @@ packages/mobile/
 ```json
 {
   "dependencies": {
-    "@expo/vector-icons": "^14.0.4",  // ✅ Ya agregado
-    "expo-constants": "~17.0.3",      // Para variables de entorno
-    "react-native-config": "^1.5.1"   // Alternativa para .env
+    "@expo/vector-icons": "^14.0.4", // ✅ Ya agregado
+    "expo-constants": "~17.0.3", // Para variables de entorno
+    "react-native-config": "^1.5.1" // Alternativa para .env
   }
 }
 ```

@@ -71,6 +71,7 @@ When running on a physical device, you **must** use your machine's local IP addr
    - **Windows**: `ipconfig` (look for IPv4 Address)
 
 2. Update `.env.local`:
+
    ```env
    MOBILE_API_URL=http://192.168.1.100:3000
    KEYCLOAK_URL=http://192.168.1.100:8080

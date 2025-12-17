@@ -21,12 +21,14 @@ Los DTOs del API (NestJS) tienen decoradores de validación (`@IsString`, `@IsEm
 ### 2. **Cuándo Crear Tipos Compartidos**
 
 ✅ **SÍ crear tipos compartidos cuando:**
+
 - El frontend necesita enviar datos al API (requests)
 - El frontend necesita tipar respuestas del API (responses)
 - Los datos son parte del contrato público entre frontend y backend
 - Se usan en múltiples lugares (mobile + web futuro)
 
 ❌ **NO crear tipos compartidos cuando:**
+
 - Son DTOs internos del API (solo usados entre servicios)
 - Son específicos de validación de NestJS
 - No se usan en el frontend
@@ -36,11 +38,13 @@ Los DTOs del API (NestJS) tienen decoradores de validación (`@IsString`, `@IsEm
 #### ✅ Ya Implementado Correctamente:
 
 **`PatientRegisterPayload`** (shared):
+
 - Usado por mobile para enviar datos de registro
 - Versión limpia de `RegisterPatientDto` (API)
 - Sin decoradores, solo estructura de datos
 
 **`TokensResponse`** (shared):
+
 - Usado por mobile y futuro web
 - Representa respuesta estándar OAuth2
 - Contrato compartido entre frontend y backend
@@ -48,15 +52,18 @@ Los DTOs del API (NestJS) tienen decoradores de validación (`@IsString`, `@IsEm
 #### ✅ Ya Implementado:
 
 **Paginación:**
+
 - ✅ `PaginationParams`, `PaginationMeta`, `PaginatedResponse<T>` (shared)
 - Usado en queries del frontend para paginación
 
 **Consent:**
+
 - ✅ `CreateConsentPayload`, `UpdateConsentPayload`, `ShareConsentWithPractitionerPayload` (shared)
 - Usado cuando mobile/web crea/actualiza/comparte consentimientos
 - Reutiliza tipos base de `fhir.interface.ts` (ConsentPolicy, ConsentVerification, etc.)
 
 **FHIR Resources:**
+
 - Ya tenemos tipos FHIR en `@carecore/shared` (Patient, Consent, etc.)
 - Los DTOs pueden extender estos tipos base
 
@@ -88,23 +95,28 @@ export class CreateConsentDto implements CreateConsentPayload {
 ### 5. **Ventajas de Esta Estrategia**
 
 ✅ **Mantiene separación de responsabilidades**
+
 - DTOs con validación en API
 - Tipos limpios en shared
 
 ✅ **Evita duplicación innecesaria**
+
 - Solo creamos tipos compartidos cuando realmente se necesitan
 
 ✅ **Facilita mantenimiento**
+
 - Un solo lugar para la estructura de datos compartidos
 - Los DTOs pueden validar contra los tipos base
 
 ✅ **TypeScript funciona correctamente**
+
 - Frontend no necesita decoradores de NestJS
 - Backend mantiene validación robusta
 
 ### 6. **Recomendación para el Proyecto**
 
 **Enfoque incremental:**
+
 1. ✅ Ya tenemos `PatientRegisterPayload`, `TokensResponse`, `PatientRegisterResponse`
 2. Crear tipos compartidos **solo cuando el frontend los necesite**
 3. Priorizar según uso real:
@@ -112,6 +124,7 @@ export class CreateConsentDto implements CreateConsentPayload {
    - **Baja prioridad**: DTOs internos del API
 
 **No es necesario:**
+
 - Mover todos los DTOs a shared
 - Crear versiones compartidas "por si acaso"
 - Duplicar DTOs que solo se usan en el backend

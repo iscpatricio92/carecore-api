@@ -78,12 +78,14 @@ app/
 **Propósito:** Permitir al paciente iniciar sesión en su cuenta
 
 **Características:**
+
 - Inicio de sesión seguro mediante OAuth2/OIDC
 - Autenticación con Keycloak (mismo sistema del backend)
 - Redirección automática si el usuario ya está autenticado
 - Enlace a pantalla de registro para nuevos usuarios
 
 **Flujo del Usuario:**
+
 1. Usuario toca "Iniciar Sesión"
 2. Se abre la pantalla de autenticación de Keycloak
 3. Usuario ingresa sus credenciales
@@ -99,12 +101,14 @@ app/
 **Propósito:** Permitir a nuevos usuarios crear una cuenta de paciente
 
 **Características:**
+
 - Formulario de registro con validación de datos
 - Creación automática de cuenta y perfil de paciente
 - Validación de información personal (email, contraseña, etc.)
 - Redirección automática al Dashboard después del registro exitoso
 
 **Flujo del Usuario:**
+
 1. Usuario completa el formulario de registro
 2. La app valida los datos ingresados
 3. Se crea la cuenta y el perfil de paciente automáticamente
@@ -120,17 +124,20 @@ app/
 **Propósito:** Pantalla principal que muestra resumen del historial clínico del paciente
 
 **Características:**
+
 - **Resumen de Consentimientos:** Muestra cuántos consentimientos activos tiene el paciente
 - **Registros Recientes:** Lista de las consultas y documentos más recientes
 - **Acceso Rápido:** Navegación directa a detalles de registros o gestión de consentimientos
 - **Actualización:** Pull-to-refresh para obtener los datos más recientes
 
 **Información Mostrada:**
+
 - Consultas médicas más recientes
 - Documentos clínicos más recientes (reportes, exámenes, etc.)
 - Estado de consentimientos activos
 
 **Acciones del Paciente:**
+
 - Ver detalles completos de cualquier registro clínico
 - Gestionar sus consentimientos (crear, revocar)
 - Actualizar la información mostrada
@@ -144,6 +151,7 @@ app/
 **Propósito:** Mostrar el historial clínico completo del paciente
 
 **Características:**
+
 - **Historial Completo:** Todos los registros clínicos del paciente en un solo lugar
 - **Filtros:** Por tipo (consultas, documentos) y por fecha
 - **Búsqueda:** Buscar registros por texto (títulos, descripciones)
@@ -151,12 +159,14 @@ app/
 - **Navegación:** Acceso directo a detalles de cada registro
 
 **Información Mostrada:**
+
 - Todas las consultas médicas del paciente
 - Todos los documentos clínicos (reportes, exámenes, imágenes)
 - Fechas y tipos de cada registro
 - Estado de cada registro
 
 **Acciones del Paciente:**
+
 - Filtrar el historial por tipo o fecha
 - Buscar registros específicos
 - Ver detalles completos de cualquier registro
@@ -171,18 +181,21 @@ app/
 **Propósito:** Mostrar información del paciente y configuraciones de la app
 
 **Características:**
+
 - **Perfil del Paciente:** Información personal y médica del paciente
 - **Gestión de Sesión:** Cerrar sesión de forma segura
 - **Resumen de Consentimientos:** Estado de los consentimientos activos
 - **Configuración:** Preferencias de la app (futuro: notificaciones, etc.)
 
 **Información Mostrada:**
+
 - Datos personales del paciente
 - Información del perfil médico
 - Resumen de consentimientos activos
 - Versión de la aplicación
 
 **Acciones del Paciente:**
+
 - Ver y actualizar información del perfil
 - Cerrar sesión de forma segura
 - Acceder a gestión de consentimientos
@@ -198,6 +211,7 @@ app/
 **Propósito:** Mostrar detalles completos de un registro clínico específico
 
 **Características:**
+
 - Vista completa y detallada del registro clínico
 - Información presentada de forma clara y comprensible
 - Navegación a información relacionada (médico, fechas, etc.)
@@ -212,6 +226,7 @@ app/
 **Propósito:** Permitir al paciente gestionar sus consentimientos informados
 
 **Características:**
+
 - Lista completa de todos los consentimientos del paciente
 - Crear nuevos consentimientos para compartir información
 - Revocar consentimientos existentes en cualquier momento
@@ -241,9 +256,11 @@ Dashboard (Inicio)
 ```
 
 **Pantallas involucradas:**
+
 - `/auth/register` → `/(tabs)/index`
 
 **Servicios:**
+
 - `RegisterService` - Maneja registro
 - `AuthService` - Guarda tokens
 
@@ -266,9 +283,11 @@ Dashboard (Inicio)
 ```
 
 **Pantallas involucradas:**
+
 - `/auth/login` → `/(tabs)/index`
 
 **Servicios:**
+
 - `AuthService` - Maneja autenticación y tokens
 - `useAuth` hook - Gestiona estado de autenticación
 
@@ -289,9 +308,11 @@ Ver Información Completa
 ```
 
 **Pantallas involucradas:**
+
 - `/(tabs)/index` → `/record/[id]`
 
 **Servicios:**
+
 - `FHIRClientService` - Obtiene recursos FHIR
 - `useFHIRData` hook - Gestiona datos y cache
 
@@ -312,9 +333,11 @@ Pantalla de Detalle
 ```
 
 **Pantallas involucradas:**
+
 - `/(tabs)/history` → `/record/[id]`
 
 **Servicios:**
+
 - `FHIRClientService` - Búsquedas con parámetros FHIR
 - `useFHIRData` hook - Maneja filtros y búsqueda
 
@@ -335,9 +358,11 @@ Actualización en Dashboard
 ```
 
 **Pantallas involucradas:**
+
 - `/(tabs)/index` → `/consents/index`
 
 **Servicios:**
+
 - `FHIRClientService` - CRUD de recursos Consent
 - `useFHIRData` hook - Gestiona consentimientos
 
@@ -358,9 +383,11 @@ Pantalla de Login
 ```
 
 **Pantallas involucradas:**
+
 - `/(tabs)/settings` → `/auth/login`
 
 **Servicios:**
+
 - `AuthService` - Elimina tokens
 - `useAuth` hook - Limpia estado
 
