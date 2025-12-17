@@ -12,6 +12,7 @@ export * from './types/config.interface';
 export * from './types/auth.interface';
 export * from './types/pagination.interface';
 export * from './types/consent.interface';
+export * from './types/mobile.interface';
 
 // Constants
 export * from './constants/fhir-scopes';
