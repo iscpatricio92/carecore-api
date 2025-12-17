@@ -9,27 +9,27 @@
 
 ### ✅ Archivos/Directorios Necesarios
 
-| Archivo/Directorio | Propósito | Estado |
-|-------------------|-----------|--------|
-| `.github/` | CI/CD workflows | ✅ Necesario |
-| `.husky/` | Git hooks | ✅ Necesario |
-| `docs/` | Documentación | ✅ Necesario |
-| `packages/` | Paquetes del monorepo | ✅ Necesario |
-| `scripts/` | Scripts compartidos | ✅ Necesario |
-| `.cursor/` | Configuración de Cursor | ✅ Necesario |
-| `.vscode/` | Configuración de VSCode | ✅ Necesario |
-| `package.json` | Root package.json (workspaces) | ✅ Necesario |
-| `package-lock.json` | Lock file de dependencias | ✅ Necesario |
-| `tsconfig.base.json` | Configuración base de TypeScript | ✅ Necesario |
-| `tsconfig.json` | Configuración root de TypeScript | ✅ Necesario |
-| `Dockerfile` | Docker build | ✅ Necesario |
-| `docker-compose*.yml` | Docker Compose configs | ✅ Necesario |
-| `Makefile` | Comandos de desarrollo | ✅ Necesario |
-| `README.md` | Documentación principal | ✅ Necesario |
-| `LICENSE` | Licencia del proyecto | ✅ Necesario |
-| `commitlint.config.mjs` | Configuración de commitlint | ✅ Necesario |
-| `.cz-config.js` | Configuración de Commitizen | ✅ Necesario |
-| `cspell.config.yaml` | Configuración de spell checker | ✅ Necesario |
+| Archivo/Directorio      | Propósito                        | Estado       |
+| ----------------------- | -------------------------------- | ------------ |
+| `.github/`              | CI/CD workflows                  | ✅ Necesario |
+| `.husky/`               | Git hooks                        | ✅ Necesario |
+| `docs/`                 | Documentación                    | ✅ Necesario |
+| `packages/`             | Paquetes del monorepo            | ✅ Necesario |
+| `scripts/`              | Scripts compartidos              | ✅ Necesario |
+| `.cursor/`              | Configuración de Cursor          | ✅ Necesario |
+| `.vscode/`              | Configuración de VSCode          | ✅ Necesario |
+| `package.json`          | Root package.json (workspaces)   | ✅ Necesario |
+| `package-lock.json`     | Lock file de dependencias        | ✅ Necesario |
+| `tsconfig.base.json`    | Configuración base de TypeScript | ✅ Necesario |
+| `tsconfig.json`         | Configuración root de TypeScript | ✅ Necesario |
+| `Dockerfile`            | Docker build                     | ✅ Necesario |
+| `docker-compose*.yml`   | Docker Compose configs           | ✅ Necesario |
+| `Makefile`              | Comandos de desarrollo           | ✅ Necesario |
+| `README.md`             | Documentación principal          | ✅ Necesario |
+| `LICENSE`               | Licencia del proyecto            | ✅ Necesario |
+| `commitlint.config.mjs` | Configuración de commitlint      | ✅ Necesario |
+| `.cz-config.js`         | Configuración de Commitizen      | ✅ Necesario |
+| `cspell.config.yaml`    | Configuración de spell checker   | ✅ Necesario |
 
 ---
 
@@ -38,22 +38,26 @@
 #### 1. `storage/` - **MOVER A `.tmp/storage/`**
 
 **Estado actual:**
+
 - Contiene `documents/` y `verifications/`
 - Usado por:
   - `packages/api/src/modules/documents/documents.service.ts` (default: `.tmp/storage/documents`) ✅ Actualizado
   - `packages/api/src/modules/auth/services/document-storage.service.ts` (default: `.tmp/storage/verifications`) ✅ Actualizado
 
 **Problema:**
+
 - Está en root cuando debería estar en `.tmp/` (temporal) o dentro de `packages/api/`
 - Ya está en `.gitignore`, pero debería estar mejor organizado
 
 **Recomendación:**
+
 - Mover a `.tmp/storage/` o `packages/api/storage/`
 - Actualizar variables de entorno por defecto:
   - `DOCUMENTS_STORAGE_PATH` → `.tmp/storage/documents` o `packages/api/storage/documents`
   - `VERIFICATION_DOCUMENTS_PATH` → `.tmp/storage/verifications` o `packages/api/storage/verifications`
 
 **Acción:** ✅ COMPLETADO
+
 ```bash
 # Movido a .tmp/storage/
 mkdir -p .tmp/storage
@@ -71,18 +75,22 @@ rmdir storage
 #### 2. `dist/` en root - **ELIMINAR**
 
 **Estado actual:**
+
 - Contiene `main.js` (514KB)
 - Probablemente de un build anterior antes de la migración a monorepo
 
 **Problema:**
+
 - El build debería estar en `packages/api/dist/`
 - Este `dist/` en root es obsoleto
 
 **Recomendación:**
+
 - Eliminar `dist/` del root
 - Verificar que no se use en ningún script o configuración
 
 **Acción:** ✅ COMPLETADO
+
 ```bash
 rm -rf dist/
 # Eliminado dist/main.js obsoleto del root
@@ -93,6 +101,7 @@ rm -rf dist/
 #### 3. `coverage/`, `coverage-e2e/`, `coverage-integration/` - **MANTENER (configurado así)**
 
 **Estado actual:**
+
 - Generados por Jest desde `packages/api/`
 - Configuración en `packages/api/jest.config.js`:
   - `coverageDirectory: '../../coverage'` (unit)
@@ -100,13 +109,16 @@ rm -rf dist/
   - `coverageDirectory: '../../coverage-integration'` (integration)
 
 **Problema:**
+
 - Están en root cuando podrían estar en `packages/api/coverage/`
 
 **Recomendación:**
+
 - **Opción A (Actual):** Mantener en root si queremos reportes centralizados
 - **Opción B (Alternativa):** Cambiar a `packages/api/coverage/` para mantener todo junto
 
 **Acción:** ✅ COMPLETADO - Organizado mejor
+
 ```bash
 # Estructura organizada:
 # coverage/api/ - unit tests
@@ -124,18 +136,22 @@ rm -rf dist/
 #### 4. `.jest-cache/`, `.jest-e2e-cache/`, `.jest-cache-integration/` - **MOVER A `packages/api/`**
 
 **Estado actual:**
+
 - Caché de Jest en root
 - Configuración en `packages/api/jest.config.js`:
   - `cacheDirectory: '<rootDir>/../../.jest-cache'`
 
 **Problema:**
+
 - Deberían estar en `packages/api/` para mantener todo junto
 
 **Recomendación:**
+
 - Mover caché a `packages/api/.jest-cache/`
 - Actualizar configuración de Jest
 
 **Acción:** ✅ COMPLETADO
+
 ```bash
 # Actualizado jest.config.js, jest-e2e.json, jest.integration.js
 # cacheDirectory ahora relativo al package: '<rootDir>/../.jest-cache'
@@ -146,18 +162,22 @@ rm -rf dist/
 #### 5. `tools/` - **ELIMINAR (vacío) o MANTENER COMO PLACEHOLDER**
 
 **Estado actual:**
+
 - Directorio vacío
 - Solo mencionado en documentación como "futuro"
 
 **Problema:**
+
 - No se usa actualmente
 - Puede confundir
 
 **Recomendación:**
+
 - **Opción A:** Eliminar si no se planea usar
 - **Opción B:** Mantener con un `.gitkeep` y README explicando su propósito futuro
 
 **Acción:** ✅ COMPLETADO - Movido a packages/shared/tools/
+
 ```bash
 # Movido a packages/shared/tools/ con README.md
 # Preparado para uso futuro compartido entre packages
@@ -208,4 +228,3 @@ rmdir tools/
 ---
 
 **Nota:** Algunos cambios requieren actualizar código y configuraciones. Revisar cuidadosamente antes de aplicar.
-

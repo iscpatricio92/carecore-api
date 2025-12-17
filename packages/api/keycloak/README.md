@@ -32,6 +32,7 @@ keycloak/
 La base de datos `keycloak_db` se crea automáticamente cuando PostgreSQL se inicializa por primera vez usando el script `scripts/init-keycloak-db.sh`.
 
 Este script se ejecuta automáticamente cuando:
+
 - Se inicia PostgreSQL por primera vez
 - El script está montado en `/docker-entrypoint-initdb.d/` dentro del contenedor
 
@@ -48,12 +49,14 @@ make docker-up
 ```
 
 El script `scripts/init-keycloak-config.sh` se ejecuta automáticamente y:
+
 - ✅ **Verifica rápidamente** si el realm, roles y clientes ya existen
 - ✅ **Es silencioso** cuando todo está configurado (no muestra output innecesario)
 - ✅ **Solo ejecuta setup** si falta algo (ahorra recursos y tiempo)
 - ✅ **Es idempotente** - se puede ejecutar múltiples veces sin problemas
 
 **Si necesitas configurar manualmente:**
+
 ```bash
 # Configurar todo manualmente (realm, roles, clientes)
 make keycloak-setup
@@ -63,6 +66,7 @@ make keycloak-get-secret
 ```
 
 **Después de la primera configuración:**
+
 - El script se ejecutará automáticamente en cada `make docker-up`
 - Si todo está configurado, será silencioso y rápido (~0.2 segundos)
 - Si falta algo, lo creará automáticamente
@@ -74,6 +78,7 @@ make keycloak-get-secret
 Después de crear el realm:
 
 **📖 Guías completas:**
+
 - [REALM_SETUP.md](./REALM_SETUP.md) - Configurar realm "carecore"
 - [CLIENT_API_SETUP.md](./CLIENT_API_SETUP.md) - Configurar cliente "carecore-api"
 - [CLIENT_WEB_SETUP.md](./CLIENT_WEB_SETUP.md) - Configurar cliente "carecore-web"
@@ -85,6 +90,7 @@ Después de crear el realm:
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - Arquitectura y diagramas del sistema
 
 **🔐 Seguridad Avanzada:**
+
 - [../docs/MFA_SETUP_GUIDE.md](../docs/MFA_SETUP_GUIDE.md) - Guía completa para configurar MFA (TOTP) en Keycloak
 - [../docs/SCOPES_SETUP_GUIDE.md](../docs/SCOPES_SETUP_GUIDE.md) - Guía completa para configurar scopes OAuth2 en Keycloak
 
@@ -100,6 +106,7 @@ Script que crea la base de datos `keycloak_db` en PostgreSQL.
 Este script se ejecuta automáticamente cuando PostgreSQL se inicializa por primera vez. No requiere ejecución manual.
 
 **Variables requeridas:**
+
 - `KEYCLOAK_DB_NAME`: Nombre de la base de datos (default: `keycloak_db`)
 - `POSTGRES_USER`: Usuario de PostgreSQL
 - `POSTGRES_DB`: Base de datos inicial de PostgreSQL
@@ -144,6 +151,7 @@ docker exec carecore-keycloak /opt/keycloak/bin/kc.sh import \
 Todas las variables de entorno relacionadas con Keycloak están documentadas en [ENV_VARIABLES.md](../docs/ENV_VARIABLES.md).
 
 Variables principales:
+
 - `KEYCLOAK_ADMIN`: Usuario administrador
 - `KEYCLOAK_ADMIN_PASSWORD`: Contraseña del administrador
 - `KEYCLOAK_URL`: URL base de Keycloak
@@ -153,6 +161,7 @@ Variables principales:
 ### Volúmenes Docker
 
 Los datos de Keycloak se persisten en el volumen `keycloak_data`:
+
 - Configuración de realms
 - Usuarios y roles
 - Clientes y configuraciones
@@ -178,6 +187,7 @@ Los datos de Keycloak se persisten en el volumen `keycloak_data`:
 Para una guía completa de troubleshooting, ver [TROUBLESHOOTING.md](./TROUBLESHOOTING.md).
 
 **Problemas comunes:**
+
 - Keycloak no inicia
 - No puedo acceder a Admin Console
 - Base de datos no se crea
@@ -189,8 +199,8 @@ Para una guía completa de troubleshooting, ver [TROUBLESHOOTING.md](./TROUBLESH
 Para información sobre backup y restore, ver [BACKUP_RESTORE.md](./BACKUP_RESTORE.md).
 
 **Incluye:**
+
 - Backup del realm
 - Backup de la base de datos
 - Restore completo
 - Scripts automatizados
-

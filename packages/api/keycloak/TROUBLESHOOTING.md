@@ -21,6 +21,7 @@ Esta guía cubre los problemas más comunes al trabajar con Keycloak en el proye
 ### Keycloak no inicia
 
 **Síntomas:**
+
 - El contenedor `carecore-keycloak` se detiene inmediatamente
 - Error en logs: `Container exited (1)`
 - Estado del contenedor: `Exited`
@@ -28,26 +29,32 @@ Esta guía cubre los problemas más comunes al trabajar con Keycloak en el proye
 **Soluciones:**
 
 1. **Verificar que PostgreSQL esté corriendo:**
+
    ```bash
    docker-compose ps postgres
    ```
+
    Si no está corriendo:
+
    ```bash
    docker-compose up -d postgres
    ```
 
 2. **Verificar logs de Keycloak:**
+
    ```bash
    docker-compose logs keycloak | tail -100
    ```
 
 3. **Verificar variables de entorno:**
+
    ```bash
    # Verificar que las variables estén definidas
    grep KEYCLOAK .env.local
    ```
 
 4. **Verificar que la base de datos exista:**
+
    ```bash
    docker exec carecore-postgres psql -U "${DB_USER}" -d "${DB_NAME}" -c "\l" | grep "${KEYCLOAK_DB_NAME}"
    ```
@@ -61,18 +68,22 @@ Esta guía cubre los problemas más comunes al trabajar con Keycloak en el proye
 ### Keycloak tarda mucho en iniciar
 
 **Síntomas:**
+
 - El contenedor está en estado `Starting` por más de 5 minutos
 - Logs muestran mensajes repetitivos
 
 **Soluciones:**
 
 1. **Verificar recursos del sistema:**
+
    ```bash
    docker stats carecore-keycloak
    ```
+
    Keycloak requiere al menos 512MB de RAM.
 
 2. **Verificar logs para errores:**
+
    ```bash
    docker-compose logs -f keycloak
    ```
@@ -87,22 +98,26 @@ Esta guía cubre los problemas más comunes al trabajar con Keycloak en el proye
 ### Error: "FATAL: database does not exist"
 
 **Síntomas:**
+
 - Logs muestran: `FATAL: database "keycloak_db" does not exist`
 - Keycloak no puede conectarse a la base de datos
 
 **Soluciones:**
 
 1. **Verificar que el script de inicialización se ejecutó:**
+
    ```bash
    docker exec carecore-postgres ls -la /docker-entrypoint-initdb.d/ | grep keycloak
    ```
 
 2. **Crear la base de datos manualmente:**
+
    ```bash
    docker exec carecore-postgres psql -U "${DB_USER}" -d "${DB_NAME}" -c "CREATE DATABASE ${KEYCLOAK_DB_NAME};"
    ```
 
 3. **Verificar que el script tenga permisos de ejecución:**
+
    ```bash
    ls -la scripts/init-keycloak-db.sh
    ```
@@ -118,17 +133,20 @@ Esta guía cubre los problemas más comunes al trabajar con Keycloak en el proye
 ### Error: "Connection refused" o "ECONNREFUSED"
 
 **Síntomas:**
+
 - Keycloak no puede conectarse a PostgreSQL
 - Logs muestran errores de conexión
 
 **Soluciones:**
 
 1. **Verificar que PostgreSQL esté accesible:**
+
    ```bash
    docker exec carecore-postgres pg_isready -U "${DB_USER}"
    ```
 
 2. **Verificar variables de conexión:**
+
    ```bash
    # Verificar que KEYCLOAK_DB_HOST apunte al servicio correcto
    grep KEYCLOAK_DB_HOST .env.local
@@ -136,6 +154,7 @@ Esta guía cubre los problemas más comunes al trabajar con Keycloak en el proye
    ```
 
 3. **Verificar red de Docker:**
+
    ```bash
    docker network inspect carecore-api_carecore-network | grep -A 5 postgres
    ```
@@ -149,11 +168,13 @@ Esta guía cubre los problemas más comunes al trabajar con Keycloak en el proye
 ### Error: "The server does not support SSL connections"
 
 **Síntomas:**
+
 - Keycloak intenta usar SSL pero PostgreSQL no lo tiene habilitado
 
 **Soluciones:**
 
 1. **Verificar configuración de SSL en variables de entorno:**
+
    ```bash
    grep KEYCLOAK_DB .env.local
    # En desarrollo, SSL debe estar deshabilitado
@@ -169,30 +190,35 @@ Esta guía cubre los problemas más comunes al trabajar con Keycloak en el proye
 ### No puedo acceder a Admin Console
 
 **Síntomas:**
+
 - No se puede acceder a `http://localhost:${KEYCLOAK_HTTP_PORT}`
 - Página no carga o muestra error
 
 **Soluciones:**
 
 1. **Verificar que Keycloak esté corriendo:**
+
    ```bash
    docker-compose ps keycloak
    # Debe estar en estado "Up (healthy)"
    ```
 
 2. **Verificar que el puerto esté disponible:**
+
    ```bash
    curl http://localhost:${KEYCLOAK_HTTP_PORT}
    # Debe responder con HTML
    ```
 
 3. **Verificar que el puerto no esté en uso:**
+
    ```bash
    lsof -i :${KEYCLOAK_HTTP_PORT}
    # O en Windows: netstat -ano | findstr :${KEYCLOAK_HTTP_PORT}
    ```
 
 4. **Verificar variables de entorno:**
+
    ```bash
    grep KEYCLOAK_HTTP_PORT .env.local
    ```
@@ -205,18 +231,21 @@ Esta guía cubre los problemas más comunes al trabajar con Keycloak en el proye
 ### Credenciales incorrectas
 
 **Síntomas:**
+
 - No se puede iniciar sesión en Admin Console
 - Error: "Invalid username or password"
 
 **Soluciones:**
 
 1. **Verificar credenciales en `.env.local`:**
+
    ```bash
    grep KEYCLOAK_ADMIN .env.local
    grep KEYCLOAK_ADMIN_PASSWORD .env.local
    ```
 
 2. **Verificar que las variables estén definidas:**
+
    ```bash
    # Las variables no deben estar vacías
    [ -z "$KEYCLOAK_ADMIN" ] && echo "KEYCLOAK_ADMIN está vacío"
@@ -224,6 +253,7 @@ Esta guía cubre los problemas más comunes al trabajar con Keycloak en el proye
    ```
 
 3. **Reiniciar Keycloak si cambiaste las credenciales:**
+
    ```bash
    docker-compose restart keycloak
    ```
@@ -239,28 +269,33 @@ Esta guía cubre los problemas más comunes al trabajar con Keycloak en el proye
 ### Base de datos no se crea automáticamente
 
 **Síntomas:**
+
 - El script `init-keycloak-db.sh` no se ejecuta
 - La base de datos `keycloak_db` no existe
 
 **Soluciones:**
 
 1. **Verificar que el script esté montado:**
+
    ```bash
    docker exec carecore-postgres ls -la /docker-entrypoint-initdb.d/ | grep keycloak
    ```
 
 2. **Verificar logs de PostgreSQL:**
+
    ```bash
    docker-compose logs postgres | grep -i keycloak
    ```
 
 3. **Verificar que el script sea válido:**
+
    ```bash
    bash -n scripts/init-keycloak-db.sh
    # No debe mostrar errores
    ```
 
 4. **Crear la base de datos manualmente:**
+
    ```bash
    docker exec carecore-postgres psql -U "${DB_USER}" -d "${DB_NAME}" -c "CREATE DATABASE ${KEYCLOAK_DB_NAME};"
    ```
@@ -274,18 +309,21 @@ Esta guía cubre los problemas más comunes al trabajar con Keycloak en el proye
 ### Error al conectar a la base de datos
 
 **Síntomas:**
+
 - Keycloak no puede conectarse a la base de datos
 - Logs muestran errores de autenticación
 
 **Soluciones:**
 
 1. **Verificar credenciales de base de datos:**
+
    ```bash
    grep KEYCLOAK_DB .env.local
    # Verificar KEYCLOAK_DB_USER, KEYCLOAK_DB_PASSWORD, etc.
    ```
 
 2. **Probar conexión manualmente:**
+
    ```bash
    docker exec carecore-postgres psql -U "${KEYCLOAK_DB_USER}" -d "${KEYCLOAK_DB_NAME}" -c "SELECT 1;"
    ```
@@ -302,6 +340,7 @@ Esta guía cubre los problemas más comunes al trabajar con Keycloak en el proye
 ### No puedo crear el realm
 
 **Síntomas:**
+
 - Error al crear el realm "carecore"
 - El realm no aparece en la lista
 
@@ -316,6 +355,7 @@ Esta guía cubre los problemas más comunes al trabajar con Keycloak en el proye
    - Verificar que las credenciales sean correctas
 
 3. **Verificar logs para errores:**
+
    ```bash
    docker-compose logs keycloak | grep -i realm
    ```
@@ -326,12 +366,14 @@ Esta guía cubre los problemas más comunes al trabajar con Keycloak en el proye
 ### El realm no se importa correctamente
 
 **Síntomas:**
+
 - Error al importar `carecore-realm.json`
 - El realm se crea pero falta configuración
 
 **Soluciones:**
 
 1. **Verificar que el JSON sea válido:**
+
    ```bash
    cat keycloak/realms/carecore-realm.json | jq .
    # No debe mostrar errores
@@ -351,12 +393,14 @@ Esta guía cubre los problemas más comunes al trabajar con Keycloak en el proye
 ### No puedo obtener token del cliente API
 
 **Síntomas:**
+
 - Error al hacer petición de token
 - Error: "Invalid client credentials"
 
 **Soluciones:**
 
 1. **Verificar Client Secret:**
+
    ```bash
    grep KEYCLOAK_CLIENT_SECRET .env.local
    # Debe tener un valor (no vacío)
@@ -378,6 +422,7 @@ Esta guía cubre los problemas más comunes al trabajar con Keycloak en el proye
 ### Cliente web no funciona con PKCE
 
 **Síntomas:**
+
 - Error al autenticar con el cliente web
 - Error: "Invalid code verifier"
 
@@ -404,6 +449,7 @@ Esta guía cubre los problemas más comunes al trabajar con Keycloak en el proye
 ### Los roles no aparecen en el token
 
 **Síntomas:**
+
 - El token JWT no incluye los roles
 - El campo `realm_access.roles` está vacío
 
@@ -486,11 +532,13 @@ docker exec carecore-postgres pg_isready -U "${DB_USER}"
 ### Dónde encontrar logs
 
 1. **Logs de Keycloak:**
+
    ```bash
    docker-compose logs keycloak
    ```
 
 2. **Logs de PostgreSQL:**
+
    ```bash
    docker-compose logs postgres
    ```
@@ -564,4 +612,3 @@ docker-compose logs --tail=20 keycloak
 3. **Reinicia los servicios** - A veces un simple reinicio resuelve problemas temporales
 4. **Usa los scripts de verificación** - Los scripts automatizados pueden detectar problemas comunes
 5. **Mantén backups** - Siempre haz backup antes de hacer cambios importantes
-

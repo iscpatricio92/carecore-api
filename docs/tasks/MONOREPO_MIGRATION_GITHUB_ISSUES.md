@@ -27,6 +27,7 @@ Como desarrollador, quiero migrar el proyecto a una estructura de monorepo para 
 Crear la estructura base de carpetas para el monorepo.
 
 **Tareas:**
+
 - [ ] Crear directorio `packages/`
 - [ ] Crear `packages/api/` (para backend actual)
 - [ ] Crear `packages/shared/` (para código compartido)
@@ -48,6 +49,7 @@ Configurar el `package.json` raíz con workspaces y scripts base.
 **⚠️ Nota:** Se eligió **NPM Workspaces** en lugar de Nx porque el proyecto es pequeño/mediano (3-4 paquetes), requiere setup rápido (30 min vs 2-4 horas), y es suficiente para nuestras necesidades. Ver [MONOREPO_TOOL_COMPARISON.md](../../MONOREPO_TOOL_COMPARISON.md) para detalles.
 
 **Tareas:**
+
 - [ ] Crear `package.json` en root con workspaces
 - [ ] Instalar dependencias de desarrollo en root (typescript, prettier, eslint)
 - [ ] Turborepo es opcional y puede agregarse después si se necesita optimización
@@ -67,6 +69,7 @@ Configurar el `package.json` raíz con workspaces y scripts base.
 Crear configuración base de TypeScript para el monorepo.
 
 **Tareas:**
+
 - [ ] Crear `tsconfig.base.json` en root
 - [ ] Crear `tsconfig.json` en root que extienda base
 - [ ] Configurar paths para `@carecore/shared`
@@ -86,6 +89,7 @@ Crear configuración base de TypeScript para el monorepo.
 Mover todo el código actual del backend a `packages/api/`.
 
 **Tareas:**
+
 - [ ] Mover `src/` → `packages/api/src/`
 - [ ] Mover `test/` → `packages/api/test/`
 - [ ] Mover `scripts/` → `packages/api/scripts/`
@@ -107,6 +111,7 @@ Mover todo el código actual del backend a `packages/api/`.
 Actualizar todos los imports y paths en `packages/api` para que funcionen con la nueva estructura.
 
 **Tareas:**
+
 - [ ] Actualizar `tsconfig.json` en `packages/api/`
 - [ ] Actualizar imports en todo el código
 - [ ] Actualizar `jest.config.js` con nuevos paths
@@ -126,6 +131,7 @@ Actualizar todos los imports y paths en `packages/api` para que funcionen con la
 Ajustar `package.json` de `packages/api` para monorepo.
 
 **Tareas:**
+
 - [ ] Actualizar `name` a `@carecore/api`
 - [ ] Verificar dependencias
 - [ ] Actualizar scripts si es necesario
@@ -146,6 +152,7 @@ Ajustar `package.json` de `packages/api` para monorepo.
 Crear la estructura base del paquete compartido.
 
 **Tareas:**
+
 - [ ] Crear `packages/shared/package.json` con name `@carecore/shared`
 - [ ] Crear estructura de directorios (types, constants, utils, config)
 - [ ] Crear `packages/shared/tsconfig.json`
@@ -163,6 +170,7 @@ Crear la estructura base del paquete compartido.
 Mover todas las interfaces FHIR a `packages/shared`.
 
 **Tareas:**
+
 - [ ] Mover `src/common/interfaces/fhir.interface.ts` → `packages/shared/src/types/`
 - [ ] Actualizar exports en `packages/shared/src/index.ts`
 - [ ] Actualizar imports en `packages/api` a `@carecore/shared`
@@ -181,6 +189,7 @@ Mover todas las interfaces FHIR a `packages/shared`.
 Mover constantes (scopes, resource types, actions) a `packages/shared`.
 
 **Tareas:**
+
 - [ ] Mover `fhir-scopes.ts` → `packages/shared/src/constants/`
 - [ ] Mover `fhir-resource-types.ts` → `packages/shared/src/constants/`
 - [ ] Mover `fhir-actions.ts` → `packages/shared/src/constants/` (si existe)
@@ -200,6 +209,7 @@ Mover constantes (scopes, resource types, actions) a `packages/shared`.
 Mover interfaces relacionadas con User y Auth a `packages/shared` (si son útiles para frontend).
 
 **Tareas:**
+
 - [ ] Revisar `src/modules/auth/interfaces/user.interface.ts`
 - [ ] Mover a `packages/shared/src/types/user.interface.ts` si corresponde
 - [ ] Actualizar exports
@@ -218,6 +228,7 @@ Mover interfaces relacionadas con User y Auth a `packages/shared` (si son útile
 Configurar el proceso de build para `packages/shared`.
 
 **Tareas:**
+
 - [ ] Agregar script `build` en `packages/shared/package.json`
 - [ ] Configurar TypeScript para generar `.d.ts`
 - [ ] Verificar que `npm run build` genera archivos correctos
@@ -237,6 +248,7 @@ Configurar el proceso de build para `packages/shared`.
 Actualizar Dockerfile para trabajar con estructura de monorepo.
 
 **Tareas:**
+
 - [ ] Actualizar `COPY` commands para `packages/api/` y `packages/shared/`
 - [ ] Ajustar paths de `src` a `packages/api/src`
 - [ ] Asegurar que `packages/shared` se construya antes de `packages/api`
@@ -255,6 +267,7 @@ Actualizar Dockerfile para trabajar con estructura de monorepo.
 Actualizar docker-compose para usar paths correctos del monorepo.
 
 **Tareas:**
+
 - [ ] Actualizar `context` en servicio `api`
 - [ ] Actualizar `volumes` si hay montajes
 - [ ] Verificar que scripts montados funcionen
@@ -272,6 +285,7 @@ Actualizar docker-compose para usar paths correctos del monorepo.
 Actualizar Makefile para trabajar con estructura de monorepo.
 
 **Tareas:**
+
 - [ ] Revisar todos los targets del Makefile
 - [ ] Actualizar paths a `packages/api/scripts/` o `tools/`
 - [ ] Actualizar comandos `npm` para workspaces
@@ -290,6 +304,7 @@ Actualizar Makefile para trabajar con estructura de monorepo.
 Revisar y actualizar scripts en `scripts/` o `packages/api/scripts/`.
 
 **Tareas:**
+
 - [ ] Decidir ubicación de scripts (API o compartidos)
 - [ ] Actualizar paths en scripts
 - [ ] Actualizar scripts de GitHub tasks si existen
@@ -309,6 +324,7 @@ Revisar y actualizar scripts en `scripts/` o `packages/api/scripts/`.
 Configurar Commitizen para commits estructurados en el monorepo.
 
 **Tareas:**
+
 - [ ] Instalar `commitizen` y `cz-conventional-changelog` en root
 - [ ] Agregar configuración en `package.json` root
 - [ ] Agregar script `commit` en root
@@ -326,6 +342,7 @@ Configurar Commitizen para commits estructurados en el monorepo.
 Asegurar que Husky y commitlint funcionen correctamente en monorepo.
 
 **Tareas:**
+
 - [ ] Verificar que `commitlint.config.mjs` esté en root
 - [ ] Actualizar `.husky/commit-msg` si es necesario
 - [ ] Actualizar `.husky/pre-commit` si es necesario
@@ -345,6 +362,7 @@ Asegurar que Husky y commitlint funcionen correctamente en monorepo.
 Actualizar configuraciones de Jest para monorepo.
 
 **Tareas:**
+
 - [ ] Verificar `jest.config.js` en `packages/api/`
 - [ ] Verificar `test/jest-e2e.json`
 - [ ] Verificar `jest.integration.js`
@@ -363,6 +381,7 @@ Actualizar configuraciones de Jest para monorepo.
 Asegurar que scripts de testing funcionen desde root y desde packages/api.
 
 **Tareas:**
+
 - [ ] Agregar scripts en root `package.json` para ejecutar tests
 - [ ] Verificar que scripts en `packages/api/package.json` funcionen
 - [ ] Probar ejecución desde root y desde packages/api
@@ -379,6 +398,7 @@ Asegurar que scripts de testing funcionen desde root y desde packages/api.
 Actualizar workflows de GitHub Actions (o CI/CD) para monorepo.
 
 **Tareas:**
+
 - [ ] Buscar archivos `.github/workflows/*.yml`
 - [ ] Actualizar paths en workflows
 - [ ] Actualizar comandos para workspaces
@@ -398,6 +418,7 @@ Actualizar workflows de GitHub Actions (o CI/CD) para monorepo.
 Eliminar archivos que ya no son necesarios en root.
 
 **Tareas:**
+
 - [ ] Identificar archivos que ya no se usan en root
 - [ ] Verificar que no se rompa nada
 - [ ] Eliminar archivos obsoletos
@@ -416,6 +437,7 @@ Eliminar archivos que ya no son necesarios en root.
 Actualizar `.gitignore` para estructura de monorepo.
 
 **Tareas:**
+
 - [ ] Agregar patrones para monorepo (`packages/*/node_modules/`, etc.)
 - [ ] Mantener patrones existentes que apliquen
 - [ ] Verificar que no se ignore nada importante
@@ -432,6 +454,7 @@ Actualizar `.gitignore` para estructura de monorepo.
 Actualizar toda la documentación para reflejar estructura de monorepo.
 
 **Tareas:**
+
 - [ ] Actualizar `README.md`
 - [ ] Actualizar `docs/PROJECT_CONTEXT.md`
 - [ ] Actualizar `docs/FRONTEND_ARCHITECTURE_DECISION.md`
@@ -449,6 +472,7 @@ Actualizar toda la documentación para reflejar estructura de monorepo.
 Ejecutar suite completa de tests y verificar que todo funciona.
 
 **Tareas:**
+
 - [ ] Ejecutar `npm install` en root
 - [ ] Ejecutar `npm run build` en todos los paquetes
 - [ ] Ejecutar todos los tests (unit, e2e, integration)
@@ -467,12 +491,14 @@ Ejecutar suite completa de tests y verificar que todo funciona.
 **Fases:** 7
 
 **Distribución por Prioridad:**
+
 - Crítica: 5 issues
 - Alta: 10 issues
 - Media: 7 issues
 - Baja: 1 issue
 
 **Distribución por Tipo:**
+
 - `build`: 13 issues
 - `refactor`: 5 issues
 - `test`: 1 issue
@@ -493,4 +519,3 @@ Ejecutar suite completa de tests y verificar que todo funciona.
 ---
 
 **Última actualización:** 2025-01-27
-

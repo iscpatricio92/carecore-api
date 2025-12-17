@@ -67,6 +67,7 @@ CareCore API utiliza un sistema de **Role-Based Access Control (RBAC)** combinad
 **Constante:** `ROLES.PATIENT`
 
 **Permisos:**
+
 - ✅ Leer sus propios datos médicos (Patient, Encounter, Observation, etc.)
 - ✅ Dar consentimiento para compartir información
 - ✅ Revocar consentimientos
@@ -77,10 +78,12 @@ CareCore API utiliza un sistema de **Role-Based Access Control (RBAC)** combinad
 - ❌ NO puede acceder a datos de otros pacientes
 
 **Asignación:**
+
 - Automática al crear cuenta de paciente
 - Se asigna en Keycloak al crear usuario
 
 **Ejemplo de uso:**
+
 ```typescript
 @Get('patient')
 @Roles(ROLES.PATIENT)
@@ -99,6 +102,7 @@ async getPatientData(@CurrentUser() user: User) {
 **Constante:** `ROLES.PRACTITIONER`
 
 **Permisos:**
+
 - ✅ Crear registros clínicos (Encounter, Observation, Condition, DocumentReference)
 - ✅ Actualizar registros clínicos existentes
 - ✅ Leer datos de pacientes asignados o con consentimiento
@@ -108,15 +112,18 @@ async getPatientData(@CurrentUser() user: User) {
 - ❌ NO puede acceder a pacientes no asignados sin consentimiento
 
 **Requisitos:**
+
 - ⚠️ Verificación de identidad requerida (cédula profesional)
 - ⚠️ Verificación manual o integración con servicio gubernamental
 - ⚠️ Estado `verified=true` antes de asignar rol
 
 **Asignación:**
+
 - Manual por admin después de verificación
 - Se puede asignar automáticamente cuando admin aprueba verificación
 
 **Ejemplo de uso:**
+
 ```typescript
 @Post('encounter')
 @Roles(ROLES.PRACTITIONER, ROLES.ADMIN)
@@ -135,10 +142,12 @@ async createEncounter(@Body() dto: CreateEncounterDto) {
 **Constante:** No definida como constante (se usa string `'practitioner-verified'`)
 
 **Permisos:**
+
 - Mismos permisos que `practitioner`
 - Indica que la identidad del practitioner ha sido verificada
 
 **Asignación:**
+
 - Automática cuando admin aprueba verificación
 - Se agrega en Keycloak mediante `KeycloakAdminService.addRoleToUser()`
 
@@ -153,6 +162,7 @@ async createEncounter(@Body() dto: CreateEncounterDto) {
 **Constante:** `ROLES.ADMIN`
 
 **Permisos:**
+
 - ✅ Acceso completo al sistema
 - ✅ Gestión de usuarios (crear, modificar, desactivar)
 - ✅ Verificación de practitioners (aprobar/rechazar)
@@ -162,10 +172,12 @@ async createEncounter(@Body() dto: CreateEncounterDto) {
 - ✅ Bypass de filtros de paciente (puede acceder a todos los pacientes)
 
 **Asignación:**
+
 - Solo manual por super administrador
 - Requiere MFA habilitado
 
 **Ejemplo de uso:**
+
 ```typescript
 @Get('admin/users')
 @Roles(ROLES.ADMIN)
@@ -184,6 +196,7 @@ async listUsers() {
 **Constante:** `ROLES.VIEWER`
 
 **Permisos:**
+
 - ✅ Leer datos con consentimiento explícito del paciente
 - ✅ Acceso temporal (limitado por tiempo definido en consentimiento)
 - ✅ Scopes limitados según consentimiento específico
@@ -192,6 +205,7 @@ async listUsers() {
 - ❌ NO puede acceder sin consentimiento activo
 
 **Asignación:**
+
 - Temporal con consentimiento del paciente
 - Se asigna cuando paciente comparte información
 
@@ -204,6 +218,7 @@ async listUsers() {
 **Constante:** `ROLES.LAB`
 
 **Permisos:**
+
 - ✅ Crear resultados de laboratorio (Observation con tipo "laboratory")
 - ✅ Leer resultados de laboratorio existentes
 - ✅ Scopes limitados a datos de laboratorio únicamente
@@ -211,6 +226,7 @@ async listUsers() {
 - ❌ NO puede modificar datos existentes
 
 **Asignación:**
+
 - A sistemas de laboratorio integrados
 - Configuración manual en Keycloak
 
@@ -223,6 +239,7 @@ async listUsers() {
 **Constante:** `ROLES.INSURER`
 
 **Permisos:**
+
 - ✅ Leer datos con consentimiento explícito del paciente
 - ✅ Scopes limitados según consentimiento específico
 - ✅ Acceso a información necesaria para seguros
@@ -230,6 +247,7 @@ async listUsers() {
 - ❌ NO puede acceder sin consentimiento activo
 
 **Asignación:**
+
 - A sistemas de aseguradoras integrados
 - Configuración manual en Keycloak
 
@@ -242,10 +260,12 @@ async listUsers() {
 **Constante:** `ROLES.SYSTEM`
 
 **Permisos:**
+
 - ⚠️ Scopes específicos según configuración de integración
 - ⚠️ Permisos definidos caso por caso según tipo de integración
 
 **Asignación:**
+
 - A sistemas externos según integración
 - Configuración manual en Keycloak
 
@@ -258,6 +278,7 @@ async listUsers() {
 **Constante:** `ROLES.AUDIT`
 
 **Permisos:**
+
 - ✅ Leer logs de auditoría
 - ✅ Acceso a operaciones internas (solo lectura)
 - ✅ Ver historial de accesos y modificaciones
@@ -267,6 +288,7 @@ async listUsers() {
 - ❌ NO puede acceder a datos clínicos de pacientes
 
 **Asignación:**
+
 - A usuarios de auditoría y compliance
 - Configuración manual en Keycloak
 
@@ -276,32 +298,33 @@ async listUsers() {
 
 ### Matriz de Permisos por Recurso
 
-| Recurso | Acción | patient | practitioner | admin | viewer | lab | insurer | system | audit |
-|---------|--------|---------|--------------|-------|--------|-----|---------|--------|-------|
-| **Patient** | Read (propio) | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ⚠️ | ❌ |
-| **Patient** | Read (otros) | ❌ | ✅* | ✅ | ✅* | ❌ | ✅* | ⚠️ | ❌ |
-| **Patient** | Write | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ⚠️ | ❌ |
-| **Patient** | Create | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ⚠️ | ❌ |
-| **Patient** | Delete | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Practitioner** | Read | ✅ | ✅ | ✅ | ✅* | ❌ | ❌ | ⚠️ | ❌ |
-| **Practitioner** | Write | ❌ | ✅** | ✅ | ❌ | ❌ | ❌ | ⚠️ | ❌ |
-| **Practitioner** | Create | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ⚠️ | ❌ |
-| **Encounter** | Read (propio) | ✅ | ✅ | ✅ | ✅* | ❌ | ❌ | ⚠️ | ❌ |
-| **Encounter** | Read (otros) | ❌ | ✅* | ✅ | ✅* | ❌ | ✅* | ⚠️ | ❌ |
-| **Encounter** | Write | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ⚠️ | ❌ |
-| **Encounter** | Create | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ⚠️ | ❌ |
-| **Encounter** | Delete | ❌ | ❌*** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **DocumentReference** | Read | ✅ | ✅ | ✅ | ✅* | ❌ | ❌ | ⚠️ | ❌ |
-| **DocumentReference** | Write | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ⚠️ | ❌ |
-| **DocumentReference** | Create | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ⚠️ | ❌ |
-| **Consent** | Read | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ⚠️ | ❌ |
-| **Consent** | Write | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ⚠️ | ❌ |
-| **Consent** | Create | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ⚠️ | ❌ |
-| **Consent** | Share | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ⚠️ | ❌ |
-| **Audit Logs** | Read | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **Audit Logs** | Export | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Recurso               | Acción        | patient | practitioner | admin | viewer | lab | insurer | system | audit |
+| --------------------- | ------------- | ------- | ------------ | ----- | ------ | --- | ------- | ------ | ----- |
+| **Patient**           | Read (propio) | ✅      | ✅           | ✅    | ❌     | ❌  | ❌      | ⚠️     | ❌    |
+| **Patient**           | Read (otros)  | ❌      | ✅\*         | ✅    | ✅\*   | ❌  | ✅\*    | ⚠️     | ❌    |
+| **Patient**           | Write         | ❌      | ❌           | ✅    | ❌     | ❌  | ❌      | ⚠️     | ❌    |
+| **Patient**           | Create        | ❌      | ❌           | ✅    | ❌     | ❌  | ❌      | ⚠️     | ❌    |
+| **Patient**           | Delete        | ❌      | ❌           | ✅    | ❌     | ❌  | ❌      | ❌     | ❌    |
+| **Practitioner**      | Read          | ✅      | ✅           | ✅    | ✅\*   | ❌  | ❌      | ⚠️     | ❌    |
+| **Practitioner**      | Write         | ❌      | ✅\*\*       | ✅    | ❌     | ❌  | ❌      | ⚠️     | ❌    |
+| **Practitioner**      | Create        | ❌      | ✅           | ✅    | ❌     | ❌  | ❌      | ⚠️     | ❌    |
+| **Encounter**         | Read (propio) | ✅      | ✅           | ✅    | ✅\*   | ❌  | ❌      | ⚠️     | ❌    |
+| **Encounter**         | Read (otros)  | ❌      | ✅\*         | ✅    | ✅\*   | ❌  | ✅\*    | ⚠️     | ❌    |
+| **Encounter**         | Write         | ❌      | ✅           | ✅    | ❌     | ❌  | ❌      | ⚠️     | ❌    |
+| **Encounter**         | Create        | ❌      | ✅           | ✅    | ❌     | ❌  | ❌      | ⚠️     | ❌    |
+| **Encounter**         | Delete        | ❌      | ❌\*\*\*     | ✅    | ❌     | ❌  | ❌      | ❌     | ❌    |
+| **DocumentReference** | Read          | ✅      | ✅           | ✅    | ✅\*   | ❌  | ❌      | ⚠️     | ❌    |
+| **DocumentReference** | Write         | ❌      | ✅           | ✅    | ❌     | ❌  | ❌      | ⚠️     | ❌    |
+| **DocumentReference** | Create        | ❌      | ✅           | ✅    | ❌     | ❌  | ❌      | ⚠️     | ❌    |
+| **Consent**           | Read          | ✅      | ✅           | ✅    | ❌     | ❌  | ❌      | ⚠️     | ❌    |
+| **Consent**           | Write         | ✅      | ❌           | ✅    | ❌     | ❌  | ❌      | ⚠️     | ❌    |
+| **Consent**           | Create        | ✅      | ❌           | ✅    | ❌     | ❌  | ❌      | ⚠️     | ❌    |
+| **Consent**           | Share         | ✅      | ❌           | ✅    | ❌     | ❌  | ❌      | ⚠️     | ❌    |
+| **Audit Logs**        | Read          | ❌      | ❌           | ✅    | ❌     | ❌  | ❌      | ❌     | ✅    |
+| **Audit Logs**        | Export        | ❌      | ❌           | ✅    | ❌     | ❌  | ❌      | ❌     | ✅    |
 
 **Leyenda:**
+
 - `✅` = Permitido
 - `❌` = No permitido
 - `⚠️` = Depende de configuración específica
@@ -336,16 +359,19 @@ async listUsers() {
 #### Asignación de `patient`
 
 Se asigna automáticamente cuando:
+
 - Se crea un nuevo usuario en Keycloak
 - El usuario se registra (si el registro está habilitado)
 
 #### Asignación de `practitioner-verified`
 
 Se asigna automáticamente cuando:
+
 - Un admin aprueba la verificación de un practitioner
 - Se ejecuta `KeycloakAdminService.addRoleToUser(userId, 'practitioner-verified')`
 
 **Código:**
+
 ```typescript
 // En AuthService.reviewVerification()
 if (newStatus === VerificationStatus.APPROVED) {
@@ -384,12 +410,14 @@ El `RolesGuard` valida que el usuario tenga al menos uno de los roles requeridos
 **Ubicación:** `src/modules/auth/guards/roles.guard.ts`
 
 **Funcionamiento:**
+
 1. Extrae roles requeridos del decorador `@Roles()`
 2. Extrae roles del usuario del request (seteado por `JwtAuthGuard`)
 3. Valida que el usuario tenga al menos uno de los roles requeridos
 4. Lanza `ForbiddenException` si no tiene los roles
 
 **Código:**
+
 ```typescript
 @Injectable()
 export class RolesGuard {
@@ -435,6 +463,7 @@ El decorador `@Roles()` define qué roles son requeridos para acceder a un endpo
 **Ubicación:** `src/modules/auth/decorators/roles.decorator.ts`
 
 **Uso básico:**
+
 ```typescript
 import { Roles } from './decorators/roles.decorator';
 import { ROLES } from '../../common/constants/roles';
@@ -448,6 +477,7 @@ async adminEndpoint() {
 ```
 
 **Múltiples roles (OR lógico):**
+
 ```typescript
 @Post('encounter')
 @Roles(ROLES.PRACTITIONER, ROLES.ADMIN)
@@ -537,13 +567,13 @@ Los roles y scopes trabajan juntos para proporcionar control de acceso granular.
 
 ### Roles vs Scopes
 
-| Aspecto | Roles | Scopes |
-|---------|-------|--------|
-| **Nivel** | Alto nivel (tipo de usuario) | Granular (recurso/acción) |
-| **Ejemplo** | `patient`, `practitioner` | `patient:read`, `patient:write` |
-| **Asignación** | En Keycloak (realm roles) | En token OAuth2 |
-| **Validación** | `RolesGuard` | `ScopesGuard` |
-| **Uso** | Control de acceso general | Control de acceso específico |
+| Aspecto        | Roles                        | Scopes                          |
+| -------------- | ---------------------------- | ------------------------------- |
+| **Nivel**      | Alto nivel (tipo de usuario) | Granular (recurso/acción)       |
+| **Ejemplo**    | `patient`, `practitioner`    | `patient:read`, `patient:write` |
+| **Asignación** | En Keycloak (realm roles)    | En token OAuth2                 |
+| **Validación** | `RolesGuard`                 | `ScopesGuard`                   |
+| **Uso**        | Control de acceso general    | Control de acceso específico    |
 
 ### Combinación de Roles y Scopes
 
@@ -571,50 +601,51 @@ async createPatient(@Body() dto: CreatePatientDto) {
 
 ### Patient
 
-| Rol | Read | Write | Create | Delete |
-|-----|------|-------|--------|--------|
-| `patient` | ✅ (propio) | ❌ | ❌ | ❌ |
-| `practitioner` | ✅ (todos*) | ❌ | ❌ | ❌ |
-| `admin` | ✅ (todos) | ✅ | ✅ | ✅ |
-| `viewer` | ✅ (con consentimiento) | ❌ | ❌ | ❌ |
+| Rol            | Read                    | Write | Create | Delete |
+| -------------- | ----------------------- | ----- | ------ | ------ |
+| `patient`      | ✅ (propio)             | ❌    | ❌     | ❌     |
+| `practitioner` | ✅ (todos\*)            | ❌    | ❌     | ❌     |
+| `admin`        | ✅ (todos)              | ✅    | ✅     | ✅     |
+| `viewer`       | ✅ (con consentimiento) | ❌    | ❌     | ❌     |
 
 ### Practitioner
 
-| Rol | Read | Write | Create | Delete |
-|-----|------|-------|--------|--------|
-| `patient` | ✅ | ❌ | ❌ | ❌ |
-| `practitioner` | ✅ | ✅ (propio) | ✅ | ❌ |
-| `admin` | ✅ | ✅ | ✅ | ✅ |
-| `viewer` | ✅ (con consentimiento) | ❌ | ❌ | ❌ |
+| Rol            | Read                    | Write       | Create | Delete |
+| -------------- | ----------------------- | ----------- | ------ | ------ |
+| `patient`      | ✅                      | ❌          | ❌     | ❌     |
+| `practitioner` | ✅                      | ✅ (propio) | ✅     | ❌     |
+| `admin`        | ✅                      | ✅          | ✅     | ✅     |
+| `viewer`       | ✅ (con consentimiento) | ❌          | ❌     | ❌     |
 
 ### Encounter
 
-| Rol | Read | Write | Create | Delete |
-|-----|------|-------|--------|--------|
-| `patient` | ✅ (propio) | ❌ | ❌ | ❌ |
-| `practitioner` | ✅ (todos*) | ✅ | ✅ | ❌*** |
-| `admin` | ✅ (todos) | ✅ | ✅ | ✅ |
-| `viewer` | ✅ (con consentimiento) | ❌ | ❌ | ❌ |
+| Rol            | Read                    | Write | Create | Delete   |
+| -------------- | ----------------------- | ----- | ------ | -------- |
+| `patient`      | ✅ (propio)             | ❌    | ❌     | ❌       |
+| `practitioner` | ✅ (todos\*)            | ✅    | ✅     | ❌\*\*\* |
+| `admin`        | ✅ (todos)              | ✅    | ✅     | ✅       |
+| `viewer`       | ✅ (con consentimiento) | ❌    | ❌     | ❌       |
 
 ### DocumentReference
 
-| Rol | Read | Write | Create | Delete |
-|-----|------|-------|--------|--------|
-| `patient` | ✅ (propio) | ❌ | ❌ | ❌ |
-| `practitioner` | ✅ (todos*) | ✅ | ✅ | ❌ |
-| `admin` | ✅ (todos) | ✅ | ✅ | ✅ |
-| `viewer` | ✅ (con consentimiento) | ❌ | ❌ | ❌ |
+| Rol            | Read                    | Write | Create | Delete |
+| -------------- | ----------------------- | ----- | ------ | ------ |
+| `patient`      | ✅ (propio)             | ❌    | ❌     | ❌     |
+| `practitioner` | ✅ (todos\*)            | ✅    | ✅     | ❌     |
+| `admin`        | ✅ (todos)              | ✅    | ✅     | ✅     |
+| `viewer`       | ✅ (con consentimiento) | ❌    | ❌     | ❌     |
 
 ### Consent
 
-| Rol | Read | Write | Create | Share |
-|-----|------|-------|--------|-------|
-| `patient` | ✅ (propio) | ✅ | ✅ | ✅ |
-| `practitioner` | ✅ | ❌ | ❌ | ❌ |
-| `admin` | ✅ (todos) | ✅ | ✅ | ✅ |
-| `viewer` | ❌ | ❌ | ❌ | ❌ |
+| Rol            | Read        | Write | Create | Share |
+| -------------- | ----------- | ----- | ------ | ----- |
+| `patient`      | ✅ (propio) | ✅    | ✅     | ✅    |
+| `practitioner` | ✅          | ❌    | ❌     | ❌    |
+| `admin`        | ✅ (todos)  | ✅    | ✅     | ✅    |
+| `viewer`       | ❌          | ❌    | ❌     | ❌    |
 
 **Notas:**
+
 - `*` = Con consentimiento o asignación
 - `***` = Solo desactivar, no eliminar permanentemente
 
@@ -709,11 +740,13 @@ async searchPatients(user: User, query: SearchPatientsDto) {
 ### 1. Usar Constantes en Lugar de Strings
 
 ✅ **Correcto:**
+
 ```typescript
 @Roles(ROLES.ADMIN)
 ```
 
 ❌ **Incorrecto:**
+
 ```typescript
 @Roles('admin')
 ```
@@ -721,11 +754,13 @@ async searchPatients(user: User, query: SearchPatientsDto) {
 ### 2. Orden Correcto de Guards
 
 ✅ **Correcto:**
+
 ```typescript
 @UseGuards(JwtAuthGuard, RolesGuard, ScopesGuard)
 ```
 
 ❌ **Incorrecto:**
+
 ```typescript
 @UseGuards(RolesGuard, JwtAuthGuard) // user no estará disponible
 ```
@@ -779,11 +814,13 @@ async getPatient(@Param('id') id: string) {
 ### 7. No Exponer Información Sensible en Errores
 
 ✅ **Correcto:**
+
 ```typescript
 throw new ForbiddenException('Insufficient permissions');
 ```
 
 ❌ **Incorrecto:**
+
 ```typescript
 throw new ForbiddenException(`User ${user.id} with roles ${user.roles} cannot access this`);
 ```
@@ -813,4 +850,3 @@ throw new ForbiddenException(`User ${user.id} with roles ${user.roles} cannot ac
 ---
 
 **Última actualización:** 2025-12-12
-

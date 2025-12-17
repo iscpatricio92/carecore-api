@@ -35,29 +35,34 @@
 #### Ventajas
 
 ✅ **Simplicidad**
+
 - **Nativo de NPM:** No requiere instalación adicional
 - **Configuración mínima:** Solo agregar `workspaces` en `package.json`
 - **Curva de aprendizaje:** Casi nula, es solo NPM
 - **Documentación:** Familiar para cualquier desarrollador Node.js
 
 ✅ **Ligero y Rápido**
+
 - **Sin overhead:** No agrega capa adicional de abstracción
 - **Instalación rápida:** `npm install` funciona igual que siempre
 - **Sin archivos de configuración extra:** Solo `package.json`
 - **Startup rápido:** No hay daemon o proceso adicional
 
 ✅ **Suficiente para el Caso de Uso**
+
 - **3-4 paquetes:** Perfecto para proyectos pequeños/medianos
 - **Dependencias compartidas:** Funciona perfectamente
 - **TypeScript paths:** Se configuran fácilmente
 - **Builds:** Simples con scripts de NPM
 
 ✅ **Ecosistema Familiar**
+
 - **Herramientas existentes:** Funciona con todo (Docker, CI/CD, etc.)
 - **Sin dependencias nuevas:** Usa solo NPM
 - **Compatibilidad:** 100% compatible con herramientas actuales
 
 ✅ **Flexibilidad**
+
 - **Puedes agregar Turborepo después:** Si necesitas optimización
 - **No te bloquea:** Puedes migrar a Nx más adelante si creces
 - **Scripts personalizados:** Total control
@@ -65,18 +70,22 @@
 #### Desventajas
 
 ❌ **Sin Graph de Dependencias Visual**
+
 - No hay UI para ver dependencias entre paquetes
 - Pero con 3-4 paquetes, no es necesario
 
 ❌ **Sin Detección de Proyectos Afectados**
+
 - No detecta automáticamente qué paquetes afecta un cambio
 - Pero con pocos paquetes, es fácil de trackear manualmente
 
 ❌ **Sin Generadores de Código**
+
 - No tiene generadores automáticos
 - Pero NestJS ya tiene sus propios generadores
 
 ❌ **Builds No Optimizados por Defecto**
+
 - No cachea builds automáticamente
 - **Solución:** Agregar Turborepo si es necesario
 
@@ -87,9 +96,7 @@
 {
   "name": "carecore",
   "private": true,
-  "workspaces": [
-    "packages/*"
-  ],
+  "workspaces": ["packages/*"],
   "scripts": {
     "build": "npm run build --workspace=@carecore/api",
     "test": "npm run test --workspace=@carecore/api"
@@ -106,48 +113,58 @@
 #### Ventajas
 
 ✅ **Graph de Dependencias**
+
 - Visualización de dependencias entre proyectos
 - Útil para monorepos grandes (10+ paquetes)
 
 ✅ **Detección de Proyectos Afectados**
+
 - Detecta automáticamente qué proyectos afecta un cambio
 - Útil para CI/CD en monorepos grandes
 
 ✅ **Generadores de Código**
+
 - Generadores para crear nuevos proyectos/componentes
 - Útil para estandarizar estructura
 
 ✅ **Caching Inteligente**
+
 - Cachea builds y tests automáticamente
 - Útil para builds largos
 
 ✅ **Task Orchestration**
+
 - Ejecuta tareas en paralelo de forma inteligente
 - Útil para muchos paquetes
 
 #### Desventajas para CareCore
 
 ❌ **Complejidad Innecesaria**
+
 - **Overhead significativo:** Agrega capa de abstracción compleja
 - **Curva de aprendizaje:** Requiere entender conceptos de Nx
 - **Configuración compleja:** `nx.json`, plugins, etc.
 - **Para 3-4 paquetes:** Es overkill
 
 ❌ **Tiempo de Setup**
+
 - **Setup inicial:** 2-4 horas vs 30 min de NPM Workspaces
 - **Migración:** Requiere más cambios en estructura
 - **Aprendizaje:** Equipo necesita aprender Nx
 
 ❌ **Dependencias Adicionales**
+
 - **Nx CLI:** Herramienta adicional a instalar
 - **Plugins:** Pueden requerir plugins específicos
 - **Mantenimiento:** Otra herramienta que mantener
 
 ❌ **Puede Ser Más Lento para Proyectos Pequeños**
+
 - **Overhead de Nx:** Para 3-4 paquetes, puede ser más lento
 - **Sin beneficios reales:** No aprovecha las ventajas de Nx
 
 ❌ **Menos Flexible**
+
 - **Estructura más rígida:** Nx impone cierta estructura
 - **Menos control:** Más "magia" detrás de escena
 
@@ -169,20 +186,20 @@ nx generators
 
 ## 📊 Comparación Lado a Lado
 
-| Aspecto | NPM Workspaces | Nx |
-|---------|---------------|-----|
-| **Setup Time** | 15-30 min | 2-4 horas |
-| **Complejidad** | Baja | Alta |
-| **Curva de Aprendizaje** | Mínima | Media-Alta |
-| **Overhead** | Ninguno | Significativo |
-| **Ideal para** | 2-10 paquetes | 10+ paquetes |
-| **Graph de Dependencias** | ❌ No | ✅ Sí |
-| **Detección de Afectados** | ❌ No | ✅ Sí |
-| **Caching** | ❌ No (pero Turborepo) | ✅ Sí |
-| **Generadores** | ❌ No | ✅ Sí |
-| **Nativo** | ✅ Sí (NPM) | ❌ No (herramienta externa) |
-| **Flexibilidad** | ✅ Alta | ⚠️ Media |
-| **Mantenimiento** | ✅ Bajo | ⚠️ Medio |
+| Aspecto                    | NPM Workspaces         | Nx                          |
+| -------------------------- | ---------------------- | --------------------------- |
+| **Setup Time**             | 15-30 min              | 2-4 horas                   |
+| **Complejidad**            | Baja                   | Alta                        |
+| **Curva de Aprendizaje**   | Mínima                 | Media-Alta                  |
+| **Overhead**               | Ninguno                | Significativo               |
+| **Ideal para**             | 2-10 paquetes          | 10+ paquetes                |
+| **Graph de Dependencias**  | ❌ No                  | ✅ Sí                       |
+| **Detección de Afectados** | ❌ No                  | ✅ Sí                       |
+| **Caching**                | ❌ No (pero Turborepo) | ✅ Sí                       |
+| **Generadores**            | ❌ No                  | ✅ Sí                       |
+| **Nativo**                 | ✅ Sí (NPM)            | ❌ No (herramienta externa) |
+| **Flexibilidad**           | ✅ Alta                | ⚠️ Media                    |
+| **Mantenimiento**          | ✅ Bajo                | ⚠️ Medio                    |
 
 ---
 
@@ -231,6 +248,7 @@ nx generators
 ```
 
 **Ventajas:**
+
 - Setup rápido
 - Funciona perfecto para 3-4 paquetes
 - Sin overhead
@@ -253,11 +271,13 @@ nx generators
 ```
 
 **Cuándo agregar Turborepo:**
+
 - Si builds se vuelven lentos (>2 min)
 - Si necesitas caching de builds
 - Si necesitas ejecución paralela optimizada
 
 **Ventajas de Turborepo sobre Nx:**
+
 - ✅ Más simple que Nx
 - ✅ Solo optimización de builds
 - ✅ No impone estructura
@@ -266,6 +286,7 @@ nx generators
 ### Fase 3: Migrar a Nx (Solo si es necesario)
 
 **Cuándo considerar Nx:**
+
 - Si el monorepo crece a 10+ paquetes
 - Si necesitas graph de dependencias visual
 - Si necesitas generadores complejos
@@ -318,6 +339,7 @@ nx graph  # Ver dependencias (útil pero no necesario)
 ### Para CareCore: **NPM Workspaces**
 
 **Justificación:**
+
 1. ✅ Proyecto pequeño/mediano (3-4 paquetes)
 2. ✅ Setup rápido (30 min vs 2-4 horas)
 3. ✅ Sin curva de aprendizaje
@@ -326,6 +348,7 @@ nx graph  # Ver dependencias (útil pero no necesario)
 6. ✅ Puedes migrar a Nx más adelante si creces
 
 **Nx sería útil si:**
+
 - Tuvieras 10+ paquetes
 - Necesitaras graph de dependencias visual
 - Tuvieras un equipo grande
@@ -346,4 +369,3 @@ nx graph  # Ver dependencias (útil pero no necesario)
 
 **Última actualización:** 2025-01-27
 **Mantenido por:** Equipo CareCore
-

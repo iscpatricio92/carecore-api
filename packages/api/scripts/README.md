@@ -9,6 +9,7 @@ Script para crear issues de GitHub automáticamente desde el archivo de tareas d
 ### Requisitos
 
 1. **GitHub CLI instalado:**
+
    ```bash
    # macOS
    brew install gh
@@ -18,6 +19,7 @@ Script para crear issues de GitHub automáticamente desde el archivo de tareas d
    ```
 
 2. **Autenticado con GitHub:**
+
    ```bash
    gh auth login
    ```
@@ -32,16 +34,19 @@ Script para crear issues de GitHub automáticamente desde el archivo de tareas d
 ### Uso
 
 #### Modo Dry Run (solo muestra lo que haría)
+
 ```bash
 node scripts/create-github-tasks-phase1.js --dry-run
 ```
 
 #### Crear issues reales
+
 ```bash
 node scripts/create-github-tasks-phase1.js
 ```
 
 #### Especificar repositorio o proyecto diferente
+
 ```bash
 # Cambiar repositorio
 node scripts/create-github-tasks-phase1.js --owner=tu-usuario --repo=tu-repo
@@ -51,6 +56,7 @@ node scripts/create-github-tasks-phase1.js --project=3
 ```
 
 **Configuración por defecto:**
+
 - Repositorio: `iscpatricio92/carecore-api`
 - Proyecto: `#2` (https://github.com/users/iscpatricio92/projects/2)
 
@@ -100,17 +106,19 @@ Creando tarea 1: Agregar Keycloak a docker-compose.yml...
 ### Troubleshooting
 
 **Error: "GitHub CLI (gh) no está instalado"**
+
 - Instala GitHub CLI: https://cli.github.com/
 
 **Error: "No estás autenticado con GitHub CLI"**
+
 - Ejecuta: `gh auth login`
 - Sigue las instrucciones para autenticarte
 
 **Error: "Permission denied"**
+
 - Verifica que tienes permisos de escritura en el repositorio
 - Verifica que estás autenticado: `gh auth status`
 
 ---
 
 **Nota:** Este script es temporal y puede ser eliminado una vez que las tareas estén creadas.
-

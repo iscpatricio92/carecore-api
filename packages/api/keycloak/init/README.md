@@ -19,17 +19,20 @@ bash keycloak/init/setup-keycloak.sh
 ### `setup-keycloak.sh` (Script Maestro)
 
 Script principal que ejecuta toda la configuración de Keycloak:
+
 - Importa el realm desde `keycloak/realms/carecore-realm.json`
 - Crea todos los roles base del sistema
 - Crea el cliente `carecore-api` (confidential)
 - Crea el cliente `carecore-web` (public con PKCE)
 
 **Uso:**
+
 ```bash
 bash keycloak/init/setup-keycloak.sh
 ```
 
 **Requisitos:**
+
 - Keycloak corriendo (verificar con `make docker-up`)
 - Variables de entorno en `.env.local`:
   - `KEYCLOAK_URL`
@@ -40,6 +43,7 @@ bash keycloak/init/setup-keycloak.sh
 ### `create-roles.sh`
 
 Crea todos los roles base del sistema:
+
 - `patient` - Usuario paciente
 - `practitioner` - Profesional médico
 - `viewer` - Acceso temporal de solo lectura
@@ -50,6 +54,7 @@ Crea todos los roles base del sistema:
 - `audit` - Auditoría
 
 **Uso:**
+
 ```bash
 # Obtener token primero
 TOKEN=$(curl -s -X POST "${KEYCLOAK_URL}/realms/master/protocol/openid-connect/token" \
@@ -65,6 +70,7 @@ bash keycloak/init/create-roles.sh "$TOKEN"
 ### `create-scopes.sh`
 
 Crea todos los client scopes OAuth2 necesarios para permisos granulares de recursos FHIR:
+
 - `patient:read`, `patient:write`
 - `practitioner:read`, `practitioner:write`
 - `encounter:read`, `encounter:write`
@@ -72,12 +78,14 @@ Crea todos los client scopes OAuth2 necesarios para permisos granulares de recur
 - `consent:read`, `consent:write`, `consent:share`
 
 **Características:**
+
 - Crea 11 scopes en total
 - Asigna automáticamente los scopes al cliente "carecore-api"
 - Idempotente: verifica si los scopes ya existen antes de crearlos
 - Configura "Include in Token Scope" automáticamente
 
 **Uso:**
+
 ```bash
 # Obtener token primero
 TOKEN=$(curl -s -X POST "${KEYCLOAK_URL}/realms/master/protocol/openid-connect/token" \
@@ -91,6 +99,7 @@ bash keycloak/init/create-scopes.sh "$TOKEN"
 ```
 
 **O usando Makefile:**
+
 ```bash
 make keycloak-create-scopes
 ```
@@ -100,6 +109,7 @@ make keycloak-create-scopes
 Crea el cliente `carecore-api` (confidential) para la API backend.
 
 **Configuración:**
+
 - Client ID: `carecore-api`
 - Tipo: Confidential (con Client Secret)
 - Standard Flow: Habilitado
@@ -107,12 +117,14 @@ Crea el cliente `carecore-api` (confidential) para la API backend.
 - Service Accounts: Habilitado
 
 **Uso:**
+
 ```bash
 # Similar a create-roles.sh, requiere token
 bash keycloak/init/create-api-client.sh "$TOKEN"
 ```
 
 **⚠️ IMPORTANTE:** Después de crear el cliente, guarda el Client Secret en `.env.local`:
+
 ```env
 KEYCLOAK_CLIENT_SECRET=<el-secret-obtenido>
 ```
@@ -122,6 +134,7 @@ KEYCLOAK_CLIENT_SECRET=<el-secret-obtenido>
 Obtiene el Client Secret del cliente `carecore-api` para guardarlo en `.env.local`.
 
 **Uso:**
+
 ```bash
 # Desde el directorio raíz
 make keycloak-get-secret
@@ -134,6 +147,7 @@ bash keycloak/init/get-client-secret.sh <client-id>
 ```
 
 **Características:**
+
 - Obtiene el Client Secret automáticamente
 - Regenera el secret si está vacío
 - Muestra el secret en formato listo para copiar a `.env.local`
@@ -143,6 +157,7 @@ bash keycloak/init/get-client-secret.sh <client-id>
 Crea el cliente `carecore-web` (public) para el frontend.
 
 **Configuración:**
+
 - Client ID: `carecore-web`
 - Tipo: Public (sin Client Secret)
 - Standard Flow: Habilitado
@@ -150,6 +165,7 @@ Crea el cliente `carecore-web` (public) para el frontend.
 - Redirect URIs: Configurados según `WEB_PORT` en `.env.local`
 
 **Uso:**
+
 ```bash
 # Similar a create-roles.sh, requiere token
 bash keycloak/init/create-web-client.sh "$TOKEN"
@@ -170,6 +186,7 @@ Este script crea la base de datos `keycloak_db` cuando PostgreSQL se inicializa 
 ### Método Automático (Recomendado)
 
 1. **Iniciar servicios:**
+
    ```bash
    make docker-up
    ```
@@ -180,11 +197,13 @@ Este script crea la base de datos `keycloak_db` cuando PostgreSQL se inicializa 
    - ⚠️ **Nota:** Requiere que `KEYCLOAK_ADMIN` y `KEYCLOAK_ADMIN_PASSWORD` estén en `.env.local`
 
 2. **Obtener Client Secret (si es necesario):**
+
    ```bash
    make keycloak-get-secret
    ```
 
    Copia la línea mostrada a tu `.env.local`:
+
    ```env
    KEYCLOAK_CLIENT_SECRET=<el-secret-mostrado>
    ```
@@ -194,16 +213,19 @@ Este script crea la base de datos `keycloak_db` cuando PostgreSQL se inicializa 
 Si prefieres configurar manualmente o la configuración automática falla:
 
 1. **Iniciar servicios:**
+
    ```bash
    make docker-up
    ```
 
 2. **Configurar Keycloak:**
+
    ```bash
    make keycloak-setup
    ```
 
 3. **Obtener Client Secret:**
+
    ```bash
    make keycloak-get-secret
    ```
@@ -246,4 +268,3 @@ Si prefieres configurar manualmente o la configuración automática falla:
 - [ROLES_SETUP.md](../ROLES_SETUP.md) - Guía manual de creación de roles
 - [CLIENT_API_SETUP.md](../CLIENT_API_SETUP.md) - Guía manual del cliente API
 - [CLIENT_WEB_SETUP.md](../CLIENT_WEB_SETUP.md) - Guía manual del cliente Web
-

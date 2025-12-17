@@ -24,6 +24,7 @@ CareCore implementa **cifrado de datos en reposo** usando dos capas complementar
 ### Ventajas de cada enfoque
 
 **pgcrypto (nivel de campo):**
+
 - ✅ Cifrado granular (solo campos sensibles)
 - ✅ Control fino sobre qué datos se cifran
 - ✅ Permite búsquedas en campos no cifrados
@@ -31,6 +32,7 @@ CareCore implementa **cifrado de datos en reposo** usando dos capas complementar
 - ⚠️ Impacto en rendimiento para operaciones cifradas
 
 **Cifrado de disco:**
+
 - ✅ Transparente para la aplicación
 - ✅ Protege todos los datos automáticamente
 - ✅ Sin cambios en el código
@@ -54,11 +56,13 @@ El cifrado a nivel de campo usa la extensión `pgcrypto` de PostgreSQL para cifr
 ### Configuración
 
 **Variable de entorno requerida:**
+
 ```env
 ENCRYPTION_KEY=<clave-de-cifrado-de-al-menos-32-caracteres>
 ```
 
 **Generar una clave segura:**
+
 ```bash
 # Opción 1: Usando OpenSSL
 openssl rand -base64 32
@@ -199,12 +203,14 @@ Para producción, se debe implementar **cifrado de disco** adicional.
 ### Desarrollo
 
 **Archivo: `.env.local`**
+
 ```env
 # Cifrado
 ENCRYPTION_KEY=<clave-generada-segura>
 ```
 
 **Ejecutar migración:**
+
 ```bash
 npm run migration:run
 ```
@@ -212,11 +218,13 @@ npm run migration:run
 ### Producción
 
 **Variables de entorno:**
+
 ```env
 ENCRYPTION_KEY=<clave-segura-de-al-menos-32-caracteres>
 ```
 
 **Consideraciones:**
+
 - ⚠️ **NUNCA** commitear `ENCRYPTION_KEY` al repositorio
 - ⚠️ Usar un Key Management Service (KMS) en producción
 - ⚠️ Rotar la clave periódicamente
@@ -393,6 +401,7 @@ npm run encryption:verify
 ```
 
 Este script verifica:
+
 1. ✅ Que pgcrypto esté habilitado
 2. ✅ Que `ENCRYPTION_KEY` esté configurada
 3. ✅ Que el cifrado/descifrado funcione correctamente
@@ -440,5 +449,3 @@ Esta implementación cumple con el DoD requerido:
 - ✅ **Cifrado a nivel de campo (pgcrypto)**: Extensión habilitada y servicio implementado
 - ✅ **Cifrado de disco documentado**: Opciones documentadas para implementación en producción
 - ✅ **Verificación**: Script de verificación disponible (`npm run encryption:verify`)
-
-

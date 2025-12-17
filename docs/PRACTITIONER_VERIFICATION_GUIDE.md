@@ -129,6 +129,7 @@ curl -X POST "${API_URL}/api/auth/verify-practitioner" \
 ```
 
 **Respuesta:**
+
 ```json
 {
   "verificationId": "uuid",
@@ -165,6 +166,7 @@ curl -X PUT "${API_URL}/api/auth/verify-practitioner/${VERIFICATION_ID}/review" 
 ```
 
 **Resultado:**
+
 - El usuario obtiene automáticamente el rol `practitioner-verified` en Keycloak
 - El estado de verificación cambia a `approved`
 
@@ -219,13 +221,13 @@ curl -X GET "${KEYCLOAK_URL}/admin/realms/${KEYCLOAK_REALM}/users/${USER_ID}/rol
 
 ## 📊 Estados de Verificación
 
-| Estado | Descripción | Rol en Keycloak |
-|--------|-------------|----------------|
-| **Sin rol** | Usuario no tiene rol practitioner | Ninguno |
-| **practitioner** | Usuario tiene rol pero no está verificado | `practitioner` |
-| **pending** | Verificación enviada, esperando revisión | `practitioner` |
-| **approved** | Verificación aprobada por admin | `practitioner` + `practitioner-verified` |
-| **rejected** | Verificación rechazada | `practitioner` (sin verified) |
+| Estado           | Descripción                               | Rol en Keycloak                          |
+| ---------------- | ----------------------------------------- | ---------------------------------------- |
+| **Sin rol**      | Usuario no tiene rol practitioner         | Ninguno                                  |
+| **practitioner** | Usuario tiene rol pero no está verificado | `practitioner`                           |
+| **pending**      | Verificación enviada, esperando revisión  | `practitioner`                           |
+| **approved**     | Verificación aprobada por admin           | `practitioner` + `practitioner-verified` |
+| **rejected**     | Verificación rechazada                    | `practitioner` (sin verified)            |
 
 ---
 
@@ -296,6 +298,7 @@ echo "✅ Rol practitioner asignado a ${USERNAME}"
 ### Problema: No puedo asignar el rol
 
 **Solución:**
+
 - Verifica que el rol `practitioner` exista en el realm
 - Verifica que tengas permisos de administrador
 - Verifica que el usuario exista
@@ -303,6 +306,7 @@ echo "✅ Rol practitioner asignado a ${USERNAME}"
 ### Problema: El usuario no aparece en la lista de roles
 
 **Solución:**
+
 - Asegúrate de estar en el realm correcto ("carecore")
 - Verifica que el rol sea un realm role (no client role)
 - Refresca la página
@@ -310,6 +314,7 @@ echo "✅ Rol practitioner asignado a ${USERNAME}"
 ### Problema: El rol no aparece en el token JWT
 
 **Solución:**
+
 - Verifica que el cliente tenga el scope "roles" (ya configurado)
 - Verifica que el rol esté asignado al usuario
 - Prueba obtener un nuevo token después de asignar el rol
@@ -327,4 +332,3 @@ echo "✅ Rol practitioner asignado a ${USERNAME}"
 
 **Última actualización:** 2025-12-06
 **Keycloak Version:** 25.0.4
-

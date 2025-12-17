@@ -29,6 +29,7 @@ Esta guía explica cómo hacer backup y restore de la configuración de Keycloak
    - Se descargará un archivo JSON
 
 3. **Guardar el archivo:**
+
    ```bash
    # Crear directorio de backups (si no existe)
    mkdir -p keycloak/backups
@@ -294,6 +295,7 @@ echo "📄 Información: ${BACKUP_DIR}/backup-info-${TIMESTAMP}.txt"
 ```
 
 Hacer el script ejecutable:
+
 ```bash
 chmod +x scripts/backup-keycloak.sh
 ```
@@ -373,11 +375,13 @@ find keycloak/backups -name "*.txt" -mtime +30 -delete
 ### Procedimiento Completo
 
 1. **Detener servicios:**
+
    ```bash
    docker-compose down
    ```
 
 2. **Restore de base de datos:**
+
    ```bash
    # Iniciar solo PostgreSQL
    docker-compose up -d postgres
@@ -394,6 +398,7 @@ find keycloak/backups -name "*.txt" -mtime +30 -delete
    ```
 
 3. **Restore del realm (si es necesario):**
+
    ```bash
    # Iniciar Keycloak
    docker-compose up -d keycloak
@@ -410,6 +415,7 @@ find keycloak/backups -name "*.txt" -mtime +30 -delete
    ```
 
 4. **Verificar:**
+
    ```bash
    # Verificar que Keycloak esté funcionando
    curl http://localhost:${KEYCLOAK_HTTP_PORT}
@@ -442,4 +448,3 @@ find keycloak/backups -name "*.txt" -mtime +30 -delete
 3. **Restore elimina datos actuales:**
    - Siempre hacer backup antes de restore
    - Verificar que el backup sea correcto antes de restore
-

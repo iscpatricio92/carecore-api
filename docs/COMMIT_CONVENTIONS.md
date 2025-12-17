@@ -27,33 +27,33 @@ test(api): agregar tests para módulo de autenticación
 
 ## Tipos de Commits
 
-| Tipo | Descripción | Ejemplo |
-|------|-------------|---------|
-| `feat` | Nueva funcionalidad | `feat(api): agregar endpoint de pacientes` |
-| `fix` | Corrección de bug | `fix(web): corregir error de validación` |
-| `docs` | Cambios en documentación | `docs(docs): actualizar README` |
-| `style` | Cambios de formato (no afectan código) | `style(api): formatear código con Prettier` |
-| `refactor` | Refactorización de código | `refactor(shared): reorganizar tipos FHIR` |
-| `perf` | Mejora de rendimiento | `perf(api): optimizar consultas a base de datos` |
-| `test` | Agregar o modificar tests | `test(api): agregar tests para módulo FHIR` |
-| `build` | Cambios en sistema de build | `build(docker): actualizar Dockerfile` |
-| `ci` | Cambios en CI/CD | `ci: actualizar workflows de GitHub Actions` |
-| `chore` | Tareas de mantenimiento | `chore(root): actualizar dependencias` |
-| `revert` | Revertir commit anterior | `revert(api): revertir cambio en autenticación` |
+| Tipo       | Descripción                            | Ejemplo                                          |
+| ---------- | -------------------------------------- | ------------------------------------------------ |
+| `feat`     | Nueva funcionalidad                    | `feat(api): agregar endpoint de pacientes`       |
+| `fix`      | Corrección de bug                      | `fix(web): corregir error de validación`         |
+| `docs`     | Cambios en documentación               | `docs(docs): actualizar README`                  |
+| `style`    | Cambios de formato (no afectan código) | `style(api): formatear código con Prettier`      |
+| `refactor` | Refactorización de código              | `refactor(shared): reorganizar tipos FHIR`       |
+| `perf`     | Mejora de rendimiento                  | `perf(api): optimizar consultas a base de datos` |
+| `test`     | Agregar o modificar tests              | `test(api): agregar tests para módulo FHIR`      |
+| `build`    | Cambios en sistema de build            | `build(docker): actualizar Dockerfile`           |
+| `ci`       | Cambios en CI/CD                       | `ci: actualizar workflows de GitHub Actions`     |
+| `chore`    | Tareas de mantenimiento                | `chore(root): actualizar dependencias`           |
+| `revert`   | Revertir commit anterior               | `revert(api): revertir cambio en autenticación`  |
 
 ## Scopes
 
 Los scopes identifican la parte del monorepo afectada por el cambio:
 
-| Scope | Descripción | Ejemplo |
-|-------|-------------|---------|
-| `api` | Backend API (NestJS) | `feat(api): agregar endpoint de pacientes` |
-| `web` | Frontend Web (Next.js) | `fix(web): corregir error de login` |
-| `mobile` | Frontend Mobile (React Native) | `feat(mobile): agregar pantalla de perfil` |
-| `shared` | Código compartido (types, constants, utils) | `feat(shared): agregar tipos FHIR` |
-| `infra` | Infraestructura (Docker, scripts, config, CI/CD) | `build(infra): actualizar docker-compose` |
-| `keycloak` | Configuración de Keycloak | `build(keycloak): agregar nuevos roles` |
-| `root` | Cambios en root (docs, package.json, etc.) | `chore(root): actualizar package.json` |
+| Scope      | Descripción                                      | Ejemplo                                    |
+| ---------- | ------------------------------------------------ | ------------------------------------------ |
+| `api`      | Backend API (NestJS)                             | `feat(api): agregar endpoint de pacientes` |
+| `web`      | Frontend Web (Next.js)                           | `fix(web): corregir error de login`        |
+| `mobile`   | Frontend Mobile (React Native)                   | `feat(mobile): agregar pantalla de perfil` |
+| `shared`   | Código compartido (types, constants, utils)      | `feat(shared): agregar tipos FHIR`         |
+| `infra`    | Infraestructura (Docker, scripts, config, CI/CD) | `build(infra): actualizar docker-compose`  |
+| `keycloak` | Configuración de Keycloak                        | `build(keycloak): agregar nuevos roles`    |
+| `root`     | Cambios en root (docs, package.json, etc.)       | `chore(root): actualizar package.json`     |
 
 ### Scope Personalizado
 
@@ -204,13 +204,13 @@ Los nombres de branches deben seguir un formato específico para mantener la con
 
 ### Componentes
 
-| Componente | Descripción | Ejemplo |
-|------------|-------------|---------|
-| `<tipo>` | Tipo de cambio (mismo que en commits) | `feat`, `fix`, `docs`, etc. |
-| `<scope>` | Scope del cambio (mismo que en commits) | `api`, `web`, `mobile`, etc. |
-| `<iniciales>` | Iniciales del desarrollador (minúsculas) | `ps`, `jd`, `am` |
-| `<numero>` | Número de tarea/issue (solo números) | `123`, `456`, `789` |
-| `<descripcion>` | Descripción corta (minúsculas, guiones) | `agregar-endpoint-pacientes` |
+| Componente      | Descripción                              | Ejemplo                      |
+| --------------- | ---------------------------------------- | ---------------------------- |
+| `<tipo>`        | Tipo de cambio (mismo que en commits)    | `feat`, `fix`, `docs`, etc.  |
+| `<scope>`       | Scope del cambio (mismo que en commits)  | `api`, `web`, `mobile`, etc. |
+| `<iniciales>`   | Iniciales del desarrollador (minúsculas) | `ps`, `jd`, `am`             |
+| `<numero>`      | Número de tarea/issue (solo números)     | `123`, `456`, `789`          |
+| `<descripcion>` | Descripción corta (minúsculas, guiones)  | `agregar-endpoint-pacientes` |
 
 ### Ejemplos
 
@@ -252,6 +252,7 @@ Para facilitar la creación de branches con el formato correcto, usa el script h
 ```
 
 **Ejemplo:**
+
 ```bash
 ./scripts/create-branch.sh feat api ps 123 agregar-endpoint-pacientes
 ```
@@ -261,6 +262,7 @@ Esto creará el branch: `feat(api)/ps-#123/agregar-endpoint-pacientes`
 ### Branches Principales
 
 Los siguientes branches están exentos de la validación:
+
 - `main`
 - `master`
 - `develop`
@@ -272,4 +274,3 @@ Los siguientes branches están exentos de la validación:
 - [Conventional Commits](https://www.conventionalcommits.org/)
 - [Commitizen](https://github.com/commitizen/cz-cli)
 - [Commitlint](https://commitlint.js.org/)
-

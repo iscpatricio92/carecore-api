@@ -137,6 +137,7 @@ Este documento describe la arquitectura de Keycloak en el proyecto CareCore.
 ### 1. Realm: "carecore"
 
 El realm "carecore" es el contenedor principal de configuración:
+
 - **Usuarios:** Pacientes, practitioners, administradores
 - **Clientes:** carecore-api, carecore-web
 - **Roles:** patient, practitioner, viewer, lab, insurer, system, admin, audit
@@ -145,12 +146,14 @@ El realm "carecore" es el contenedor principal de configuración:
 ### 2. Cliente: "carecore-api"
 
 **Tipo:** Confidential
+
 - **Propósito:** Autenticación del backend NestJS
 - **Grant Type:** Client Credentials
 - **Service Account:** Habilitado
 - **Client Secret:** Requerido (almacenado en `.env.local`)
 
 **Uso:**
+
 - Backend obtiene tokens para llamadas internas
 - Validación de tokens de usuarios
 - Gestión de usuarios y roles
@@ -158,12 +161,14 @@ El realm "carecore" es el contenedor principal de configuración:
 ### 3. Cliente: "carecore-web"
 
 **Tipo:** Public
+
 - **Propósito:** Autenticación del frontend (web/mobile)
 - **Grant Type:** Authorization Code
 - **PKCE:** Habilitado (S256)
 - **Client Secret:** No requerido (cliente público)
 
 **Uso:**
+
 - Usuarios inician sesión desde frontend
 - Obtienen tokens para acceder a la API
 - Refresh tokens para renovar sesiones
@@ -171,6 +176,7 @@ El realm "carecore" es el contenedor principal de configuración:
 ### 4. Roles del Sistema
 
 **Roles Base:**
+
 - `patient` - Usuario paciente
 - `practitioner` - Profesional médico
 - `viewer` - Acceso temporal de solo lectura
@@ -181,12 +187,14 @@ El realm "carecore" es el contenedor principal de configuración:
 - `audit` - Auditoría
 
 **Jerarquía (Futuro):**
+
 - Roles compuestos para simplificar gestión
 - Roles anidados para permisos granulares
 
 ### 5. Base de Datos
 
 **PostgreSQL:**
+
 - **Base de datos:** `keycloak_db`
 - **Almacena:**
   - Configuración de realms
@@ -310,4 +318,3 @@ El realm "carecore" es el contenedor principal de configuración:
 - [OpenID Connect Specification](https://openid.net/connect/)
 - [PKCE Specification](https://oauth.net/2/pkce/)
 - [NestJS Authentication](https://docs.nestjs.com/security/authentication)
-

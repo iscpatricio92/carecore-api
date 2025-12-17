@@ -17,6 +17,7 @@ Configurar el cliente OAuth2/OIDC "carecore-web" de tipo public con PKCE para qu
 ### Paso 1: Acceder a Admin Console
 
 1. Iniciar servicios (si no están corriendo):
+
    ```bash
    npm run docker:up
    ```
@@ -126,6 +127,7 @@ Configurar el cliente OAuth2/OIDC "carecore-web" de tipo public con PKCE para qu
 Puedes probar la configuración usando el Authorization Code Flow con PKCE desde el frontend. Esto requiere implementar el flujo OAuth2 en el frontend.
 
 **Ejemplo de URL de autorización:**
+
 ```
 http://localhost:8080/realms/carecore/protocol/openid-connect/auth?
   client_id=carecore-web&
@@ -141,6 +143,7 @@ http://localhost:8080/realms/carecore/protocol/openid-connect/auth?
 ## 📝 Configuración Aplicada
 
 ### Settings Generales
+
 - **Client ID:** carecore-web
 - **Client Type:** OpenID Connect
 - **Access Type:** public (sin Client Secret)
@@ -149,16 +152,18 @@ http://localhost:8080/realms/carecore/protocol/openid-connect/auth?
 - **PKCE:** ON (S256)
 
 ### URLs
+
 - **Root URL:** http://localhost:3001
 - **Valid Redirect URIs:**
   - http://localhost:3001/auth/callback
-  - http://localhost:3001/auth/callback/*
+  - http://localhost:3001/auth/callback/\*
   - http://localhost:3000/auth/callback (si aplica)
 - **Web Origins:**
   - http://localhost:3001
   - http://localhost:3000
 
 ### Tokens
+
 - **Access Token Lifespan:** 15 minutes
 - **Client Session Idle:** 30 minutes
 - **Client Session Max:** 10 hours
@@ -207,6 +212,7 @@ Para validar que el cliente está configurado correctamente sin tener un fronten
 **📖 Ver guía completa:** [CLIENT_WEB_VALIDATION.md](./CLIENT_WEB_VALIDATION.md)
 
 **Método rápido:**
+
 ```bash
 ./scripts/verify-web-client.sh
 ```
@@ -216,6 +222,7 @@ Este script verifica toda la configuración del cliente automáticamente.
 ## 📚 Próximos Pasos
 
 Después de configurar el cliente, continúa con:
+
 - [Tarea #7: Definir roles base](../docs/tasks/PHASE1_KEYCLOAK_SETUP.md#tarea-7-definir-roles-base-en-keycloak)
 - [Tarea #8: Documentar setup de Keycloak](../docs/tasks/PHASE1_KEYCLOAK_SETUP.md#tarea-8-documentar-setup-de-keycloak)
 - [Fase 2: Integración NestJS](../docs/AUTH_IMPLEMENTATION_PLAN.md#fase-2-integración-nestjs)
