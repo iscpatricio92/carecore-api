@@ -3,12 +3,14 @@
 ## ✅ Configuración Actual: Expo SDK 54 + React 19
 
 ### Estado
+
 - **Web**: ✅ **FUNCIONAL** - Funciona correctamente con SDK 54
 - **iOS**: ✅ **FUNCIONAL** - Desarrollo bare (`npx expo run:ios`)
 - **Android**: ✅ **FUNCIONAL** - Configurado para usar emulador Pixel_5 por defecto
 - **Versiones**: Expo SDK 54, React 19.1.0, React Native 0.81.5
 
 ### Nota sobre Expo Go
+
 - **Expo Go**: ❌ No funciona (nueva arquitectura habilitada)
 - **Solución**: Usar desarrollo bare en todas las plataformas
 
@@ -17,6 +19,7 @@
 Para ejecutar la app en Android, necesitas:
 
 #### Opción 1: Emulador Android (Recomendado para desarrollo)
+
 1. **Instalar Android Studio**: [Descargar Android Studio](https://developer.android.com/studio)
 2. **Configurar AVD (Android Virtual Device)**:
    - Abre Android Studio
@@ -34,6 +37,7 @@ Para ejecutar la app en Android, necesitas:
    ```
 
 #### Opción 2: Dispositivo Físico
+
 1. **Habilitar Modo Desarrollador**:
    - Ve a `Configuración` → `Acerca del teléfono`
    - Toca 7 veces en "Número de compilación"
@@ -54,6 +58,7 @@ Para ejecutar la app en Android, necesitas:
    ```
 
 #### Verificar instalación de Android SDK
+
 ```bash
 # Verificar que Android SDK está configurado
 echo $ANDROID_HOME

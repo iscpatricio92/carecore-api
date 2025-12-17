@@ -43,17 +43,21 @@ npm run android
 ## ⚠️ Solución de Problemas
 
 ### Error: "Unable to locate a Java Runtime"
+
 1. **Recarga la terminal**:
+
    ```bash
    source ~/.zshrc
    ```
 
 2. **Verifica que Java esté instalado**:
+
    ```bash
    brew list openjdk@17
    ```
 
 3. **Si no está instalado, instálalo**:
+
    ```bash
    brew install openjdk@17
    ```
@@ -65,12 +69,15 @@ npm run android
    ```
 
 ### Error: "JAVA_HOME is not set"
+
 1. **Verifica que JAVA_HOME esté en `.zshrc`**:
+
    ```bash
    grep JAVA_HOME ~/.zshrc
    ```
 
 2. **Si no está, agrega estas líneas a `~/.zshrc`**:
+
    ```bash
    export JAVA_HOME=/opt/homebrew/opt/openjdk@17
    export PATH=$JAVA_HOME/bin:$PATH
@@ -82,6 +89,7 @@ npm run android
    ```
 
 ### Verificar que Gradle encuentra Java
+
 ```bash
 cd packages/mobile/android
 ./gradlew --version
