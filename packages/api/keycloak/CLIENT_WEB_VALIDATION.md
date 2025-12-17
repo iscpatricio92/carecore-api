@@ -13,6 +13,7 @@ Usa el script de verificación que valida toda la configuración:
 ```
 
 **Variables requeridas en `.env.local`:**
+
 - `KEYCLOAK_URL`
 - `KEYCLOAK_REALM`
 - `KEYCLOAK_ADMIN`
@@ -20,6 +21,7 @@ Usa el script de verificación que valida toda la configuración:
 - `KEYCLOAK_WEB_CLIENT_ID` (ejemplo: `carecore-web`)
 
 **El script verifica:**
+
 - ✅ Que Keycloak esté corriendo
 - ✅ Que el realm "carecore" exista
 - ✅ Que el cliente "carecore-web" exista
@@ -53,6 +55,7 @@ curl -s -X GET "${KEYCLOAK_URL}/admin/realms/${KEYCLOAK_REALM}/clients?clientId=
 ```
 
 **Salida esperada:**
+
 ```json
 {
   "clientId": "carecore-web",
@@ -64,21 +67,26 @@ curl -s -X GET "${KEYCLOAK_URL}/admin/realms/${KEYCLOAK_REALM}/clients?clientId=
 #### Paso 2: Probar Endpoint de Autorización
 
 # Cargar variables de entorno
+
 source .env.local 2>/dev/null || true
 
 # Generar code_verifier y code_challenge para PKCE
+
 CODE_VERIFIER=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-43)
 CODE_CHALLENGE=$(echo -n "$CODE_VERIFIER" | openssl dgst -binary -sha256 | openssl base64 | tr -d "=+/" | cut -c1-43)
 
 # Construir URL de autorización (usar variables de entorno)
+
 AUTH_URL="${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/auth"
 REDIRECT_URI="${KEYCLOAK_WEB_REDIRECT_URI:-http://localhost:3001/auth/callback}"
 
 FULL_URL="${AUTH_URL}?client_id=carecore-web&redirect_uri=${REDIRECT_URI}&response_type=code&scope=openid&code_challenge=${CODE_CHALLENGE}&code_challenge_method=S256"
 
 # Probar (debería redirigir o mostrar página de login)
+
 curl -I "$FULL_URL"
-```
+
+````
 
 **Resultado esperado:**
 - HTTP 302 (redirect) o HTTP 200 (página de login)
@@ -158,7 +166,7 @@ Puedes usar herramientas online de testing OAuth2 como:
 1. Verificar credenciales en `.env.local`:
    ```bash
    grep KEYCLOAK_ADMIN .env.local
-   ```
+````
 
 2. Verificar que Keycloak esté corriendo:
    ```bash
@@ -190,4 +198,3 @@ Puedes usar herramientas online de testing OAuth2 como:
 - [CLIENT_WEB_SETUP.md](./CLIENT_WEB_SETUP.md) - Guía de configuración
 - [Keycloak Admin REST API](https://www.keycloak.org/docs-api/latest/rest-api/)
 - [OAuth2 PKCE](https://oauth.net/2/pkce/)
-

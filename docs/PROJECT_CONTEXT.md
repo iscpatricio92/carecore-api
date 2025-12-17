@@ -232,6 +232,7 @@ El proyecto fue creado para **empoderar a los pacientes** dándoles control real
 ### Recursos FHIR Implementados
 
 ✅ **Completados:**
+
 - `Patient` - Perfil del paciente
 - `Practitioner` - Profesionales médicos
 - `Encounter` - Consultas/visitas médicas
@@ -239,6 +240,7 @@ El proyecto fue creado para **empoderar a los pacientes** dándoles control real
 - `Consent` - Consentimientos informados para compartir información
 
 ⏳ **Pendientes:**
+
 - `Observation` - Signos vitales, resultados de exámenes
 - `Condition` - Diagnósticos
 - `Medication` - Medicamentos
@@ -248,6 +250,7 @@ El proyecto fue creado para **empoderar a los pacientes** dándoles control real
 ### Modelo de Datos
 
 **Estrategia de Almacenamiento:**
+
 - Todos los recursos FHIR se almacenan como **JSONB** en PostgreSQL
 - Campos comunes extraídos para indexación y búsquedas eficientes
 - Soft delete implementado (campo `deletedAt`) para mantener historial
@@ -309,6 +312,7 @@ AuditLogEntity
 ```
 
 **Relaciones:**
+
 - Las relaciones entre recursos FHIR se manejan mediante **referencias** (strings) en lugar de foreign keys
 - Ejemplo: `Encounter.subject` contiene `"Patient/123"` como referencia
 - Esto permite flexibilidad y compatibilidad con estándares FHIR
@@ -324,6 +328,7 @@ Usuario → Keycloak (Login) → JWT Token → API (Validación) → Acceso a Re
 ```
 
 **Pasos:**
+
 1. Usuario inicia sesión en Keycloak (OAuth2/OIDC)
 2. Keycloak valida credenciales y genera JWT token
 3. Token incluye: `sub`, `roles`, `scopes`, `preferred_username`
@@ -338,6 +343,7 @@ Usuario → Solicita Verificación → Upload Documentos → Admin Revisa → Ap
 ```
 
 **Pasos:**
+
 1. Usuario con cuenta solicita verificación como practitioner
 2. Upload de documentos (cédula/licencia médica)
 3. Sistema crea registro en `PractitionerVerification`
@@ -352,6 +358,7 @@ Practitioner Autenticado → POST /api/fhir/Encounter → Validación de Rol/Sco
 ```
 
 **Pasos:**
+
 1. Practitioner autenticado con token JWT válido
 2. Request a endpoint FHIR con datos del encounter
 3. `JwtAuthGuard` valida autenticación
@@ -368,6 +375,7 @@ Paciente → Crea Consent → Especifica Practitioner/Institución → Consent A
 ```
 
 **Pasos:**
+
 1. Paciente autenticado crea recurso `Consent`
 2. Especifica con quién compartir (practitioner, institución)
 3. Define duración y alcance del consentimiento
@@ -382,6 +390,7 @@ App Externa → Launch URL → Keycloak Auth → Token con Contexto → Acceso a
 ```
 
 **Pasos:**
+
 1. Aplicación externa inicia launch sequence
 2. Redirige a Keycloak para autenticación
 3. Usuario se autentica y autoriza aplicación
@@ -396,12 +405,14 @@ App Externa → Launch URL → Keycloak Auth → Token con Contexto → Acceso a
 ### Fases Completadas ✅
 
 #### Fase 1: MVP - Historial Clínico Básico ✅
+
 - CRUD completo de Patient, Practitioner, Encounter
 - Estructura FHIR base implementada
 - Endpoints `/api/fhir/*` funcionales
 - Metadata endpoint (`/api/fhir/metadata`)
 
 #### Fase 2: Funcionalidades Core ✅
+
 - DocumentReference (documentos clínicos)
 - Consent (consentimientos informados)
 - Migración a base de datos (TypeORM)
@@ -409,6 +420,7 @@ App Externa → Launch URL → Keycloak Auth → Token con Contexto → Acceso a
 - Sistema de migraciones
 
 #### Fase 3: Seguridad Avanzada y Verificación ✅
+
 - OAuth2/OIDC con Keycloak
 - JWT Authentication
 - Role-Based Authorization
@@ -417,6 +429,7 @@ App Externa → Launch URL → Keycloak Auth → Token con Contexto → Acceso a
 - Scopes y permisos granulares (OAuth2 scopes para recursos FHIR)
 
 #### Fase 4: SMART on FHIR ✅
+
 - Integración SMART on FHIR
 - Launch sequence implementado
 - Token exchange con contexto de paciente
@@ -427,12 +440,14 @@ App Externa → Launch URL → Keycloak Auth → Token con Contexto → Acceso a
 **Estado:** En progreso (3/14 tareas completadas)
 
 **Completado:**
+
 - ✅ Tests unitarios para módulo auth (mayoría)
 - ✅ Tests unitarios para guards
 - ✅ Tests unitarios para strategies
 - ✅ Documentación de scopes OAuth2
 
 **Pendiente:**
+
 - ⏳ Tests E2E completos
 - ⏳ Documentación de flujos de autenticación
 - ⏳ Documentación de roles y permisos
@@ -477,6 +492,7 @@ Scopes granulares para control de acceso a recursos FHIR:
 ### Verificación de Practitioners
 
 Flujo completo de verificación:
+
 1. Usuario solicita verificación como practitioner
 2. Upload de documentos (cédula/licencia médica)
 3. Revisión manual por administrador
@@ -639,6 +655,7 @@ make format        # Formatear código
 ### Documentación Temporal ⚠️
 
 Archivos en `docs/tasks/` son temporales y pueden ser eliminados una vez completadas las tareas:
+
 - `PHASE1_KEYCLOAK_SETUP.md`
 - `PHASE2_NESTJS_INTEGRATION.md`
 - `PHASE3_SECURITY_AND_VERIFICATION.md`
@@ -696,6 +713,7 @@ Archivos en `docs/tasks/` son temporales y pueden ser eliminados una vez complet
 ### Próximas Fases
 
 **Fase 6: Integraciones con IA** ⏳
+
 - Búsqueda semántica en historiales clínicos
 - Extracción de información con NLP
 - Resumen clínico automático
@@ -703,12 +721,14 @@ Archivos en `docs/tasks/` son temporales y pueden ser eliminados una vez complet
 - Pipeline MLOps clínico
 
 **Fase 7: Integraciones Externas** ⏳
+
 - Integración con laboratorios (SMART on FHIR)
 - Integración con aseguradoras
 - Integración con clínicas y hospitales
 - CDS Hooks para decisiones clínicas
 
 **Fase 8: Frontend** ⏳
+
 - Aplicación web (Next.js)
 - Aplicación móvil (React Native)
 - Panel de administración
@@ -838,4 +858,3 @@ Ver [CONTRIBUTING.md](CONTRIBUTING.md) para más detalles.
 **Última actualización:** 2025-01-27
 **Versión:** 1.1
 **Mantenido por:** Equipo CareCore
-

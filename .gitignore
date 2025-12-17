@@ -117,3 +117,7 @@ packages/api/keycloak/realms/*-*.json
 
 # Keycloak backups (contienen información sensible: usuarios, secrets, etc.)
 packages/api/keycloak/backups/
+
+.expo/
+android/
+ios/

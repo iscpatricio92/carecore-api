@@ -8,7 +8,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build --workspace=@carecore/api",
+    "build": "npm run build:shared && npm run build --workspace=@carecore/api",
     "build:shared": "npm run build --workspace=@carecore/shared",
     "test": "echo 'select specific package to test: api, web, mobile. use npm run test:<package>'",
     "test:api": "npm run test --workspace=@carecore/api",
@@ -23,8 +23,8 @@
     "test:all": "npm run test:api && npm run test:api:e2e",
     "test:all:packages": "npm run test:api && npm run test:web && npm run test:mobile",
     "lint": "npm run lint --workspace=@carecore/api",
-    "format": "prettier --write \"**/*.{ts,js,json,md,yml,yaml}\" --ignore-path .gitignore",
-    "format:check": "prettier --check \"**/*.{ts,js,json,md,yml,yaml}\" --ignore-path .gitignore",
+    "format": "prettier --write \"**/*.{ts,js,json,md,yml,yaml}\" --ignore-path .prettierignore",
+    "format:check": "prettier --check \"**/*.{ts,js,json,md,yml,yaml}\" --ignore-path .prettierignore",
     "commit": "cz",
     "prepare": "husky install",
     "test:changed": "bash scripts/run-tests-for-packages.sh",
@@ -33,16 +33,16 @@
   },
   "lint-staged": {
     "packages/api/**/*.{ts,js}": [
-      "bash -c 'npm run lint --workspace=@carecore/api -- --fix'",
-      "prettier --write"
+      "prettier --write",
+      "bash -c 'npm run lint --workspace=@carecore/api -- --fix'"
     ],
     "packages/web/**/*.{ts,js,tsx,jsx}": [
-      "bash -c 'npm run lint --workspace=@carecore/web -- --fix'",
-      "prettier --write"
+      "prettier --write",
+      "bash -c 'npm run lint --workspace=@carecore/web -- --fix'"
     ],
     "packages/mobile/**/*.{ts,js,tsx,jsx}": [
-      "bash -c 'npm run lint --workspace=@carecore/mobile -- --fix'",
-      "prettier --write"
+      "prettier --write",
+      "bash -c 'npm run lint --workspace=@carecore/mobile -- --fix'"
     ],
     "packages/shared/**/*.{ts,js}": [
       "prettier --write"

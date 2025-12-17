@@ -82,9 +82,11 @@ RUN addgroup -g 1001 -S nodejs && \
     adduser -S nestjs -u 1001
 
 # Copy production dependencies from dependencies stage
+# In npm workspaces, dependencies may be hoisted to root node_modules, so workspace node_modules may not exist
 COPY --from=dependencies --chown=nestjs:nodejs /app/node_modules ./node_modules
-COPY --from=dependencies --chown=nestjs:nodejs /app/packages/api/node_modules ./packages/api/node_modules
-COPY --from=dependencies --chown=nestjs:nodejs /app/packages/shared/node_modules ./packages/shared/node_modules
+# Create workspace directories structure (needed for module resolution even if node_modules don't exist in workspaces)
+# npm workspaces hoist dependencies to root, so workspace node_modules may be empty or non-existent
+RUN mkdir -p ./packages/api/node_modules ./packages/shared/node_modules
 
 # Copy built application from build stage
 COPY --from=build --chown=nestjs:nodejs /app/packages/api/dist ./packages/api/dist

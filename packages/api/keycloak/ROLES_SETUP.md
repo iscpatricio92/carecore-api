@@ -16,6 +16,7 @@ Crear todos los roles base del sistema que definirán los permisos y acceso de l
 ### Paso 1: Acceder a Admin Console
 
 1. Iniciar servicios (si no están corriendo):
+
    ```bash
    npm run docker:up
    ```
@@ -45,6 +46,7 @@ Crear todos los roles base del sistema que definirán los permisos y acceso de l
 - **Composites:** Ninguno (rol base)
 
 **Permisos:**
+
 - ✅ Leer sus propios datos médicos
 - ✅ Dar consentimiento para compartir información
 - ✅ Revocar consentimientos
@@ -60,6 +62,7 @@ Crear todos los roles base del sistema que definirán los permisos y acceso de l
 - **Composites:** Ninguno (rol base)
 
 **Permisos:**
+
 - ✅ Crear registros clínicos (Encounter, Observation, Condition, etc.)
 - ✅ Actualizar registros clínicos
 - ✅ Leer datos de pacientes asignados
@@ -76,6 +79,7 @@ Crear todos los roles base del sistema que definirán los permisos y acceso de l
 - **Composites:** Ninguno (rol base)
 
 **Permisos:**
+
 - ✅ Leer datos con consentimiento explícito
 - ✅ Acceso temporal (limitado por tiempo)
 - ✅ Scopes limitados según consentimiento
@@ -89,6 +93,7 @@ Crear todos los roles base del sistema que definirán los permisos y acceso de l
 - **Composites:** Ninguno (rol base)
 
 **Permisos:**
+
 - ✅ Crear resultados de laboratorio (Observation)
 - ✅ Leer resultados de laboratorio
 - ✅ Scopes limitados a datos de laboratorio
@@ -102,6 +107,7 @@ Crear todos los roles base del sistema que definirán los permisos y acceso de l
 - **Composites:** Ninguno (rol base)
 
 **Permisos:**
+
 - ✅ Leer datos con consentimiento explícito
 - ✅ Scopes limitados según consentimiento
 - ✅ Acceso a información necesaria para seguros
@@ -115,6 +121,7 @@ Crear todos los roles base del sistema que definirán los permisos y acceso de l
 - **Composites:** Ninguno (rol base)
 
 **Permisos:**
+
 - ✅ Scopes específicos según integración
 - ✅ Acceso según configuración de integración
 - ⚠️ Permisos definidos caso por caso
@@ -126,6 +133,7 @@ Crear todos los roles base del sistema que definirán los permisos y acceso de l
 - **Composites:** Ninguno (rol base)
 
 **Permisos:**
+
 - ✅ Acceso completo al sistema
 - ✅ Gestión de usuarios
 - ✅ Verificación de practitioners
@@ -140,6 +148,7 @@ Crear todos los roles base del sistema que definirán los permisos y acceso de l
 - **Composites:** Ninguno (rol base)
 
 **Permisos:**
+
 - ✅ Leer logs de auditoría
 - ✅ Acceso a operaciones internas
 - ✅ Ver historial de accesos
@@ -170,10 +179,12 @@ Crear todos los roles base del sistema que definirán los permisos y acceso de l
 En el futuro, puedes crear roles compuestos para simplificar la gestión:
 
 **Ejemplo:**
+
 - Rol `practitioner-verified` que incluye `practitioner` + permisos adicionales
 - Rol `patient-premium` que incluye `patient` + permisos adicionales
 
 Para configurar roles compuestos:
+
 1. Ir a **Realm roles** → Seleccionar rol
 2. Ir a pestaña **Composite roles**
 3. Agregar roles base como composites
@@ -192,6 +203,7 @@ Para configurar roles compuestos:
 ### Asignar Roles a Clientes (Service Accounts)
 
 Para clientes que usan Service Accounts (como `carecore-api`):
+
 1. Ir a **Clients** → `carecore-api`
 2. Ir a pestaña **Service account roles**
 3. Asignar roles según necesidades del servicio
@@ -199,6 +211,7 @@ Para clientes que usan Service Accounts (como `carecore-api`):
 ## 📚 Próximos Pasos
 
 Después de crear los roles, continúa con:
+
 - [Tarea #8: Documentar setup de Keycloak](../docs/tasks/PHASE1_KEYCLOAK_SETUP.md#tarea-8-documentar-setup-de-keycloak)
 - [Fase 2: Integración NestJS](../docs/AUTH_IMPLEMENTATION_PLAN.md#fase-2-integración-nestjs)
   - Implementar `RolesGuard`
@@ -230,4 +243,3 @@ Después de crear los roles, continúa con:
 - [Keycloak Roles Documentation](https://www.keycloak.org/docs/latest/server_admin/#_roles)
 - [Keycloak Composite Roles](https://www.keycloak.org/docs/latest/server_admin/#_composite_roles)
 - [Keycloak Role Mappings](https://www.keycloak.org/docs/latest/server_admin/#_role_mappings)
-

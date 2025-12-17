@@ -20,6 +20,7 @@ Todos los scripts en este directorio son **seguros para commitear** porque:
 ## 📋 Archivos en este Directorio
 
 ### Scripts (✅ Seguros para commitear)
+
 - `setup-keycloak.sh` - Script maestro
 - `create-roles.sh` - Crea roles base
 - `create-api-client.sh` - Crea cliente API
@@ -27,6 +28,7 @@ Todos los scripts en este directorio son **seguros para commitear** porque:
 - `README.md` - Documentación
 
 ### Archivos de Configuración
+
 - `carecore-realm.json` (en `../realms/`) - Plantilla base del realm (✅ Seguro, solo configuración)
 
 ## ⚠️ Archivos que NO deben Commitearse
@@ -70,4 +72,3 @@ git check-ignore .env.local
 - Los scripts **verifican** si los recursos ya existen antes de crearlos
 - El Client Secret se **muestra** pero no se guarda en ningún archivo (solo en consola)
 - Todos los datos sensibles se leen de `.env.local` que está en `.gitignore`
-

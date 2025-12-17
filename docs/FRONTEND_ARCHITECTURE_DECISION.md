@@ -9,12 +9,14 @@
 ## 📋 Contexto del Proyecto
 
 ### Situación Actual
+
 - ✅ **Backend:** NestJS (TypeScript) completamente implementado
 - ✅ **Interfaces TypeScript:** FHIR interfaces, User interface, constantes de scopes
 - ✅ **Experiencia del equipo:** TypeScript
 - ⏳ **Frontend:** Pendiente (web + mobile)
 
 ### Necesidades
+
 - **Web App:** Interfaz para pacientes y practitioners
 - **Mobile App:** Aplicación móvil nativa (iOS + Android)
 - **Código compartido:** Tipos, interfaces, constantes, utilidades
@@ -31,18 +33,21 @@
 **Ventajas para CareCore:**
 
 ✅ **Experiencia en TypeScript**
+
 - Tu equipo ya domina TypeScript
 - Código compartido directo entre backend y frontend
 - Mismo lenguaje = menos contexto switching
 - Mismas herramientas (ESLint, Prettier, Jest)
 
 ✅ **Código Compartido**
+
 - **Interfaces FHIR:** Puedes compartir `src/common/interfaces/fhir.interface.ts` directamente
 - **Constantes:** `FHIR_SCOPES`, `FHIR_RESOURCE_TYPES` reutilizables
 - **Tipos:** `User` interface, DTOs, etc.
 - **Utilidades:** Funciones de validación, formatters, etc.
 
 ✅ **Ecosistema Maduro**
+
 - React Native 0.73+ con soporte TypeScript nativo
 - Expo para desarrollo rápido (opcional)
 - Librerías FHIR disponibles (`fhir-kit-client`, `fhirclient`)
@@ -50,21 +55,25 @@
 - Comunidad grande y activa
 
 ✅ **Integración con Backend**
+
 - Mismo stack TypeScript facilita debugging
 - Compartir tipos elimina errores de sincronización
 - Mismas convenciones de código
 
 ✅ **Rendimiento**
+
 - Buen rendimiento para apps de salud (no juegos)
 - Hot reload rápido
 - Fácil debugging con React DevTools
 
 **Desventajas:**
+
 - ❌ Bundle size ligeramente mayor que Flutter
 - ❌ Algunos módulos nativos requieren linking manual (si no usas Expo)
 - ❌ Actualizaciones de React Native pueden requerir ajustes
 
 **Stack Recomendado:**
+
 ```typescript
 // React Native + TypeScript + Expo (opcional)
 - React Native 0.73+
@@ -79,12 +88,14 @@
 #### Flutter
 
 **Ventajas:**
+
 - ✅ Excelente rendimiento (compilado nativo)
 - ✅ UI consistente entre plataformas
 - ✅ Hot reload muy rápido
 - ✅ Bundle size más pequeño
 
 **Desventajas para CareCore:**
+
 - ❌ **Dart es un lenguaje nuevo** para tu equipo
 - ❌ **No puedes compartir código TypeScript** directamente
 - ❌ Necesitas reescribir todas las interfaces en Dart
@@ -94,6 +105,7 @@
 - ❌ Menos librerías OAuth2/OIDC disponibles
 
 **Conclusión Flutter:**
+
 - Solo recomendable si el equipo tiene experiencia en Dart
 - Requiere duplicar todo el código de tipos/interfaces
 - No aprovecha la experiencia existente en TypeScript
@@ -109,6 +121,7 @@
 **Ventajas para CareCore:**
 
 ✅ **Código Compartido Real**
+
 ```typescript
 // packages/shared/src/types/fhir.interface.ts
 // Usado por: backend, web, mobile
@@ -119,32 +132,38 @@ export const FHIR_SCOPES = { ... }
 ```
 
 ✅ **Type Safety End-to-End**
+
 - Cambios en backend se reflejan inmediatamente en frontend
 - TypeScript detecta errores en tiempo de compilación
 - No hay desincronización de tipos
 
 ✅ **Dependencias Coordinadas**
+
 - Mismas versiones de librerías compartidas
 - Actualizaciones sincronizadas
 - Menos problemas de compatibilidad
 
 ✅ **Desarrollo Simplificado**
+
 - Un solo `git clone`
 - Un solo `npm install` (o yarn/npm workspaces)
 - Scripts compartidos en root
 - CI/CD unificado
 
 ✅ **Refactoring Seguro**
+
 - Cambios en interfaces afectan todos los proyectos
 - TypeScript te avisa si rompes algo
 - Refactoring automático con herramientas
 
 ✅ **Herramientas Modernas**
+
 - **Nx:** Excelente para monorepos TypeScript
 - **Turborepo:** Build system rápido
 - **Yarn/NPM Workspaces:** Nativo, simple
 
 **Estructura Recomendada:**
+
 ```
 carecore/
 ├── packages/
@@ -167,6 +186,7 @@ carecore/
 ```
 
 **Herramientas Recomendadas:**
+
 - **NPM Workspaces** (simple, nativo)
 - **Turborepo** (build system rápido, caching)
 - **Nx** (más completo, pero más complejo)
@@ -174,11 +194,13 @@ carecore/
 #### Multi-repo
 
 **Ventajas:**
+
 - ✅ Repositorios independientes
 - ✅ Permisos granulares por repo
 - ✅ CI/CD independiente
 
 **Desventajas para CareCore:**
+
 - ❌ **Duplicación de código** (interfaces, constantes)
 - ❌ **Desincronización de tipos** (backend cambia, frontend no se entera)
 - ❌ **Mantenimiento duplicado** (mismo código en 3 lugares)
@@ -186,6 +208,7 @@ carecore/
 - ❌ **Refactoring complejo** (cambios en 3 repos)
 
 **Conclusión Multi-repo:**
+
 - Solo recomendable si los equipos son completamente independientes
 - Para CareCore (equipo pequeño/mediano), monorepo es mejor
 
@@ -198,6 +221,7 @@ carecore/
 #### 1. Frontend: **React Native + TypeScript**
 
 **Razones:**
+
 1. ✅ Aprovecha experiencia existente en TypeScript
 2. ✅ Código compartido directo con backend
 3. ✅ Ecosistema maduro para salud (FHIR, OAuth2)
@@ -205,11 +229,12 @@ carecore/
 5. ✅ Comunidad grande y soporte
 
 **Stack Específico:**
+
 ```json
 {
   "react-native": "^0.73.0",
   "typescript": "^5.3.0",
-  "expo": "^50.0.0",  // Opcional pero recomendado
+  "expo": "^50.0.0", // Opcional pero recomendado
   "@react-navigation/native": "^6.1.0",
   "@tanstack/react-query": "^5.0.0",
   "zustand": "^4.4.0",
@@ -220,6 +245,7 @@ carecore/
 #### 2. Estructura: **Monorepo con NPM Workspaces + Turborepo**
 
 **Razones:**
+
 1. ✅ Código compartido real (no duplicación)
 2. ✅ Type safety end-to-end
 3. ✅ Refactoring seguro
@@ -227,6 +253,7 @@ carecore/
 5. ✅ Dependencias coordinadas
 
 **Estructura:**
+
 ```
 carecore/
 ├── packages/
@@ -246,11 +273,13 @@ carecore/
 ### Fase 1: Preparar Monorepo (1-2 días)
 
 1. **Crear estructura de monorepo**
+
    ```bash
    mkdir -p packages/{api,shared,web,mobile}
    ```
 
 2. **Mover backend actual a `packages/api`**
+
    ```bash
    # Mover todo el código actual
    mv src packages/api/src
@@ -259,18 +288,18 @@ carecore/
    ```
 
 3. **Configurar NPM Workspaces**
+
    ```json
    // package.json (root)
    {
      "name": "carecore",
      "private": true,
-     "workspaces": [
-       "packages/*"
-     ]
+     "workspaces": ["packages/*"]
    }
    ```
 
 4. **Crear `packages/shared`**
+
    ```typescript
    // packages/shared/src/types/fhir.interface.ts
    // Mover interfaces desde packages/api/src/common/interfaces/
@@ -282,12 +311,14 @@ carecore/
 ### Fase 2: Setup Frontend (3-5 días)
 
 1. **Crear `packages/web` (Next.js)**
+
    ```bash
    cd packages/web
    npx create-next-app@latest . --typescript
    ```
 
 2. **Crear `packages/mobile` (React Native)**
+
    ```bash
    cd packages/mobile
    npx react-native@latest init CareCoreMobile --template react-native-template-typescript
@@ -296,6 +327,7 @@ carecore/
    ```
 
 3. **Configurar dependencias compartidas**
+
    ```json
    // packages/web/package.json
    {
@@ -324,21 +356,25 @@ carecore/
 ## 🛠️ Herramientas Adicionales Recomendadas
 
 ### Turborepo (Build System)
+
 ```bash
 npm install -D turbo
 ```
 
 **Beneficios:**
+
 - ✅ Caching inteligente de builds
 - ✅ Ejecución paralela de tareas
 - ✅ Pipeline optimizado
 
 ### Nx (Opcional, más completo)
+
 ```bash
 npx create-nx-workspace@latest carecore
 ```
 
 **Beneficios:**
+
 - ✅ Graph de dependencias
 - ✅ Affected projects detection
 - ✅ Generadores de código
@@ -348,14 +384,14 @@ npx create-nx-workspace@latest carecore
 
 ## 📊 Comparación Final
 
-| Aspecto | React Native | Flutter | Monorepo | Multi-repo |
-|---------|-------------|---------|----------|------------|
-| **Experiencia TS** | ✅ Aprovecha | ❌ No aplica | ✅ Compartido | ⚠️ Parcial |
-| **Código Compartido** | ✅ Directo | ❌ Duplicado | ✅ Real | ❌ Duplicado |
-| **Type Safety** | ✅ End-to-end | ⚠️ Parcial | ✅ Completo | ❌ Desincronizado |
-| **Curva Aprendizaje** | ✅ Baja | ❌ Alta | ✅ Baja | ✅ Baja |
-| **Mantenimiento** | ✅ Simple | ⚠️ Medio | ✅ Centralizado | ❌ Disperso |
-| **Refactoring** | ✅ Seguro | ⚠️ Manual | ✅ Automático | ❌ Complejo |
+| Aspecto               | React Native  | Flutter      | Monorepo        | Multi-repo        |
+| --------------------- | ------------- | ------------ | --------------- | ----------------- |
+| **Experiencia TS**    | ✅ Aprovecha  | ❌ No aplica | ✅ Compartido   | ⚠️ Parcial        |
+| **Código Compartido** | ✅ Directo    | ❌ Duplicado | ✅ Real         | ❌ Duplicado      |
+| **Type Safety**       | ✅ End-to-end | ⚠️ Parcial   | ✅ Completo     | ❌ Desincronizado |
+| **Curva Aprendizaje** | ✅ Baja       | ❌ Alta      | ✅ Baja         | ✅ Baja           |
+| **Mantenimiento**     | ✅ Simple     | ⚠️ Medio     | ✅ Centralizado | ❌ Disperso       |
+| **Refactoring**       | ✅ Seguro     | ⚠️ Manual    | ✅ Automático   | ❌ Complejo       |
 
 ---
 
@@ -364,6 +400,7 @@ npx create-nx-workspace@latest carecore
 ### **React Native + TypeScript + Monorepo**
 
 **Justificación:**
+
 1. ✅ Maximiza aprovechamiento de experiencia existente
 2. ✅ Minimiza duplicación de código
 3. ✅ Maximiza type safety
@@ -371,6 +408,7 @@ npx create-nx-workspace@latest carecore
 5. ✅ Facilita desarrollo futuro
 
 **Próximos Pasos:**
+
 1. Confirmar decisión
 2. Crear estructura de monorepo
 3. Migrar backend a `packages/api`
@@ -391,4 +429,3 @@ npx create-nx-workspace@latest carecore
 
 **Última actualización:** 2025-01-27
 **Mantenido por:** Equipo CareCore
-

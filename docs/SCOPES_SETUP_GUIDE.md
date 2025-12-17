@@ -37,12 +37,14 @@ bash keycloak/init/create-scopes.sh "$TOKEN"
 ```
 
 El script:
+
 - ✅ Crea todos los 11 scopes necesarios
 - ✅ Verifica si ya existen antes de crearlos (idempotente)
 - ✅ Asigna automáticamente los scopes al cliente "carecore-api"
 - ✅ Muestra un resumen de lo que se creó
 
 **Después de ejecutar el script:**
+
 1. Verifica que los scopes fueron creados correctamente (ver Paso 8)
 2. Haz un backup del realm (ver sección de Backup)
 
@@ -53,6 +55,7 @@ Si prefieres crear los scopes manualmente desde la Admin Console:
 ### Paso 1: Acceder a Admin Console
 
 1. Iniciar servicios (si no están corriendo):
+
    ```bash
    npm run docker:up
    ```
@@ -105,19 +108,20 @@ Para cada scope, seguir estos pasos:
 
 Repetir el proceso para los siguientes scopes:
 
-| Scope Name | Description |
-|------------|-------------|
-| `practitioner:read` | Read access to Practitioner resources |
-| `practitioner:write` | Create and update access to Practitioner resources |
-| `encounter:read` | Read access to Encounter resources |
-| `encounter:write` | Create and update access to Encounter resources |
-| `document:read` | Read access to DocumentReference resources |
-| `document:write` | Create and update access to DocumentReference resources |
-| `consent:read` | Read access to Consent resources |
-| `consent:write` | Create and update access to Consent resources |
-| `consent:share` | Share consent with practitioners |
+| Scope Name           | Description                                             |
+| -------------------- | ------------------------------------------------------- |
+| `practitioner:read`  | Read access to Practitioner resources                   |
+| `practitioner:write` | Create and update access to Practitioner resources      |
+| `encounter:read`     | Read access to Encounter resources                      |
+| `encounter:write`    | Create and update access to Encounter resources         |
+| `document:read`      | Read access to DocumentReference resources              |
+| `document:write`     | Create and update access to DocumentReference resources |
+| `consent:read`       | Read access to Consent resources                        |
+| `consent:write`      | Create and update access to Consent resources           |
+| `consent:share`      | Share consent with practitioners                        |
 
 **Nota:** Para cada scope, asegurarse de:
+
 - ✅ **Include in Token Scope:** ON
 - ✅ **Display on consent screen:** OFF (para MVP)
 
@@ -193,6 +197,7 @@ bash scripts/backup-keycloak-realm.sh
 ```
 
 El script:
+
 - ✅ Exporta la configuración completa del realm (incluye scopes, clientes, roles, etc.)
 - ✅ Guarda el backup en `keycloak/backups/carecore-realm-YYYYMMDD-HHMMSS.json`
 - ✅ Crea un symlink `carecore-realm-latest.json` al último backup
@@ -224,19 +229,19 @@ Para verificar que los scopes están configurados correctamente:
 
 ## 📊 Scopes Definidos
 
-| Scope | Descripción | Recurso FHIR | Roles que lo tienen |
-|-------|-------------|--------------|-------------------|
-| `patient:read` | Leer datos de pacientes | Patient | patient, practitioner, admin |
-| `patient:write` | Crear/actualizar pacientes | Patient | patient, practitioner, admin |
-| `practitioner:read` | Leer datos de practitioners | Practitioner | practitioner, admin |
-| `practitioner:write` | Crear/actualizar practitioners | Practitioner | admin |
-| `encounter:read` | Leer encounters | Encounter | practitioner, admin |
-| `encounter:write` | Crear/actualizar encounters | Encounter | practitioner, admin |
-| `document:read` | Leer documentos | DocumentReference | patient, practitioner, admin |
-| `document:write` | Crear/actualizar documentos | DocumentReference | practitioner, admin |
-| `consent:read` | Leer consentimientos | Consent | patient, practitioner, admin |
-| `consent:write` | Crear/actualizar consentimientos | Consent | patient, admin |
-| `consent:share` | Compartir consentimientos | Consent | patient, admin |
+| Scope                | Descripción                      | Recurso FHIR      | Roles que lo tienen          |
+| -------------------- | -------------------------------- | ----------------- | ---------------------------- |
+| `patient:read`       | Leer datos de pacientes          | Patient           | patient, practitioner, admin |
+| `patient:write`      | Crear/actualizar pacientes       | Patient           | patient, practitioner, admin |
+| `practitioner:read`  | Leer datos de practitioners      | Practitioner      | practitioner, admin          |
+| `practitioner:write` | Crear/actualizar practitioners   | Practitioner      | admin                        |
+| `encounter:read`     | Leer encounters                  | Encounter         | practitioner, admin          |
+| `encounter:write`    | Crear/actualizar encounters      | Encounter         | practitioner, admin          |
+| `document:read`      | Leer documentos                  | DocumentReference | patient, practitioner, admin |
+| `document:write`     | Crear/actualizar documentos      | DocumentReference | practitioner, admin          |
+| `consent:read`       | Leer consentimientos             | Consent           | patient, practitioner, admin |
+| `consent:write`      | Crear/actualizar consentimientos | Consent           | patient, admin               |
+| `consent:share`      | Compartir consentimientos        | Consent           | patient, admin               |
 
 ## 🔍 Verificación de Scopes en Tokens
 
@@ -308,6 +313,7 @@ make keycloak-backup
 ```
 
 Los backups se guardan en `keycloak/backups/`:
+
 - `carecore-realm-YYYYMMDD-HHMMSS.json` - Backup con timestamp
 - `carecore-realm-latest.json` - Symlink al último backup
 
@@ -331,19 +337,19 @@ bash scripts/restore-keycloak.sh keycloak/backups/carecore-realm-YYYYMMDD-HHMMSS
 
 Los scopes se mapean automáticamente a permisos de recursos FHIR mediante `SCOPE_PERMISSIONS_MAP`:
 
-| Scope | Recurso FHIR | Acción | Descripción |
-|-------|--------------|--------|-------------|
-| `patient:read` | Patient | read | Leer recursos Patient |
-| `patient:write` | Patient | write | Crear/actualizar recursos Patient |
-| `practitioner:read` | Practitioner | read | Leer recursos Practitioner |
-| `practitioner:write` | Practitioner | write | Crear/actualizar recursos Practitioner |
-| `encounter:read` | Encounter | read | Leer recursos Encounter |
-| `encounter:write` | Encounter | write | Crear/actualizar recursos Encounter |
-| `document:read` | DocumentReference | read | Leer recursos DocumentReference |
-| `document:write` | DocumentReference | write | Crear/actualizar recursos DocumentReference |
-| `consent:read` | Consent | read | Leer recursos Consent |
-| `consent:write` | Consent | write | Crear/actualizar recursos Consent |
-| `consent:share` | Consent | share | Compartir consentimientos |
+| Scope                | Recurso FHIR      | Acción | Descripción                                 |
+| -------------------- | ----------------- | ------ | ------------------------------------------- |
+| `patient:read`       | Patient           | read   | Leer recursos Patient                       |
+| `patient:write`      | Patient           | write  | Crear/actualizar recursos Patient           |
+| `practitioner:read`  | Practitioner      | read   | Leer recursos Practitioner                  |
+| `practitioner:write` | Practitioner      | write  | Crear/actualizar recursos Practitioner      |
+| `encounter:read`     | Encounter         | read   | Leer recursos Encounter                     |
+| `encounter:write`    | Encounter         | write  | Crear/actualizar recursos Encounter         |
+| `document:read`      | DocumentReference | read   | Leer recursos DocumentReference             |
+| `document:write`     | DocumentReference | write  | Crear/actualizar recursos DocumentReference |
+| `consent:read`       | Consent           | read   | Leer recursos Consent                       |
+| `consent:write`      | Consent           | write  | Crear/actualizar recursos Consent           |
+| `consent:share`      | Consent           | share  | Compartir consentimientos                   |
 
 Este mapeo está definido en `src/common/constants/fhir-scopes.ts` y es utilizado por `ScopePermissionService` para validar permisos.
 
@@ -356,12 +362,14 @@ El `ScopesGuard` valida que el usuario tenga todos los scopes requeridos para ac
 **Ubicación:** `src/modules/auth/guards/scopes.guard.ts`
 
 **Funcionamiento:**
+
 1. Extrae scopes requeridos del decorador `@Scopes()`
 2. Extrae scopes del usuario del request (seteado por `JwtAuthGuard`)
 3. Valida que el usuario tenga **TODOS** los scopes requeridos
 4. Lanza `InsufficientScopesException` si faltan scopes
 
 **Ejemplo de uso:**
+
 ```typescript
 import { Controller, Get, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -388,6 +396,7 @@ El decorador `@Scopes()` define qué scopes son requeridos para acceder a un end
 **Ubicación:** `src/modules/auth/decorators/scopes.decorator.ts`
 
 **Uso básico:**
+
 ```typescript
 import { Scopes } from '../auth/decorators/scopes.decorator';
 import { FHIR_SCOPES } from '../../common/constants/fhir-scopes';
@@ -401,6 +410,7 @@ async getPatient() {
 ```
 
 **Múltiples scopes (AND lógico):**
+
 ```typescript
 @Post('consent/:id/share')
 @Scopes(FHIR_SCOPES.CONSENT_READ, FHIR_SCOPES.CONSENT_SHARE)
@@ -445,14 +455,13 @@ hasResourcePermission(user: User, resourceType: string, action: string): boolean
 ```
 
 **Ejemplo de uso en el servicio:**
+
 ```typescript
 import { ScopePermissionService } from '../auth/services/scope-permission.service';
 
 @Injectable()
 export class FhirService {
-  constructor(
-    private scopePermissionService: ScopePermissionService,
-  ) {}
+  constructor(private scopePermissionService: ScopePermissionService) {}
 
   async getPatient(id: string, user: User) {
     // Validar permisos usando el servicio
@@ -485,6 +494,7 @@ GET /api/auth/login?scope=patient:read%20patient:write%20encounter:read
 ```
 
 **En el código (JavaScript/TypeScript):**
+
 ```typescript
 const scopes = ['patient:read', 'patient:write', 'encounter:read'];
 const scopeString = scopes.join(' ');
@@ -547,6 +557,7 @@ Los scopes SMART on FHIR pueden incluir contexto de paciente:
 - `patient/*.read`: Leer recursos de cualquier paciente (requiere permisos especiales)
 
 **Ejemplo de solicitud:**
+
 ```bash
 GET /api/fhir/authorize?scope=patient/123.read%20patient/123.write
 ```
@@ -562,20 +573,21 @@ Los scopes SMART on FHIR también pueden incluir contexto de usuario:
 
 SMART on FHIR define scopes estándar adicionales:
 
-| Scope | Descripción | Uso |
-|-------|-------------|-----|
-| `openid` | OpenID Connect | Siempre incluido |
-| `profile` | Información del perfil | Información básica del usuario |
-| `fhirUser` | FHIR User Resource | Referencia al recurso FHIR del usuario |
-| `launch` | Launch context | Contexto de launch desde EHR |
-| `launch/patient` | Patient launch context | Launch con contexto de paciente |
-| `launch/encounter` | Encounter launch context | Launch con contexto de encuentro |
+| Scope              | Descripción              | Uso                                    |
+| ------------------ | ------------------------ | -------------------------------------- |
+| `openid`           | OpenID Connect           | Siempre incluido                       |
+| `profile`          | Información del perfil   | Información básica del usuario         |
+| `fhirUser`         | FHIR User Resource       | Referencia al recurso FHIR del usuario |
+| `launch`           | Launch context           | Contexto de launch desde EHR           |
+| `launch/patient`   | Patient launch context   | Launch con contexto de paciente        |
+| `launch/encounter` | Encounter launch context | Launch con contexto de encuentro       |
 
 ### Ejemplo de Flujo SMART on FHIR con Scopes
 
 ```typescript
 // 1. Solicitar autorización con scopes SMART on FHIR
-const authUrl = `${fhirBaseUrl}/api/fhir/auth?` +
+const authUrl =
+  `${fhirBaseUrl}/api/fhir/auth?` +
   `client_id=smart-app-123&` +
   `response_type=code&` +
   `redirect_uri=${encodeURIComponent('https://app.com/callback')}&` +
@@ -606,8 +618,8 @@ const tokens = await tokenResponse.json();
 // 4. Usar token para acceder a recursos
 const patientResponse = await fetch(`${fhirBaseUrl}/api/fhir/Patient/patient-123`, {
   headers: {
-    'Authorization': `Bearer ${tokens.access_token}`,
-    'Accept': 'application/fhir+json',
+    Authorization: `Bearer ${tokens.access_token}`,
+    Accept: 'application/fhir+json',
   },
 });
 ```
@@ -628,6 +640,7 @@ async getPatient(@Param('id') id: string, @CurrentUser() user: User) {
 ```
 
 **En el servicio:**
+
 ```typescript
 async getPatient(id: string, user: User) {
   // Si hay contexto de paciente, validar que el ID coincida
@@ -672,4 +685,3 @@ Para más información sobre SMART on FHIR, ver [SMART_ON_FHIR_GUIDE.md](./SMART
 ---
 
 **Última actualización:** 2025-12-12
-

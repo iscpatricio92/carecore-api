@@ -74,10 +74,11 @@ Ahora puedes probar cualquier endpoint protegido:
 3. El token se guardará entre recargas de página (si `persistAuthorization` está habilitado)
 
 > ⚠️ **Seguridad**: Recuerda que el token puede quedar en:
+>
 > - Historial del navegador
 > - Logs del servidor (si se registran headers)
 > - Capturas de pantalla
-> Siempre usa tokens de prueba, nunca tokens de producción.
+>   Siempre usa tokens de prueba, nunca tokens de producción.
 
 ## Ejemplos de Uso
 
@@ -89,6 +90,7 @@ Authorization: Bearer <your-access-token>
 ```
 
 **Respuesta:**
+
 ```json
 {
   "id": "user-uuid",
@@ -224,4 +226,3 @@ Para cerrar sesión:
 - [NestJS Swagger Documentation](https://docs.nestjs.com/openapi/introduction)
 - [OpenAPI Security Schemes](https://swagger.io/docs/specification/authentication/)
 - [JWT.io - JWT Debugger](https://jwt.io)
-

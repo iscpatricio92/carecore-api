@@ -33,6 +33,7 @@ We follow the [Conventional Commits](https://www.conventionalcommits.org/) stand
 ### Scope (Optional)
 
 The scope indicates the affected code area. Examples:
+
 - `auth`: Authentication
 - `patients`: Patients module
 - `fhir`: FHIR resources
@@ -154,6 +155,7 @@ git commit -m "feat(scope): change description"
 ```
 
 The pre-commit hook will automatically run:
+
 - Formatting with Prettier
 - ESLint fixes
 - Unit tests with coverage
@@ -168,6 +170,7 @@ git push origin feature/feature-name
 ```
 
 Then create a Pull Request on GitHub/GitLab with:
+
 - Descriptive title
 - Description of changes
 - References to related issues (if applicable)

@@ -3,6 +3,7 @@
 > ⚠️ **ARCHIVO TEMPORAL**
 > Este archivo contiene tareas detalladas para agregar en GitHub Projects.
 > **Puede ser eliminado** una vez que:
+>
 > - Las tareas estén agregadas a GitHub Projects
 > - Las tareas estén completadas
 > - Ya no se necesite como referencia
@@ -35,6 +36,7 @@
 Esta HU incluye las siguientes tareas (ver detalles abajo):
 
 **Verificación de Practitioners:**
+
 - ✅ **Tarea 1**: Crear endpoint POST /auth/verify-practitioner
 - ✅ **Tarea 2**: Crear entidad PractitionerVerification en base de datos
 - ✅ **Tarea 3**: Implementar upload de documentos (cédula/licencia)
@@ -42,6 +44,7 @@ Esta HU incluye las siguientes tareas (ver detalles abajo):
 - ✅ **Tarea 5**: Actualizar rol en Keycloak cuando se verifica
 
 **MFA (Multi-Factor Authentication):**
+
 - ✅ **Tarea 6**: Configurar MFA en Keycloak (TOTP)
 - ✅ **Tarea 7**: Crear endpoint POST /auth/mfa/setup - Setup MFA
 - ✅ **Tarea 8**: Crear endpoint POST /auth/mfa/verify - Verificar código
@@ -49,6 +52,7 @@ Esta HU incluye las siguientes tareas (ver detalles abajo):
 - ✅ **Tarea 10**: Forzar MFA para roles críticos (admin, practitioner)
 
 **Scopes y Permisos:**
+
 - ✅ **Tarea 11**: Definir scopes en Keycloak (patient:read, patient:write, etc.)
 - ✅ **Tarea 12**: Crear ScopesGuard que valida scopes
 - ✅ **Tarea 13**: Crear decorador @Scopes() para endpoints
@@ -79,11 +83,14 @@ Esta HU incluye las siguientes tareas (ver detalles abajo):
 **Título:** `feat(auth): crear endpoint POST /auth/verify-practitioner para solicitar verificación`
 
 **Descripción:**
+
 ```markdown
 ## Objetivo
+
 Crear endpoint que permite a los practitioners solicitar verificación de identidad subiendo documentos.
 
 ## Tareas
+
 - [x] Crear DTO `VerifyPractitionerDto` con:
   - `practitionerId` (string, required) - ID del Practitioner FHIR
   - `documentType` (enum: 'cedula' | 'licencia', required)
@@ -100,17 +107,19 @@ Crear endpoint que permite a los practitioners solicitar verificación de identi
 - [x] Agregar documentación Swagger
 
 ## Endpoint Esperado
-
 ```
+
 POST /api/auth/verify-practitioner
 Content-Type: multipart/form-data
 
 Body:
+
 - practitionerId: string
 - documentType: 'cedula' | 'licencia'
 - documentFile: File
 - additionalInfo?: string
-```
+
+````
 
 ## Respuesta
 
@@ -121,9 +130,10 @@ Body:
   "message": "Verification request submitted successfully",
   "estimatedReviewTime": "2-3 business days"
 }
-```
+````
 
 ## Criterios de Aceptación
+
 - [x] Endpoint creado y funcional
 - [x] Validación de archivos implementada
 - [x] Archivos guardados correctamente
@@ -133,9 +143,11 @@ Body:
 - [x] Tests unitarios y E2E pasando
 
 ## Referencias
+
 - [NestJS File Upload](https://docs.nestjs.com/techniques/file-upload)
 - [Multer Configuration](https://github.com/expressjs/multer)
-```
+
+````
 
 **Labels:** `enhancement`, `auth`, `phase-3`, `security`
 
@@ -219,18 +231,21 @@ export class PractitionerVerificationEntity {
   @UpdateDateColumn()
   updatedAt: Date;
 }
-```
+````
 
 ## Criterios de Aceptación
+
 - [x] Entidad creada con todos los campos necesarios
 - [x] Migración creada y ejecutada exitosamente
 - [x] Índices creados para optimizar consultas
 - [x] Repositorio disponible para uso en servicios
 
 ## Referencias
+
 - [TypeORM Entities](https://typeorm.io/entities)
 - Ver entidades existentes como referencia
-```
+
+````
 
 **Labels:** `enhancement`, `auth`, `phase-3`, `database`
 
@@ -268,12 +283,14 @@ Implementar el sistema de almacenamiento de documentos subidos para verificació
 
 ## Estructura de Almacenamiento
 
-```
+````
+
 storage/
 └── verifications/
-    └── {practitionerId}/
-        ├── cedula_{timestamp}.pdf
-        └── licencia_{timestamp}.pdf
+└── {practitionerId}/
+├── cedula*{timestamp}.pdf
+└── licencia*{timestamp}.pdf
+
 ```
 
 ## Validaciones
@@ -310,11 +327,14 @@ storage/
 **Título:** `feat(auth): crear endpoints para revisión manual de verificaciones por admin`
 
 **Descripción:**
+
 ```markdown
 ## Objetivo
+
 Crear endpoints que permiten a los administradores revisar, aprobar o rechazar solicitudes de verificación.
 
 ## Tareas
+
 - [x] Crear DTOs:
   - `ReviewVerificationDto` con:
     - `status` (enum: 'approved' | 'rejected', required)
@@ -335,18 +355,22 @@ Crear endpoints que permiten a los administradores revisar, aprobar o rechazar s
 - [x] Agregar documentación Swagger
 
 ## Endpoints Esperados
-
 ```
+
 GET /api/auth/verify-practitioner
-  - Lista todas las verificaciones (solo admin)
-  - Query params: status, page, limit
+
+- Lista todas las verificaciones (solo admin)
+- Query params: status, page, limit
 
 GET /api/auth/verify-practitioner/:id
-  - Obtiene detalle de una verificación (solo admin)
+
+- Obtiene detalle de una verificación (solo admin)
 
 PUT /api/auth/verify-practitioner/:id/review
-  - Revisa y aprueba/rechaza una verificación (solo admin)
-```
+
+- Revisa y aprueba/rechaza una verificación (solo admin)
+
+````
 
 ## Respuesta de Revisión
 
@@ -358,9 +382,10 @@ PUT /api/auth/verify-practitioner/:id/review
   "reviewedAt": "2025-01-27T10:00:00Z",
   "message": "Verification approved successfully"
 }
-```
+````
 
 ## Criterios de Aceptación
+
 - [x] Endpoints creados y funcionales
 - [x] Solo admins pueden acceder
 - [x] Validaciones implementadas
@@ -369,8 +394,10 @@ PUT /api/auth/verify-practitioner/:id/review
 - [x] Tests unitarios y E2E pasando
 
 ## Referencias
+
 - Ver `ConsentsService` para referencia de flujos de aprobación
-```
+
+````
 
 **Labels:** `enhancement`, `auth`, `phase-3`, `admin`
 
@@ -427,7 +454,7 @@ Cuando un practitioner es verificado, actualizar automáticamente su rol en Keyc
 ## Referencias
 - [Keycloak Admin REST API](https://www.keycloak.org/docs-api/latest/rest-api/)
 - [Keycloak Admin Client](https://www.keycloak.org/docs/latest/server_admin/#admin-cli)
-```
+````
 
 **Labels:** `enhancement`, `auth`, `phase-3`, `integration`
 
@@ -438,11 +465,14 @@ Cuando un practitioner es verificado, actualizar automáticamente su rol en Keyc
 **Título:** `feat(auth): configurar MFA TOTP en Keycloak realm`
 
 **Descripción:**
+
 ```markdown
 ## Objetivo
+
 Configurar Multi-Factor Authentication usando TOTP (Time-based One-Time Password) en Keycloak.
 
 ## Tareas
+
 - [x] Crear guía detallada de configuración MFA (`docs/MFA_SETUP_GUIDE.md`)
 - [x] Acceder a admin console de Keycloak
 - [x] Navegar a Authentication > Flows
@@ -478,6 +508,7 @@ Configurar Multi-Factor Authentication usando TOTP (Time-based One-Time Password
 2. **Browser with MFA:** Para roles críticos o usuarios que habilitaron MFA
 
 ## Criterios de Aceptación
+
 - [x] MFA configurado en Keycloak
 - [x] TOTP funcionando correctamente
 - [x] Flujos de autenticación creados
@@ -485,6 +516,7 @@ Configurar Multi-Factor Authentication usando TOTP (Time-based One-Time Password
 - [x] Documentación actualizada
 
 ## Referencias
+
 - [Keycloak Authentication Flows](https://www.keycloak.org/docs/latest/server_admin/#_authentication-flows)
 - [Keycloak TOTP](https://www.keycloak.org/docs/latest/server_admin/#_otp)
 ```
@@ -498,11 +530,14 @@ Configurar Multi-Factor Authentication usando TOTP (Time-based One-Time Password
 **Título:** `feat(auth): crear endpoint para configurar MFA para usuarios`
 
 **Descripción:**
+
 ```markdown
 ## Objetivo
+
 Crear endpoint que permite a los usuarios configurar MFA en su cuenta.
 
 ## Tareas
+
 - [x] Crear método `setupMFA()` en `AuthService`
 - [x] Integrar con Keycloak Admin API:
   - Llamar a endpoint de Keycloak para generar secret TOTP
@@ -520,11 +555,12 @@ Crear endpoint que permite a los usuarios configurar MFA en su cuenta.
 - [x] Tests unitarios pasando
 
 ## Endpoint Esperado
-
 ```
+
 POST /api/auth/mfa/setup
 Authorization: Bearer <token>
-```
+
+````
 
 ## Respuesta
 
@@ -535,7 +571,7 @@ Authorization: Bearer <token>
   "manualEntryKey": "JBSWY3DPEHPK3PXP",
   "message": "Scan the QR code with your authenticator app"
 }
-```
+````
 
 ## Flujo
 
@@ -546,6 +582,7 @@ Authorization: Bearer <token>
 5. Usuario verifica con código (ver Tarea 8)
 
 ## Criterios de Aceptación
+
 - [x] Endpoint creado y funcional
 - [x] Secret TOTP generado correctamente
 - [x] QR code generado y retornado
@@ -554,9 +591,11 @@ Authorization: Bearer <token>
 - [x] Tests unitarios pasando
 
 ## Referencias
+
 - [Keycloak Admin API - TOTP](https://www.keycloak.org/docs-api/latest/rest-api/#_users_resource)
 - [QR Code Generation](https://www.npmjs.com/package/qrcode)
-```
+
+````
 
 **Labels:** `enhancement`, `auth`, `phase-3`, `security`
 
@@ -590,15 +629,17 @@ Crear endpoint que permite verificar el código TOTP durante el setup de MFA y h
 
 ## Endpoint Esperado
 
-```
+````
+
 POST /api/auth/mfa/verify
 Authorization: Bearer <token>
 Content-Type: application/json
 
 {
-  "code": "123456"
+"code": "123456"
 }
-```
+
+````
 
 ## Respuesta Exitosa
 
@@ -608,7 +649,7 @@ Content-Type: application/json
   "message": "MFA enabled successfully",
   "mfaEnabled": true
 }
-```
+````
 
 ## Respuesta de Error
 
@@ -621,6 +662,7 @@ Content-Type: application/json
 ```
 
 ## Criterios de Aceptación
+
 - [x] Endpoint creado y funcional
 - [x] Validación de código TOTP implementada
 - [x] Integración con Keycloak funcionando
@@ -630,9 +672,11 @@ Content-Type: application/json
 - [x] Tests unitarios pasando
 
 ## Referencias
+
 - [TOTP Validation](https://tools.ietf.org/html/rfc6238)
 - Ver librerías como `otplib` para validación TOTP
-```
+
+````
 
 **Labels:** `enhancement`, `auth`, `phase-3`, `security`
 
@@ -665,15 +709,17 @@ Crear endpoint que permite a los usuarios deshabilitar MFA, requiriendo verifica
 
 ## Endpoint Esperado
 
-```
+````
+
 POST /api/auth/mfa/disable
 Authorization: Bearer <token>
 Content-Type: application/json
 
 {
-  "code": "123456"
+"code": "123456"
 }
-```
+
+````
 
 ## Respuesta
 
@@ -683,7 +729,7 @@ Content-Type: application/json
   "message": "MFA disabled successfully",
   "mfaEnabled": false
 }
-```
+````
 
 ## Seguridad
 
@@ -692,6 +738,7 @@ Content-Type: application/json
 - ⚠️ Registrar acción en audit log
 
 ## Criterios de Aceptación
+
 - [x] Endpoint creado y funcional
 - [x] Validación de código TOTP requerida
 - [x] Integración con Keycloak funcionando
@@ -701,8 +748,10 @@ Content-Type: application/json
 - [x] Tests unitarios pasando
 
 ## Referencias
+
 - Ver Tarea 8 para referencia de validación TOTP
-```
+
+````
 
 **Labels:** `enhancement`, `auth`, `phase-3`, `security`
 
@@ -753,7 +802,7 @@ export class MFARequiredGuard implements CanActivate {
     return true;
   }
 }
-```
+````
 
 ## Respuesta de Error
 
@@ -767,6 +816,7 @@ export class MFARequiredGuard implements CanActivate {
 ```
 
 ## Criterios de Aceptación
+
 - [x] Guard creado y funcional
 - [x] Validación aplicada a roles críticos
 - [x] Endpoints protegidos correctamente
@@ -778,8 +828,10 @@ export class MFARequiredGuard implements CanActivate {
   - Tests E2E: 10/10 pasando ✅
 
 ## Referencias
+
 - Ver `RolesGuard` para referencia de implementación de guards
-```
+
+````
 
 **Labels:** `enhancement`, `auth`, `phase-3`, `security`
 
@@ -850,7 +902,7 @@ Definir scopes OAuth2 en Keycloak que mapean a permisos específicos de recursos
 - [Guía de Configuración de Scopes](../SCOPES_SETUP_GUIDE.md) - Guía completa paso a paso
 - [Keycloak Client Scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes)
 - [OAuth2 Scopes](https://oauth.net/2/scope/)
-```
+````
 
 **Labels:** `enhancement`, `auth`, `phase-3`, `keycloak`, `security`
 
@@ -861,11 +913,14 @@ Definir scopes OAuth2 en Keycloak que mapean a permisos específicos de recursos
 **Título:** `feat(auth): crear ScopesGuard para validar scopes OAuth2 en requests`
 
 **Descripción:**
-```markdown
+
+````markdown
 ## Objetivo
+
 Crear guard que valida que el token JWT contiene los scopes necesarios para acceder a un endpoint.
 
 ## Tareas
+
 - [x] Crear `ScopesGuard` en `src/modules/auth/guards/scopes.guard.ts`
 - [x] Implementar `CanActivate`:
   - Extraer scopes del token JWT (campo `scope` o `scp`)
@@ -895,7 +950,7 @@ export class ScopesGuard implements CanActivate {
     }
 
     const userScopes = this.extractScopes(user);
-    const hasAllScopes = requiredScopes.every(scope => userScopes.includes(scope));
+    const hasAllScopes = requiredScopes.every((scope) => userScopes.includes(scope));
 
     if (!hasAllScopes) {
       throw new InsufficientScopesException(requiredScopes, userScopes);
@@ -913,8 +968,10 @@ export class ScopesGuard implements CanActivate {
   }
 }
 ```
+````
 
 ## Criterios de Aceptación
+
 - [x] Guard creado y funcional
 - [x] Validación de scopes implementada
 - [x] Manejo de errores implementado
@@ -922,9 +979,11 @@ export class ScopesGuard implements CanActivate {
 - [x] Tests unitarios pasando (12/12)
 
 ## Referencias
+
 - Ver `RolesGuard` para referencia de implementación
 - [JWT Scope Claim](https://datatracker.ietf.org/doc/html/rfc8693)
-```
+
+````
 
 **Labels:** `enhancement`, `auth`, `phase-3`, `security`
 
@@ -958,7 +1017,7 @@ export const Scopes = (...scopes: string[]) => SetMetadata(SCOPES_KEY, scopes);
 
 // Helper functions
 export const fhirScope = (resource: string, action: string) => `${resource}:${action}`;
-```
+````
 
 ## Uso Esperado
 
@@ -987,6 +1046,7 @@ shareConsent(@Param('id') id: string) {
 ```
 
 ## Criterios de Aceptación
+
 - [x] Decorador creado y funcional
 - [x] Helper functions implementadas
 - [x] Documentación y ejemplos agregados
@@ -994,9 +1054,11 @@ shareConsent(@Param('id') id: string) {
 - [x] Tests unitarios pasando (incluidos en ScopesGuard tests)
 
 ## Referencias
+
 - Ver `@Roles()` decorator para referencia
 - [NestJS Custom Decorators](https://docs.nestjs.com/custom-decorators)
-```
+
+````
 
 **Labels:** `enhancement`, `auth`, `phase-3`, `security`
 
@@ -1023,7 +1085,8 @@ Crear sistema que mapea scopes OAuth2 a permisos específicos de recursos FHIR y
     'patient:write': { resource: 'Patient', action: 'write' },
     // ... más mapeos
   };
-  ```
+````
+
 - [x] Integrar con servicios FHIR:
   - Modificar `FhirService` para validar scopes antes de operaciones
   - Modificar `ConsentsService` para validar scopes
@@ -1041,19 +1104,19 @@ Crear sistema que mapea scopes OAuth2 a permisos específicos de recursos FHIR y
 
 ## Mapeo Esperado
 
-| Scope | Resource | Action | Descripción |
-|-------|----------|--------|-------------|
-| `patient:read` | Patient | read | Leer datos de pacientes |
-| `patient:write` | Patient | write | Crear/actualizar pacientes |
-| `practitioner:read` | Practitioner | read | Leer datos de practitioners |
-| `practitioner:write` | Practitioner | write | Crear/actualizar practitioners |
-| `encounter:read` | Encounter | read | Leer encounters |
-| `encounter:write` | Encounter | write | Crear/actualizar encounters |
-| `document:read` | DocumentReference | read | Leer documentos |
-| `document:write` | DocumentReference | write | Crear/actualizar documentos |
-| `consent:read` | Consent | read | Leer consentimientos |
-| `consent:write` | Consent | write | Crear/actualizar consentimientos |
-| `consent:share` | Consent | share | Compartir consentimientos |
+| Scope                | Resource          | Action | Descripción                      |
+| -------------------- | ----------------- | ------ | -------------------------------- |
+| `patient:read`       | Patient           | read   | Leer datos de pacientes          |
+| `patient:write`      | Patient           | write  | Crear/actualizar pacientes       |
+| `practitioner:read`  | Practitioner      | read   | Leer datos de practitioners      |
+| `practitioner:write` | Practitioner      | write  | Crear/actualizar practitioners   |
+| `encounter:read`     | Encounter         | read   | Leer encounters                  |
+| `encounter:write`    | Encounter         | write  | Crear/actualizar encounters      |
+| `document:read`      | DocumentReference | read   | Leer documentos                  |
+| `document:write`     | DocumentReference | write  | Crear/actualizar documentos      |
+| `consent:read`       | Consent           | read   | Leer consentimientos             |
+| `consent:write`      | Consent           | write  | Crear/actualizar consentimientos |
+| `consent:share`      | Consent           | share  | Compartir consentimientos        |
 
 ## Lógica de Validación
 
@@ -1063,6 +1126,7 @@ Crear sistema que mapea scopes OAuth2 a permisos específicos de recursos FHIR y
 4. Practitioner tiene scopes de lectura/escritura de sus recursos
 
 ## Criterios de Aceptación
+
 - [x] Servicio de mapeo creado
 - [x] Mapeo completo de scopes implementado (11 scopes)
 - [x] Integración con servicios FHIR funcionando (FhirService, ConsentsService)
@@ -1072,7 +1136,9 @@ Crear sistema que mapea scopes OAuth2 a permisos específicos de recursos FHIR y
 - [x] Tests unitarios pasando (36/36 para ScopePermissionService)
 
 ## Referencias
+
 - Ver `FhirService.canAccessPatient()` para referencia de validación
+
 ```
 
 **Labels:** `enhancement`, `auth`, `phase-3`, `security`, `fhir`
@@ -1123,3 +1189,4 @@ Crear sistema que mapea scopes OAuth2 a permisos específicos de recursos FHIR y
 ---
 
 **Última actualización**: 2025-01-27
+```

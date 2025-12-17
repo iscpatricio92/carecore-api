@@ -25,7 +25,8 @@ services:
     # Construir shared primero, luego limpiar dist si existe para evitar errores EBUSY
     # Luego ejecutar nest start --watch usando npx con configuración mejorada para hot reload
     # Nota: El build genera dist/packages/api/src/main.js, creamos symlink para que nest start lo encuentre
-    command: sh -c "npm ci && cd /app/packages/shared && npm run build && cd /app/packages/api && rm -rf dist && npm run build 2>&1 | grep -v 'scripts/' || true && sh /app/packages/api/scripts/create-main-symlink.sh && cd /app/packages/api && npx nest start --watch --preserveWatchOutput"
+    # IMPORTANTE: Capturamos el exit code del build antes de filtrar output para no enmascarar errores
+    command: sh -c "npm ci && cd /app/packages/shared && npm run build && cd /app/packages/api && rm -rf dist && npm run build > /tmp/build_output.log 2>&1; BUILD_EXIT=$$?; grep -v 'scripts/' /tmp/build_output.log || true; if [ $${BUILD_EXIT} -ne 0 ]; then echo '❌ Build failed with exit code' $${BUILD_EXIT} && exit $${BUILD_EXIT}; fi && sh /app/packages/api/scripts/create-main-symlink.sh && cd /app/packages/api && npx nest start --watch --preserveWatchOutput"
     volumes:
       # Montar código fuente para hot-reload (monorepo structure)
       - ./packages/api/src:/app/packages/api/src

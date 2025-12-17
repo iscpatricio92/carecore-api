@@ -44,6 +44,7 @@ Keycloak es un servidor de identidad y acceso (Identity and Access Management - 
 ```
 
 **Componentes:**
+
 - **Keycloak**: Identity Provider (IdP) que emite tokens JWT
 - **CareCore API**: Resource Server que valida tokens
 - **Frontend/Cliente**: Aplicación que inicia el flujo OAuth2
@@ -101,6 +102,7 @@ make docker-up
 ```
 
 El script `scripts/init-keycloak-config.sh` se ejecuta automáticamente y:
+
 - ✅ Crea la base de datos `keycloak_db` (si no existe)
 - ✅ Verifica si el realm "carecore" existe
 - ✅ Crea el realm si no existe
@@ -123,6 +125,7 @@ make keycloak-get-secret
 ### Acceder a Admin Console
 
 1. Iniciar servicios:
+
    ```bash
    make docker-up
    ```
@@ -283,6 +286,7 @@ Este es el cliente principal para la API backend.
    ```
 
 **O usar el script:**
+
 ```bash
 make keycloak-get-secret
 ```
@@ -467,6 +471,7 @@ Para una guía completa de configuración de scopes OAuth2, ver [SCOPES_SETUP_GU
 ### Scopes Básicos
 
 Los scopes básicos de OIDC están habilitados por defecto:
+
 - `openid`: Requerido para OIDC
 - `profile`: Información del perfil
 - `email`: Email del usuario
@@ -608,16 +613,20 @@ Para una guía completa, ver [keycloak/TROUBLESHOOTING.md](../keycloak/TROUBLESH
 #### Keycloak no inicia
 
 **Síntomas:**
+
 - El contenedor se reinicia constantemente
 - Logs muestran errores de conexión a la base de datos
 
 **Solución:**
+
 1. Verificar que PostgreSQL esté corriendo:
+
    ```bash
    docker ps | grep postgres
    ```
 
 2. Verificar variables de entorno:
+
    ```bash
    docker exec carecore-keycloak env | grep KEYCLOAK_DB
    ```
@@ -630,16 +639,20 @@ Para una guía completa, ver [keycloak/TROUBLESHOOTING.md](../keycloak/TROUBLESH
 #### No puedo acceder a Admin Console
 
 **Síntomas:**
+
 - Error 404 o conexión rechazada
 - Timeout al intentar acceder
 
 **Solución:**
+
 1. Verificar que Keycloak esté corriendo:
+
    ```bash
    docker ps | grep keycloak
    ```
 
 2. Verificar el puerto:
+
    ```bash
    # Verificar en .env.local
    KEYCLOAK_PORT=8080
@@ -650,11 +663,14 @@ Para una guía completa, ver [keycloak/TROUBLESHOOTING.md](../keycloak/TROUBLESH
 #### Base de datos no se crea
 
 **Síntomas:**
+
 - Keycloak no puede conectarse a la base de datos
 - Error: "database does not exist"
 
 **Solución:**
+
 1. Verificar que el script de inicialización se ejecutó:
+
    ```bash
    docker logs carecore-postgres | grep keycloak_db
    ```
@@ -668,11 +684,14 @@ Para una guía completa, ver [keycloak/TROUBLESHOOTING.md](../keycloak/TROUBLESH
 #### Problemas con realm o clientes
 
 **Síntomas:**
+
 - El realm no aparece
 - Los clientes no funcionan
 
 **Solución:**
+
 1. Verificar que el realm existe:
+
    ```bash
    # Desde Admin Console o API
    curl http://localhost:8080/realms/carecore/.well-known/openid-configuration
@@ -686,12 +705,15 @@ Para una guía completa, ver [keycloak/TROUBLESHOOTING.md](../keycloak/TROUBLESH
 #### Tokens no se validan
 
 **Síntomas:**
+
 - Error "Token expired" o "Invalid token"
 - Error "Issuer mismatch"
 
 **Solución:**
+
 1. Verificar `KEYCLOAK_URL` y `KEYCLOAK_REALM` en `.env.local`
 2. Verificar que el issuer del token coincida:
+
    ```bash
    # Decodificar token (solo testing)
    # El issuer debe ser: http://keycloak:8080/realms/carecore
@@ -728,12 +750,14 @@ Todos los scripts están en `keycloak/init/`:
 #### `setup-keycloak.sh`
 
 Script principal que configura todo:
+
 - Crea el realm
 - Crea roles
 - Crea clientes
 - Configura scopes
 
 **Uso:**
+
 ```bash
 make keycloak-setup
 ```
@@ -743,6 +767,7 @@ make keycloak-setup
 Crea todos los roles base del sistema.
 
 **Uso:**
+
 ```bash
 ./keycloak/init/create-roles.sh
 ```
@@ -752,6 +777,7 @@ Crea todos los roles base del sistema.
 Crea el cliente `carecore-api`.
 
 **Uso:**
+
 ```bash
 ./keycloak/init/create-api-client.sh
 ```
@@ -761,6 +787,7 @@ Crea el cliente `carecore-api`.
 Crea el cliente `carecore-web`.
 
 **Uso:**
+
 ```bash
 ./keycloak/init/create-web-client.sh
 ```
@@ -770,6 +797,7 @@ Crea el cliente `carecore-web`.
 Crea scopes OAuth2 personalizados.
 
 **Uso:**
+
 ```bash
 ./keycloak/init/create-scopes.sh
 ```
@@ -779,6 +807,7 @@ Crea scopes OAuth2 personalizados.
 Obtiene el client secret de un cliente.
 
 **Uso:**
+
 ```bash
 make keycloak-get-secret
 # O
@@ -791,6 +820,7 @@ Para crear scripts personalizados:
 
 1. Crear archivo en `keycloak/init/`
 2. Usar la Admin API de Keycloak:
+
    ```bash
    # Obtener access token
    TOKEN=$(curl -X POST "http://localhost:8080/realms/master/protocol/openid-connect/token" \
@@ -836,4 +866,3 @@ Para crear scripts personalizados:
 ---
 
 **Última actualización:** 2025-12-12
-

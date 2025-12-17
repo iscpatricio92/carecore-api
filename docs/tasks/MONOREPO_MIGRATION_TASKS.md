@@ -24,6 +24,7 @@
 ### Fase 1: Preparación y Estructura Base (2-3 días)
 
 #### Tarea 1.1: Crear estructura de directorios del monorepo
+
 **Tipo:** `build`
 **Prioridad:** Crítica
 **Estimación:** 30 min
@@ -32,6 +33,7 @@
 Crear la estructura base de carpetas para el monorepo.
 
 **Acciones:**
+
 - [ ] Crear directorio `packages/`
 - [ ] Crear `packages/api/` (para backend actual)
 - [ ] Crear `packages/shared/` (para código compartido)
@@ -40,10 +42,12 @@ Crear la estructura base de carpetas para el monorepo.
 - [ ] Crear `tools/` (para scripts compartidos)
 
 **Criterios de Aceptación:**
+
 - Estructura de directorios creada
 - Directorios vacíos listos para migración
 
 **Commits sugeridos:**
+
 ```
 build: crear estructura base de monorepo
 ```
@@ -51,6 +55,7 @@ build: crear estructura base de monorepo
 ---
 
 #### Tarea 1.2: Configurar NPM Workspaces en root
+
 **Tipo:** `build`
 **Prioridad:** Crítica
 **Estimación:** 1 hora
@@ -60,6 +65,7 @@ Configurar el `package.json` raíz con workspaces y scripts base.
 
 **⚠️ Nota sobre NPM Workspaces vs Nx:**
 Se eligió **NPM Workspaces** en lugar de Nx porque:
+
 - Proyecto pequeño/mediano (3-4 paquetes): NPM Workspaces es suficiente
 - Setup rápido (30 min vs 2-4 horas de Nx)
 - Sin curva de aprendizaje adicional
@@ -67,6 +73,7 @@ Se eligió **NPM Workspaces** en lugar de Nx porque:
 - Ver [MONOREPO_TOOL_COMPARISON.md](../../MONOREPO_TOOL_COMPARISON.md) para detalles completos
 
 **Acciones:**
+
 - [ ] Crear `package.json` en root con:
   - `name: "carecore"`
   - `private: true`
@@ -79,16 +86,19 @@ Se eligió **NPM Workspaces** en lugar de Nx porque:
 - [ ] Crear `.npmrc` con configuraciones de workspaces (opcional)
 
 **Archivos a crear/modificar:**
+
 - `package.json` (root, nuevo)
 - `.npmrc` (nuevo, opcional)
 
 **Criterios de Aceptación:**
+
 - `npm install` funciona en root
 - Workspaces detectados correctamente (`npm ls --workspaces`)
 - Scripts base funcionan
 - Puedes ejecutar comandos en workspaces específicos
 
 **Commits sugeridos:**
+
 ```
 build: configurar NPM workspaces en root
 ```
@@ -96,6 +106,7 @@ build: configurar NPM workspaces en root
 ---
 
 #### Tarea 1.3: Configurar TypeScript base compartido
+
 **Tipo:** `build`
 **Prioridad:** Alta
 **Estimación:** 1 hora
@@ -104,6 +115,7 @@ build: configurar NPM workspaces en root
 Crear configuración base de TypeScript para el monorepo.
 
 **Acciones:**
+
 - [ ] Crear `tsconfig.base.json` en root con:
   - Configuración base compartida
   - Paths para `@carecore/shared`
@@ -112,14 +124,17 @@ Crear configuración base de TypeScript para el monorepo.
 - [ ] Documentar estructura de configuraciones TypeScript
 
 **Archivos a crear:**
+
 - `tsconfig.base.json` (nuevo)
 - `tsconfig.json` (root, nuevo)
 
 **Criterios de Aceptación:**
+
 - TypeScript compila correctamente
 - Paths configurados para paquetes
 
 **Commits sugeridos:**
+
 ```
 build: configurar TypeScript base para monorepo
 ```
@@ -129,6 +144,7 @@ build: configurar TypeScript base para monorepo
 ### Fase 2: Migración del Backend (2-3 días)
 
 #### Tarea 2.1: Mover código del backend a packages/api
+
 **Tipo:** `refactor`
 **Prioridad:** Crítica
 **Estimación:** 2 horas
@@ -137,6 +153,7 @@ build: configurar TypeScript base para monorepo
 Mover todo el código actual del backend a `packages/api/`.
 
 **Acciones:**
+
 - [ ] Mover `src/` → `packages/api/src/`
 - [ ] Mover `test/` → `packages/api/test/`
 - [ ] Mover `scripts/` → `packages/api/scripts/` (o `tools/` si son compartidos)
@@ -151,14 +168,17 @@ Mover todo el código actual del backend a `packages/api/`.
 - [ ] Actualizar `name` en `package.json` a `@carecore/api`
 
 **Archivos a mover:**
+
 - Todo el contenido actual del proyecto (excepto `.git`, `node_modules`, etc.)
 
 **Criterios de Aceptación:**
+
 - Todo el código movido a `packages/api/`
 - Estructura de carpetas mantenida
 - No se pierde ningún archivo
 
 **Commits sugeridos:**
+
 ```
 refactor: mover backend a packages/api
 ```
@@ -166,6 +186,7 @@ refactor: mover backend a packages/api
 ---
 
 #### Tarea 2.2: Actualizar paths e imports en packages/api
+
 **Tipo:** `refactor`
 **Prioridad:** Crítica
 **Estimación:** 2-3 horas
@@ -174,6 +195,7 @@ refactor: mover backend a packages/api
 Actualizar todos los imports y paths en `packages/api` para que funcionen con la nueva estructura.
 
 **Acciones:**
+
 - [ ] Actualizar `tsconfig.json` en `packages/api/`:
   - Extender `tsconfig.base.json` del root
   - Ajustar `baseUrl` y `paths` relativos
@@ -188,18 +210,21 @@ Actualizar todos los imports y paths en `packages/api` para que funcionen con la
   - Verificar paths y configuración
 
 **Archivos a modificar:**
+
 - `packages/api/tsconfig.json`
 - `packages/api/jest.config.js`
 - `packages/api/test/jest-e2e.json`
 - Todos los archivos con imports
 
 **Criterios de Aceptación:**
+
 - `npm run build` funciona en `packages/api`
 - `npm run test` funciona en `packages/api`
 - Todos los imports resueltos correctamente
 - No hay errores de TypeScript
 
 **Commits sugeridos:**
+
 ```
 refactor: actualizar paths e imports en packages/api
 ```
@@ -207,6 +232,7 @@ refactor: actualizar paths e imports en packages/api
 ---
 
 #### Tarea 2.3: Actualizar package.json de packages/api
+
 **Tipo:** `build`
 **Prioridad:** Alta
 **Estimación:** 1 hora
@@ -215,6 +241,7 @@ refactor: actualizar paths e imports en packages/api
 Ajustar `package.json` de `packages/api` para monorepo.
 
 **Acciones:**
+
 - [ ] Actualizar `name` a `@carecore/api`
 - [ ] Verificar que todas las dependencias estén correctas
 - [ ] Actualizar scripts si es necesario (paths relativos)
@@ -222,14 +249,17 @@ Ajustar `package.json` de `packages/api` para monorepo.
 - [ ] Verificar que `prepare` script funcione con husky
 
 **Archivos a modificar:**
+
 - `packages/api/package.json`
 
 **Criterios de Aceptación:**
+
 - `npm install` funciona
 - Scripts ejecutan correctamente
 - Dependencias resueltas
 
 **Commits sugeridos:**
+
 ```
 build: actualizar package.json de packages/api para monorepo
 ```
@@ -239,6 +269,7 @@ build: actualizar package.json de packages/api para monorepo
 ### Fase 3: Crear Paquete Shared (2 días)
 
 #### Tarea 3.1: Crear estructura de packages/shared
+
 **Tipo:** `build`
 **Prioridad:** Alta
 **Estimación:** 1 hora
@@ -247,6 +278,7 @@ build: actualizar package.json de packages/api para monorepo
 Crear la estructura base del paquete compartido.
 
 **Acciones:**
+
 - [ ] Crear `packages/shared/package.json`:
   - `name: "@carecore/shared"`
   - `version: "0.1.0"`
@@ -264,16 +296,19 @@ Crear la estructura base del paquete compartido.
 - [ ] Crear `packages/shared/src/index.ts` (barrel export)
 
 **Archivos a crear:**
+
 - `packages/shared/package.json`
 - `packages/shared/tsconfig.json`
 - `packages/shared/src/index.ts`
 
 **Criterios de Aceptación:**
+
 - Estructura creada
 - TypeScript compila
 - Paquete puede ser importado
 
 **Commits sugeridos:**
+
 ```
 build: crear estructura de packages/shared
 ```
@@ -281,6 +316,7 @@ build: crear estructura de packages/shared
 ---
 
 #### Tarea 3.2: Migrar interfaces FHIR a packages/shared
+
 **Tipo:** `refactor`
 **Prioridad:** Alta
 **Estimación:** 2 horas
@@ -289,6 +325,7 @@ build: crear estructura de packages/shared
 Mover todas las interfaces FHIR a `packages/shared`.
 
 **Acciones:**
+
 - [ ] Mover `src/common/interfaces/fhir.interface.ts` → `packages/shared/src/types/fhir.interface.ts`
 - [ ] Actualizar exports en `packages/shared/src/index.ts`
 - [ ] Actualizar imports en `packages/api`:
@@ -297,18 +334,22 @@ Mover todas las interfaces FHIR a `packages/shared`.
 - [ ] Ejecutar tests para verificar
 
 **Archivos a mover:**
+
 - `src/common/interfaces/fhir.interface.ts` → `packages/shared/src/types/`
 
 **Archivos a modificar:**
+
 - Todos los archivos que importan interfaces FHIR
 
 **Criterios de Aceptación:**
+
 - Interfaces movidas correctamente
 - Todos los imports actualizados
 - Tests pasan
 - TypeScript compila sin errores
 
 **Commits sugeridos:**
+
 ```
 refactor: migrar interfaces FHIR a packages/shared
 ```
@@ -316,6 +357,7 @@ refactor: migrar interfaces FHIR a packages/shared
 ---
 
 #### Tarea 3.3: Migrar constantes a packages/shared
+
 **Tipo:** `refactor`
 **Prioridad:** Alta
 **Estimación:** 1-2 horas
@@ -324,6 +366,7 @@ refactor: migrar interfaces FHIR a packages/shared
 Mover constantes (scopes, resource types, actions) a `packages/shared`.
 
 **Acciones:**
+
 - [ ] Mover `src/common/constants/fhir-scopes.ts` → `packages/shared/src/constants/`
 - [ ] Mover `src/common/constants/fhir-resource-types.ts` → `packages/shared/src/constants/`
 - [ ] Mover `src/common/constants/fhir-actions.ts` → `packages/shared/src/constants/` (si existe)
@@ -334,17 +377,21 @@ Mover constantes (scopes, resource types, actions) a `packages/shared`.
 - [ ] Ejecutar tests
 
 **Archivos a mover:**
+
 - `src/common/constants/*.ts` → `packages/shared/src/constants/`
 
 **Archivos a modificar:**
+
 - Todos los archivos que importan constantes
 
 **Criterios de Aceptación:**
+
 - Constantes movidas correctamente
 - Todos los imports actualizados
 - Tests pasan
 
 **Commits sugeridos:**
+
 ```
 refactor: migrar constantes a packages/shared
 ```
@@ -352,6 +399,7 @@ refactor: migrar constantes a packages/shared
 ---
 
 #### Tarea 3.4: Migrar interfaces de User y Auth a packages/shared
+
 **Tipo:** `refactor`
 **Prioridad:** Media
 **Estimación:** 1 hora
@@ -360,6 +408,7 @@ refactor: migrar constantes a packages/shared
 Mover interfaces relacionadas con User y Auth a `packages/shared` (si son útiles para frontend).
 
 **Acciones:**
+
 - [ ] Revisar `src/modules/auth/interfaces/user.interface.ts`
 - [ ] Decidir si mover a `packages/shared` (probablemente sí, para frontend)
 - [ ] Mover si corresponde → `packages/shared/src/types/user.interface.ts`
@@ -368,14 +417,17 @@ Mover interfaces relacionadas con User y Auth a `packages/shared` (si son útile
 - [ ] Verificar tests
 
 **Archivos a mover (si aplica):**
+
 - `src/modules/auth/interfaces/user.interface.ts` → `packages/shared/src/types/`
 
 **Criterios de Aceptación:**
+
 - Interfaces movidas si son compartidas
 - Imports actualizados
 - Tests pasan
 
 **Commits sugeridos:**
+
 ```
 refactor: migrar interfaces de User a packages/shared
 ```
@@ -383,6 +435,7 @@ refactor: migrar interfaces de User a packages/shared
 ---
 
 #### Tarea 3.5: Configurar build de packages/shared
+
 **Tipo:** `build`
 **Prioridad:** Alta
 **Estimación:** 1 hora
@@ -391,6 +444,7 @@ refactor: migrar interfaces de User a packages/shared
 Configurar el proceso de build para `packages/shared`.
 
 **Acciones:**
+
 - [ ] Agregar script `build` en `packages/shared/package.json`
 - [ ] Configurar TypeScript para generar `.d.ts`
 - [ ] Verificar que `npm run build` genera:
@@ -401,15 +455,18 @@ Configurar el proceso de build para `packages/shared`.
 - [ ] Probar que `@carecore/shared` puede ser importado desde `packages/api`
 
 **Archivos a modificar:**
+
 - `packages/shared/package.json`
 - `packages/shared/tsconfig.json`
 
 **Criterios de Aceptación:**
+
 - `npm run build` funciona
 - Archivos `.d.ts` generados
 - Paquete puede ser importado desde otros paquetes
 
 **Commits sugeridos:**
+
 ```
 build: configurar build de packages/shared
 ```
@@ -419,6 +476,7 @@ build: configurar build de packages/shared
 ### Fase 4: Actualización de Docker y Scripts (2 días)
 
 #### Tarea 4.1: Actualizar Dockerfile para monorepo
+
 **Tipo:** `build`
 **Prioridad:** Alta
 **Estimación:** 2 horas
@@ -428,6 +486,7 @@ build: configurar build de packages/shared
 Actualizar Dockerfile para trabajar con estructura de monorepo.
 
 **Acciones:**
+
 - [x] Actualizar `COPY` commands:
   - Copiar `packages/api/package*.json` en lugar de root
   - Copiar `packages/shared/package*.json` también
@@ -441,14 +500,17 @@ Actualizar Dockerfile para trabajar con estructura de monorepo.
   ```
 
 **Archivos a modificar:**
+
 - `Dockerfile` (o `packages/api/Dockerfile` si se mueve)
 
 **Criterios de Aceptación:**
+
 - Docker build funciona
 - Imagen se crea correctamente
 - Contenedor inicia y funciona
 
 **Commits sugeridos:**
+
 ```
 build: actualizar Dockerfile para monorepo
 ```
@@ -456,6 +518,7 @@ build: actualizar Dockerfile para monorepo
 ---
 
 #### Tarea 4.2: Actualizar docker-compose.yml para monorepo
+
 **Tipo:** `build`
 **Prioridad:** Alta
 **Estimación:** 1 hora
@@ -465,6 +528,7 @@ build: actualizar Dockerfile para monorepo
 Actualizar docker-compose para usar paths correctos del monorepo.
 
 **Acciones:**
+
 - [x] Actualizar `context` en servicio `api`:
   - Cambiar de `.` a `.` (root del monorepo)
   - Ajustar `dockerfile` path si se mueve
@@ -475,16 +539,19 @@ Actualizar docker-compose para usar paths correctos del monorepo.
 - [x] Probar `docker-compose up`
 
 **Archivos a modificar:**
+
 - `docker-compose.yml`
 - `docker-compose.development.yml` (si existe)
 - `docker-compose.production.yml` (si existe)
 
 **Criterios de Aceptación:**
+
 - `docker-compose up` funciona
 - Servicios inician correctamente
 - Paths correctos en todos los servicios
 
 **Commits sugeridos:**
+
 ```
 build: actualizar docker-compose para monorepo
 ```
@@ -492,6 +559,7 @@ build: actualizar docker-compose para monorepo
 ---
 
 #### Tarea 4.3: Actualizar Makefile para monorepo
+
 **Tipo:** `build`
 **Prioridad:** Alta
 **Estimación:** 2 horas
@@ -501,6 +569,7 @@ build: actualizar docker-compose para monorepo
 Actualizar Makefile para trabajar con estructura de monorepo.
 
 **Acciones:**
+
 - [x] Revisar todos los targets del Makefile
 - [x] Actualizar paths:
   - Scripts pueden estar en `packages/api/scripts/` o `tools/`
@@ -514,14 +583,17 @@ Actualizar Makefile para trabajar con estructura de monorepo.
 - [x] Probar todos los targets principales
 
 **Archivos a modificar:**
+
 - `Makefile`
 
 **Criterios de Aceptación:**
+
 - Todos los targets funcionan
 - Paths correctos
 - Comandos ejecutan correctamente
 
 **Commits sugeridos:**
+
 ```
 build: actualizar Makefile para monorepo
 ```
@@ -529,6 +601,7 @@ build: actualizar Makefile para monorepo
 ---
 
 #### Tarea 4.4: Actualizar scripts de utilidad
+
 **Tipo:** `refactor`
 **Prioridad:** Media
 **Estimación:** 1-2 horas
@@ -538,6 +611,7 @@ build: actualizar Makefile para monorepo
 Revisar y actualizar scripts en `scripts/` o `packages/api/scripts/`.
 
 **Acciones:**
+
 - [x] Decidir ubicación de scripts:
   - Si son solo para API → `packages/api/scripts/`
   - Si son compartidos → `tools/` o root
@@ -548,14 +622,17 @@ Revisar y actualizar scripts en `scripts/` o `packages/api/scripts/`.
 - [x] Verificar que scripts ejecuten correctamente
 
 **Archivos a modificar:**
+
 - Todos los scripts en `scripts/` o `packages/api/scripts/`
 
 **Criterios de Aceptación:**
+
 - Scripts funcionan con nueva estructura
 - Paths correctos
 - No hay errores de ejecución
 
 **Commits sugeridos:**
+
 ```
 refactor: actualizar scripts para monorepo
 ```
@@ -565,6 +642,7 @@ refactor: actualizar scripts para monorepo
 ### Fase 5: Configuración de Commitizen y Hooks (1 día)
 
 #### Tarea 5.1: Configurar Commitizen en root
+
 **Tipo:** `build`
 **Prioridad:** Media
 **Estimación:** 1-2 horas
@@ -574,6 +652,7 @@ refactor: actualizar scripts para monorepo
 Configurar Commitizen para commits estructurados en el monorepo.
 
 **Acciones:**
+
 - [x] Instalar `commitizen` y `cz-conventional-changelog` en root:
   ```bash
   npm install -D commitizen cz-conventional-changelog
@@ -600,15 +679,18 @@ Configurar Commitizen para commits estructurados en el monorepo.
 - [x] Probar `npm run commit`
 
 **Archivos a crear/modificar:**
+
 - `package.json` (root)
 - `.czrc` (opcional)
 
 **Criterios de Aceptación:**
+
 - `npm run commit` funciona
 - Commits siguen formato Conventional Commits
 - Commitlint valida correctamente
 
 **Commits sugeridos:**
+
 ```
 build: configurar Commitizen para commits estructurados
 ```
@@ -616,6 +698,7 @@ build: configurar Commitizen para commits estructurados
 ---
 
 #### Tarea 5.2: Actualizar Husky y commitlint para monorepo
+
 **Tipo:** `build`
 **Prioridad:** Media
 **Estimación:** 1 hora
@@ -625,6 +708,7 @@ build: configurar Commitizen para commits estructurados
 Asegurar que Husky y commitlint funcionen correctamente en monorepo.
 
 **Acciones:**
+
 - [x] Verificar que `commitlint.config.mjs` esté en root
 - [x] Actualizar `.husky/commit-msg` si es necesario:
   - Asegurar que commitlint se ejecute desde root
@@ -636,16 +720,19 @@ Asegurar que Husky y commitlint funcionen correctamente en monorepo.
   - Hacer commit con formato correcto (debe pasar)
 
 **Archivos a modificar:**
+
 - `.husky/commit-msg`
 - `.husky/pre-commit` (si existe)
 - `commitlint.config.mjs` (verificar ubicación)
 
 **Criterios de Aceptación:**
+
 - Hooks funcionan correctamente
 - Commitlint valida desde root
 - Lint-staged funciona en workspaces
 
 **Commits sugeridos:**
+
 ```
 build: actualizar Husky y commitlint para monorepo
 ```
@@ -655,6 +742,7 @@ build: actualizar Husky y commitlint para monorepo
 ### Fase 6: Configuración de Testing y CI/CD (1 día)
 
 #### Tarea 6.1: Actualizar configuraciones de Jest
+
 **Tipo:** `build`
 **Prioridad:** Alta
 **Estimación:** 1-2 horas
@@ -664,6 +752,7 @@ build: actualizar Husky y commitlint para monorepo
 Actualizar configuraciones de Jest para monorepo.
 
 **Acciones:**
+
 - [x] Verificar `jest.config.js` en `packages/api/`:
   - Ajustar `rootDir` si es necesario
   - Verificar `moduleNameMapper` con nuevos paths
@@ -679,14 +768,17 @@ Actualizar configuraciones de Jest para monorepo.
 - [x] Verificar cobertura funciona
 
 **Archivos a modificar:**
+
 - `packages/api/jest.config.js` ✅
 
 **Criterios de Aceptación:**
+
 - Todos los tests pasan
 - Cobertura funciona
 - Paths correctos
 
 **Commits sugeridos:**
+
 ```
 build: actualizar configuraciones de Jest para monorepo
 ```
@@ -694,6 +786,7 @@ build: actualizar configuraciones de Jest para monorepo
 ---
 
 #### Tarea 6.2: Actualizar scripts de testing en package.json
+
 **Tipo:** `build`
 **Prioridad:** Media
 **Estimación:** 30 min
@@ -703,6 +796,7 @@ build: actualizar configuraciones de Jest para monorepo
 Asegurar que scripts de testing funcionen desde root y desde packages/api.
 
 **Acciones:**
+
 - [x] Agregar scripts en root `package.json` para ejecutar tests:
   - `test:api` - Tests unitarios
   - `test:api:cov` - Tests con cobertura
@@ -713,14 +807,17 @@ Asegurar que scripts de testing funcionen desde root y desde packages/api.
 - [x] Probar ejecución desde root y desde packages/api
 
 **Archivos a modificar:**
+
 - `package.json` (root) ✅
 
 **Criterios de Aceptación:**
+
 - Tests ejecutan desde root
 - Tests ejecutan desde packages/api
 - Ambos funcionan correctamente
 
 **Commits sugeridos:**
+
 ```
 build: agregar scripts de testing en root para monorepo
 ```
@@ -728,6 +825,7 @@ build: agregar scripts de testing en root para monorepo
 ---
 
 #### Tarea 6.3: Actualizar CI/CD (si existe)
+
 **Tipo:** `ci`
 **Prioridad:** Media
 **Estimación:** 1-2 horas
@@ -737,6 +835,7 @@ build: agregar scripts de testing en root para monorepo
 Actualizar workflows de GitHub Actions (o CI/CD) para monorepo.
 
 **Acciones:**
+
 - [x] Buscar archivos `.github/workflows/*.yml`
 - [x] Actualizar paths en workflows:
   - `working-directory: packages/api` donde sea necesario
@@ -752,17 +851,20 @@ Actualizar workflows de GitHub Actions (o CI/CD) para monorepo.
 - [x] Documentar cambios
 
 **Archivos a modificar:**
+
 - `.github/workflows/ci.yml` ✅
 - `.github/workflows/cd.yml` ✅
 - `.github/workflows/docker.yml` ✅
 
 **Criterios de Aceptación:**
+
 - Workflows funcionan con nueva estructura
 - Tests ejecutan correctamente
 - Build funciona
 - Build de shared se ejecuta antes de tests
 
 **Commits sugeridos:**
+
 ```
 ci: actualizar workflows para monorepo
 ```
@@ -772,6 +874,7 @@ ci: actualizar workflows para monorepo
 ### Fase 7: Limpieza y Documentación (1 día)
 
 #### Tarea 7.1: Limpiar archivos obsoletos
+
 **Tipo:** `chore`
 **Prioridad:** Baja
 **Estimación:** 30 min
@@ -781,6 +884,7 @@ ci: actualizar workflows para monorepo
 Eliminar archivos que ya no son necesarios en root.
 
 **Acciones:**
+
 - [x] Identificar archivos que ya no se usan en root:
   - `tsconfig.json.backup` - Eliminado ✅
   - `.env.local.backup` - Identificado (puede eliminarse manualmente)
@@ -789,14 +893,17 @@ Eliminar archivos que ya no son necesarios en root.
 - [x] Actualizar `.gitignore` si es necesario
 
 **Archivos a eliminar:**
+
 - `tsconfig.json.backup` ✅
 
 **Criterios de Aceptación:**
+
 - No hay archivos duplicados
 - Todo funciona correctamente
 - `.gitignore` actualizado
 
 **Commits sugeridos:**
+
 ```
 chore: eliminar archivos obsoletos después de migración
 ```
@@ -804,6 +911,7 @@ chore: eliminar archivos obsoletos después de migración
 ---
 
 #### Tarea 7.2: Actualizar .gitignore para monorepo
+
 **Tipo:** `build`
 **Prioridad:** Media
 **Estimación:** 30 min
@@ -813,6 +921,7 @@ chore: eliminar archivos obsoletos después de migración
 Actualizar `.gitignore` para estructura de monorepo.
 
 **Acciones:**
+
 - [x] Agregar patrones para monorepo:
   - `packages/*/node_modules/` (ya cubierto por node_modules/)
   - `packages/*/dist/` ✅
@@ -826,14 +935,17 @@ Actualizar `.gitignore` para estructura de monorepo.
 - [x] Probar que `.gitignore` funciona
 
 **Archivos a modificar:**
+
 - `.gitignore` ✅
 
 **Criterios de Aceptación:**
+
 - `.gitignore` cubre todos los casos
 - No se ignoran archivos importantes
 - Estructura de monorepo considerada
 
 **Commits sugeridos:**
+
 ```
 build: actualizar .gitignore para monorepo
 ```
@@ -841,6 +953,7 @@ build: actualizar .gitignore para monorepo
 ---
 
 #### Tarea 7.3: Actualizar documentación
+
 **Tipo:** `docs`
 **Prioridad:** Alta
 **Estimación:** 2 horas
@@ -850,6 +963,7 @@ build: actualizar .gitignore para monorepo
 Actualizar toda la documentación para reflejar estructura de monorepo.
 
 **Acciones:**
+
 - [x] Actualizar `README.md`:
   - Estructura de directorios ✅
   - Comandos de instalación ✅
@@ -869,16 +983,19 @@ Actualizar toda la documentación para reflejar estructura de monorepo.
 - [x] Actualizar otros docs relevantes
 
 **Archivos a modificar:**
+
 - `README.md` ✅
 - `docs/PROJECT_CONTEXT.md` ✅
 - `docs/MONOREPO_GUIDE.md` ✅ (creado)
 
 **Criterios de Aceptación:**
+
 - Documentación actualizada
 - Guías claras para desarrolladores
 - Ejemplos funcionan
 
 **Commits sugeridos:**
+
 ```
 docs: actualizar documentación para monorepo
 ```
@@ -886,6 +1003,7 @@ docs: actualizar documentación para monorepo
 ---
 
 #### Tarea 7.4: Verificación final y testing completo
+
 **Tipo:** `test`
 **Prioridad:** Crítica
 **Estimación:** 2-3 horas
@@ -895,6 +1013,7 @@ docs: actualizar documentación para monorepo
 Ejecutar suite completa de tests y verificar que todo funciona.
 
 **Acciones:**
+
 - [x] Ejecutar `npm install` en root ✅
 - [x] Ejecutar `npm run build` en `packages/api` ✅
 - [x] Ejecutar `npm run build` en `packages/shared` ✅
@@ -914,12 +1033,14 @@ Ejecutar suite completa de tests y verificar que todo funciona.
 - [x] Crear checklist de verificación ✅
 
 **Criterios de Aceptación:**
+
 - Todos los tests pasan
 - Docker funciona
 - No hay regresiones
 - Todo funciona como antes de la migración
 
 **Commits sugeridos:**
+
 ```
 test: verificación final de migración a monorepo
 ```
@@ -928,16 +1049,16 @@ test: verificación final de migración a monorepo
 
 ## 📊 Resumen de Tareas
 
-| Fase | Tareas | Estimación | Prioridad |
-|------|--------|------------|-----------|
-| Fase 1: Preparación | 3 tareas | 2-3 días | Crítica |
-| Fase 2: Migración Backend | 3 tareas | 2-3 días | Crítica |
-| Fase 3: Paquete Shared | 5 tareas | 2 días | Alta |
-| Fase 4: Docker y Scripts | 4 tareas | 2 días | Alta |
-| Fase 5: Commitizen | 2 tareas | 1 día | Media |
-| Fase 6: Testing y CI/CD | 3 tareas | 1 día | Alta |
-| Fase 7: Limpieza | 4 tareas | 1 día | Media |
-| **TOTAL** | **24 tareas** | **8-10 días** | |
+| Fase                      | Tareas        | Estimación    | Prioridad |
+| ------------------------- | ------------- | ------------- | --------- |
+| Fase 1: Preparación       | 3 tareas      | 2-3 días      | Crítica   |
+| Fase 2: Migración Backend | 3 tareas      | 2-3 días      | Crítica   |
+| Fase 3: Paquete Shared    | 5 tareas      | 2 días        | Alta      |
+| Fase 4: Docker y Scripts  | 4 tareas      | 2 días        | Alta      |
+| Fase 5: Commitizen        | 2 tareas      | 1 día         | Media     |
+| Fase 6: Testing y CI/CD   | 3 tareas      | 1 día         | Alta      |
+| Fase 7: Limpieza          | 4 tareas      | 1 día         | Media     |
+| **TOTAL**                 | **24 tareas** | **8-10 días** |           |
 
 ---
 
@@ -975,6 +1096,7 @@ Una vez completada la migración:
 **Mantenido por:** Equipo CareCore
 
 **Estado de Migración:**
+
 - ✅ Fase 1: Preparación y Estructura Base (Completada)
 - ✅ Fase 2: Migración del Backend (Completada)
 - ✅ Fase 3: Crear Paquete Shared (Completada)
@@ -982,4 +1104,3 @@ Una vez completada la migración:
 - ✅ Fase 5: Configuración de Commitizen y Hooks (Completada)
 - ✅ Fase 6: Configuración de Testing y CI/CD (Completada)
 - ✅ Fase 7: Limpieza y Documentación (Completada)
-

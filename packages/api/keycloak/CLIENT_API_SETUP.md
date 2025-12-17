@@ -17,6 +17,7 @@ Configurar el cliente OAuth2/OIDC "carecore-api" de tipo confidential para que l
 ### Paso 1: Acceder a Admin Console
 
 1. Iniciar servicios (si no están corriendo):
+
    ```bash
    npm run docker:up
    ```
@@ -92,6 +93,7 @@ Configurar el cliente OAuth2/OIDC "carecore-api" de tipo confidential para que l
 Los mappers permiten agregar información adicional a los tokens. Para MVP, podemos usar los mappers por defecto.
 
 Si necesitas mappers personalizados más adelante:
+
 1. Ir a la pestaña **Mappers**
 2. Hacer clic en **Create mapper**
 3. Configurar según necesidades (roles, grupos, etc.)
@@ -134,6 +136,7 @@ curl -X POST http://localhost:8080/realms/carecore/protocol/openid-connect/token
 ## 📝 Configuración Aplicada
 
 ### Settings Generales
+
 - **Client ID:** carecore-api
 - **Client Type:** OpenID Connect
 - **Client Authentication:** ON (confidential)
@@ -141,13 +144,15 @@ curl -X POST http://localhost:8080/realms/carecore/protocol/openid-connect/token
 - **Direct Access Grants:** ON (solo desarrollo)
 
 ### URLs
+
 - **Root URL:** http://localhost:3000
 - **Valid Redirect URIs:**
   - http://localhost:3000/api/auth/callback
-  - http://localhost:3000/api/auth/callback/*
+  - http://localhost:3000/api/auth/callback/\*
 - **Web Origins:** http://localhost:3000
 
 ### Tokens
+
 - **Access Token Lifespan:** 5 minutes
 - **Client Session Idle:** 30 minutes
 - **Client Session Max:** 10 hours
@@ -171,6 +176,7 @@ curl -X POST http://localhost:8080/realms/carecore/protocol/openid-connect/token
 ### Variables de Entorno
 
 Agregar a `.env.local`:
+
 ```env
 # Keycloak Client Configuration
 KEYCLOAK_CLIENT_ID=carecore-api
@@ -182,6 +188,7 @@ KEYCLOAK_CLIENT_SECRET=<tu-client-secret-aqui>
 ## 📚 Próximos Pasos
 
 Después de configurar el cliente, continúa con:
+
 - [Tarea #6: Configurar cliente "carecore-web"](../docs/tasks/PHASE1_KEYCLOAK_SETUP.md#tarea-6-configurar-cliente-carecore-web-en-keycloak)
 - [Tarea #7: Definir roles base](../docs/tasks/PHASE1_KEYCLOAK_SETUP.md#tarea-7-definir-roles-base-en-keycloak)
 - [Fase 2: Integración NestJS](../docs/AUTH_IMPLEMENTATION_PLAN.md#fase-2-integración-nestjs)
@@ -212,4 +219,3 @@ Después de configurar el cliente, continúa con:
 - [Keycloak Client Configuration](https://www.keycloak.org/docs/latest/server_admin/#_clients)
 - [OAuth2 Client Types](https://www.keycloak.org/docs/latest/server_admin/#_client_types)
 - [Keycloak Client Credentials](https://www.keycloak.org/docs/latest/server_admin/#_client_credentials)
-

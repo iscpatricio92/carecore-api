@@ -5,6 +5,7 @@ This guide explains how to work with database migrations in the CareCore API pro
 ## Overview
 
 We use TypeORM migrations to manage database schema changes. Migrations ensure that:
+
 - Database schema changes are version-controlled
 - Changes can be applied consistently across environments
 - Rollbacks are possible if needed
@@ -21,11 +22,13 @@ npm run migration:generate -- src/migrations/MigrationName
 ```
 
 **Example:**
+
 ```bash
 npm run migration:generate -- src/migrations/AddEmailToUsers
 ```
 
 This will:
+
 - Compare your entities with the current database schema
 - Generate a migration file with the necessary SQL changes
 - Use the current timestamp automatically
@@ -39,11 +42,13 @@ npm run migration:create -- MigrationName
 ```
 
 **Example:**
+
 ```bash
 npm run migration:create -- AddIndexToPatients
 ```
 
 This creates a template file with:
+
 - Current timestamp (ensures proper ordering)
 - `up()` method for applying changes
 - `down()` method for rollback
@@ -76,6 +81,7 @@ RUN_MIGRATIONS_ON_STARTUP=true
 3. **Production:** **NOT RECOMMENDED** - Migrations should be run manually or via CI/CD
 
 **Why not in production?**
+
 - Migrations can be destructive
 - You want full control over when schema changes are applied
 - Better to test migrations in staging first
@@ -139,11 +145,13 @@ public async up(queryRunner: QueryRunner): Promise<void> {
 Always test migrations:
 
 1. **Test locally:**
+
    ```bash
    npm run migration:run
    ```
 
 2. **Test rollback:**
+
    ```bash
    npm run migration:revert
    ```
@@ -243,6 +251,7 @@ public async up(queryRunner: QueryRunner): Promise<void> {
 ### Migration Already Exists
 
 If you see "Migration already exists", check:
+
 - The migration has already been run
 - Use `npm run migration:show` to see executed migrations
 
@@ -257,13 +266,14 @@ If you see "Migration already exists", check:
 ### Timestamp Conflicts
 
 If you have timestamp conflicts:
+
 - Use `npm run migration:create` which always uses current timestamp
 - Never manually edit timestamps in existing migrations
 
 ## Environment Variables
 
-| Variable | Description | Default | Recommended |
-|----------|-------------|---------|-------------|
+| Variable                    | Description                    | Default | Recommended                        |
+| --------------------------- | ------------------------------ | ------- | ---------------------------------- |
 | `RUN_MIGRATIONS_ON_STARTUP` | Auto-run migrations on startup | `false` | `false` (production), `true` (dev) |
 
 ## Related Documentation

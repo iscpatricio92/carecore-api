@@ -114,6 +114,7 @@ Backend API construido con NestJS.
 **Ubicación:** `packages/api/`
 
 **Scripts principales:**
+
 - `npm run build` - Compilar TypeScript
 - `npm run start:dev` - Desarrollo con hot-reload
 - `npm run test` - Tests unitarios
@@ -121,6 +122,7 @@ Backend API construido con NestJS.
 - `npm run test:integration` - Tests de integración
 
 **Dependencias:**
+
 - Depende de `@carecore/shared` para tipos y constantes
 
 ### `@carecore/shared`
@@ -130,10 +132,12 @@ Código compartido entre todos los packages (tipos, interfaces, constantes).
 **Ubicación:** `packages/shared/`
 
 **Contenido:**
+
 - `src/types/` - Interfaces TypeScript (FHIR, User, etc.)
 - `src/constants/` - Constantes (FHIR scopes, resource types, etc.)
 
 **Uso:**
+
 ```typescript
 // En packages/api o packages/web
 import { Patient, Practitioner } from '@carecore/shared';
@@ -141,6 +145,7 @@ import { FHIR_SCOPES } from '@carecore/shared';
 ```
 
 **Importante:**
+
 - Siempre construir `@carecore/shared` antes de construir otros packages
 - Los cambios en `shared` requieren rebuild de los packages que lo usan
 
@@ -161,11 +166,13 @@ Frontend mobile construido con React Native.
 ## 🔧 Cómo Agregar un Nuevo Paquete
 
 1. **Crear estructura de directorios:**
+
    ```bash
    mkdir -p packages/nuevo-package/src
    ```
 
 2. **Crear `package.json`:**
+
    ```json
    {
      "name": "@carecore/nuevo-package",
@@ -181,6 +188,7 @@ Frontend mobile construido con React Native.
    ```
 
 3. **Crear `tsconfig.json`:**
+
    ```json
    {
      "extends": "../../tsconfig.base.json",
@@ -193,6 +201,7 @@ Frontend mobile construido con React Native.
    ```
 
 4. **Instalar dependencias:**
+
    ```bash
    npm install --workspace=@carecore/nuevo-package
    ```
@@ -213,6 +222,7 @@ Frontend mobile construido con React Native.
 ### Compartir Tipos e Interfaces
 
 1. **Mover código a `packages/shared/src/types/`:**
+
    ```typescript
    // packages/shared/src/types/user.interface.ts
    export interface User {
@@ -222,6 +232,7 @@ Frontend mobile construido con React Native.
    ```
 
 2. **Exportar desde `packages/shared/src/index.ts`:**
+
    ```typescript
    export * from './types/user.interface';
    ```
@@ -235,6 +246,7 @@ Frontend mobile construido con React Native.
 ### Compartir Constantes
 
 1. **Crear archivo en `packages/shared/src/constants/`:**
+
    ```typescript
    // packages/shared/src/constants/api.constants.ts
    export const API_VERSION = 'v1';
@@ -242,6 +254,7 @@ Frontend mobile construido con React Native.
    ```
 
 2. **Exportar desde `packages/shared/src/index.ts`:**
+
    ```typescript
    export * from './constants/api.constants';
    ```
@@ -280,6 +293,7 @@ npm run test:changed
 ### Configuración de Jest
 
 Cada package tiene su propia configuración de Jest:
+
 - `packages/api/jest.config.js` - Tests unitarios
 - `packages/api/test/jest-e2e.json` - Tests E2E
 - `packages/api/jest.integration.js` - Tests de integración
@@ -332,6 +346,7 @@ npm run commit
 **Formato:** `<tipo>(<scope>): <descripción>`
 
 **Scopes disponibles:**
+
 - `api` - Backend API
 - `web` - Frontend Web
 - `mobile` - Frontend Mobile
@@ -341,6 +356,7 @@ npm run commit
 - `root` - Cambios en root
 
 **Ejemplos:**
+
 ```bash
 feat(api): agregar endpoint de pacientes
 fix(shared): corregir tipo de User
@@ -354,6 +370,7 @@ docs(root): actualizar README
 El Dockerfile está configurado para trabajar con la estructura de monorepo:
 
 1. **Copia `package.json` de root y packages:**
+
    ```dockerfile
    COPY package.json package-lock.json ./
    COPY packages/api/package.json ./packages/api/
@@ -361,6 +378,7 @@ El Dockerfile está configurado para trabajar con la estructura de monorepo:
    ```
 
 2. **Instala dependencias con workspaces:**
+
    ```dockerfile
    RUN npm ci --omit=dev
    ```
@@ -378,7 +396,9 @@ El Dockerfile está configurado para trabajar con la estructura de monorepo:
 ### Error: Cannot find module '@carecore/shared'
 
 **Solución:**
+
 1. Asegúrate de que `packages/shared` está construido:
+
    ```bash
    npm run build:shared
    ```
@@ -393,7 +413,9 @@ El Dockerfile está configurado para trabajar con la estructura de monorepo:
 ### Error: TypeScript no encuentra tipos de @carecore/shared
 
 **Solución:**
+
 1. Verifica que `tsconfig.json` del package extiende `tsconfig.base.json`:
+
    ```json
    {
      "extends": "../../tsconfig.base.json"
@@ -414,7 +436,9 @@ El Dockerfile está configurado para trabajar con la estructura de monorepo:
 ### Tests fallan con imports de @carecore/shared
 
 **Solución:**
+
 1. Verifica que `jest.config.js` tiene el `moduleNameMapper` correcto:
+
    ```javascript
    moduleNameMapper: {
      '^@carecore/shared$': '<rootDir>/../../shared/src',
@@ -436,4 +460,3 @@ El Dockerfile está configurado para trabajar con la estructura de monorepo:
 ---
 
 **¿Preguntas?** Consulta la documentación en `docs/` o crea un issue en el repositorio.
-

@@ -3,6 +3,7 @@
 > ⚠️ **ARCHIVO TEMPORAL**
 > Este archivo contiene tareas detalladas para agregar en GitHub Projects.
 > **Puede ser eliminado** una vez que:
+>
 > - Las tareas estén agregadas a GitHub Projects
 > - Las tareas estén completadas
 > - Ya no se necesite como referencia
@@ -18,11 +19,14 @@
 **Título:** `feat(auth): agregar servicio Keycloak a docker-compose.yml`
 
 **Descripción:**
-```markdown
+
+````markdown
 ## Objetivo
+
 Agregar el servicio Keycloak al archivo docker-compose.yml para que corra junto con la API y PostgreSQL.
 
 ## Tareas
+
 - [ ] Agregar servicio `keycloak` en docker-compose.yml
 - [ ] Configurar imagen: `quay.io/keycloak/keycloak:latest`
 - [ ] Configurar puerto 8080 (mapear a host)
@@ -32,6 +36,7 @@ Agregar el servicio Keycloak al archivo docker-compose.yml para que corra junto 
 - [ ] Configurar healthcheck para Keycloak
 
 ## Configuración Esperada
+
 ```yaml
 keycloak:
   image: quay.io/keycloak/keycloak:latest
@@ -46,7 +51,7 @@ keycloak:
     KC_DB_USERNAME: ${DB_USER}
     KC_DB_PASSWORD: ${DB_PASSWORD}
   ports:
-    - "${KEYCLOAK_PORT:-8080}:8080"
+    - '${KEYCLOAK_PORT:-8080}:8080'
   depends_on:
     postgres:
       condition: service_healthy
@@ -55,16 +60,20 @@ keycloak:
   volumes:
     - keycloak_data:/var/lib/keycloak/data
 ```
+````
 
 ## Criterios de Aceptación
+
 - [ ] Keycloak inicia correctamente con `docker-compose up`
 - [ ] Keycloak accesible en http://localhost:8080
 - [ ] Admin console carga correctamente
 - [ ] Base de datos keycloak_db se crea automáticamente
 
 ## Referencias
+
 - [Keycloak Docker Documentation](https://www.keycloak.org/server/containers)
-```
+
+````
 
 **Labels:** `enhancement`, `auth`, `phase-1`
 
@@ -104,7 +113,7 @@ Agregar todas las variables de entorno necesarias para Keycloak en los archivos 
 
 ## Referencias
 - Ver ENV_VARIABLES.md para formato
-```
+````
 
 **Labels:** `enhancement`, `auth`, `phase-1`, `documentation`
 
@@ -115,11 +124,14 @@ Agregar todas las variables de entorno necesarias para Keycloak en los archivos 
 **Título:** `feat(auth): crear scripts de inicialización para Keycloak`
 
 **Descripción:**
+
 ```markdown
 ## Objetivo
+
 Crear scripts y estructura de carpetas para inicializar y configurar Keycloak automáticamente.
 
 ## Tareas
+
 - [ ] Crear carpeta `keycloak/` en raíz del proyecto
 - [ ] Crear subcarpeta `keycloak/init/` para scripts
 - [ ] Crear script SQL para crear base de datos `keycloak_db` (opcional, Keycloak lo hace automáticamente)
@@ -129,12 +141,14 @@ Crear scripts y estructura de carpetas para inicializar y configurar Keycloak au
 
 ## Estructura Esperada
 ```
+
 keycloak/
 ├── README.md
 ├── init/
-│   └── (scripts de inicialización)
+│ └── (scripts de inicialización)
 └── realms/
-    └── (exports de realms, futuro)
+└── (exports de realms, futuro)
+
 ```
 
 ## Criterios de Aceptación
@@ -156,11 +170,14 @@ keycloak/
 **Título:** `feat(auth): crear y configurar realm "carecore" en Keycloak`
 
 **Descripción:**
+
 ```markdown
 ## Objetivo
+
 Crear el realm principal "carecore" en Keycloak con configuración básica para el MVP.
 
 ## Tareas
+
 - [ ] Acceder a admin console de Keycloak (http://localhost:8080)
 - [ ] Crear nuevo realm "carecore"
 - [ ] Configurar settings básicos del realm:
@@ -177,6 +194,7 @@ Crear el realm principal "carecore" en Keycloak con configuración básica para 
 - [ ] Documentar configuración en keycloak/README.md
 
 ## Configuración del Realm
+
 - **Name:** carecore
 - **Display Name:** CareCore
 - **Enabled:** Yes
@@ -185,11 +203,13 @@ Crear el realm principal "carecore" en Keycloak con configuración básica para 
 - **Remember me:** Yes
 
 ## Criterios de Aceptación
+
 - [ ] Realm "carecore" creado y funcional
 - [ ] Configuración básica aplicada
 - [ ] Realm exportado y guardado en keycloak/realms/ (opcional)
 
 ## Referencias
+
 - [Keycloak Realm Configuration](https://www.keycloak.org/docs/latest/server_admin/#_realm)
 ```
 
@@ -202,11 +222,14 @@ Crear el realm principal "carecore" en Keycloak con configuración básica para 
 **Título:** `feat(auth): configurar cliente confidential "carecore-api" en Keycloak`
 
 **Descripción:**
+
 ```markdown
 ## Objetivo
+
 Configurar el cliente OAuth2/OIDC "carecore-api" de tipo confidential para la API backend.
 
 ## Tareas
+
 - [ ] Crear cliente "carecore-api" en realm "carecore"
 - [ ] Configurar tipo: Confidential
 - [ ] Configurar Client ID: `carecore-api`
@@ -225,6 +248,7 @@ Configurar el cliente OAuth2/OIDC "carecore-api" de tipo confidential para la AP
 - [ ] Documentar configuración
 
 ## Configuración del Cliente
+
 - **Client ID:** carecore-api
 - **Client Protocol:** openid-connect
 - **Access Type:** confidential
@@ -234,12 +258,14 @@ Configurar el cliente OAuth2/OIDC "carecore-api" de tipo confidential para la AP
 - **Web Origins:** http://localhost:3000
 
 ## Criterios de Aceptación
+
 - [ ] Cliente creado y configurado correctamente
 - [ ] Client Secret guardado de forma segura
 - [ ] Redirect URIs configurados
 - [ ] Configuración documentada
 
 ## Seguridad
+
 - ⚠️ Client Secret NUNCA debe estar en el código
 - ⚠️ Usar variables de entorno para Client Secret
 - ⚠️ Rotar Client Secret periódicamente en producción
@@ -254,11 +280,14 @@ Configurar el cliente OAuth2/OIDC "carecore-api" de tipo confidential para la AP
 **Título:** `feat(auth): configurar cliente public "carecore-web" en Keycloak`
 
 **Descripción:**
+
 ```markdown
 ## Objetivo
+
 Configurar el cliente OAuth2/OIDC "carecore-web" de tipo public para la aplicación frontend.
 
 ## Tareas
+
 - [ ] Crear cliente "carecore-web" en realm "carecore"
 - [ ] Configurar tipo: Public
 - [ ] Configurar Client ID: `carecore-web`
@@ -276,6 +305,7 @@ Configurar el cliente OAuth2/OIDC "carecore-web" de tipo public para la aplicaci
 - [ ] Documentar configuración
 
 ## Configuración del Cliente
+
 - **Client ID:** carecore-web
 - **Client Protocol:** openid-connect
 - **Access Type:** public
@@ -285,12 +315,14 @@ Configurar el cliente OAuth2/OIDC "carecore-web" de tipo public para la aplicaci
 - **Web Origins:** http://localhost:3001
 
 ## Criterios de Aceptación
+
 - [ ] Cliente creado y configurado correctamente
 - [ ] PKCE habilitado para seguridad
 - [ ] Redirect URIs configurados
 - [ ] Configuración documentada
 
 ## Notas
+
 - Cliente público no requiere Client Secret
 - PKCE es obligatorio para clientes públicos en producción
 ```
@@ -304,11 +336,14 @@ Configurar el cliente OAuth2/OIDC "carecore-web" de tipo public para la aplicaci
 **Título:** `feat(auth): definir roles base del sistema en Keycloak`
 
 **Descripción:**
+
 ```markdown
 ## Objetivo
+
 Crear todos los roles base del sistema en el realm "carecore" de Keycloak.
 
 ## Tareas
+
 - [ ] Crear rol "patient" con descripción
 - [ ] Crear rol "practitioner" con descripción
 - [ ] Crear rol "viewer" con descripción
@@ -323,43 +358,53 @@ Crear todos los roles base del sistema en el realm "carecore" de Keycloak.
 ## Roles a Crear
 
 ### patient
+
 - **Descripción:** Usuario paciente, dueño de su información
 - **Permisos:** read/consent/revoke/share/export de sus propios datos
 
 ### practitioner
+
 - **Descripción:** Profesional médico certificado
 - **Permisos:** create/update registros clínicos, read datos de pacientes asignados
 
 ### viewer
+
 - **Descripción:** Usuario con acceso de solo lectura temporal
 - **Permisos:** read datos con consentimiento, scopes temporales
 
 ### lab
+
 - **Descripción:** Sistema de laboratorio integrado
 - **Permisos:** create/read resultados de laboratorio, scopes limitados
 
 ### insurer
+
 - **Descripción:** Sistema de aseguradora integrado
 - **Permisos:** read datos con consentimiento, scopes limitados
 
 ### system
+
 - **Descripción:** Sistema externo integrado
 - **Permisos:** scopes específicos según integración
 
 ### admin
+
 - **Descripción:** Administrador del sistema
 - **Permisos:** acceso completo, gestión de usuarios, verificación de practitioners
 
 ### audit
+
 - **Descripción:** Usuario de auditoría
 - **Permisos:** read logs de auditoría, operaciones internas
 
 ## Criterios de Aceptación
+
 - [ ] Todos los roles creados en Keycloak
 - [ ] Roles documentados en ROLES.md
 - [ ] Descripción clara de permisos de cada rol
 
 ## Referencias
+
 - Ver sección 2.3 del AUTH_IMPLEMENTATION_PLAN.md
 ```
 
@@ -372,11 +417,14 @@ Crear todos los roles base del sistema en el realm "carecore" de Keycloak.
 **Título:** `docs(auth): documentar setup y configuración de Keycloak`
 
 **Descripción:**
-```markdown
+
+````markdown
 ## Objetivo
+
 Crear documentación completa sobre el setup, configuración y uso de Keycloak en el proyecto.
 
 ## Tareas
+
 - [ ] Crear sección "Keycloak Setup" en README.md
 - [ ] Documentar acceso a admin console:
   - URL: http://localhost:8080
@@ -394,33 +442,41 @@ Crear documentación completa sobre el setup, configuración y uso de Keycloak e
 ## Documentación a Crear
 
 ### README.md - Sección Keycloak
+
 ```markdown
 ## 🔐 Keycloak Setup
 
 ### Acceso
+
 - Admin Console: http://localhost:8080
 - Usuario: ${KEYCLOAK_ADMIN}
 - Contraseña: (ver .env.local)
 
 ### Estructura
+
 - `keycloak/` - Configuración de Keycloak
   - `init/` - Scripts de inicialización
   - `realms/` - Exports de realms (futuro)
 
 ### Troubleshooting
+
 - Ver [KEYCLOAK_TROUBLESHOOTING.md](docs/KEYCLOAK_TROUBLESHOOTING.md)
 ```
+````
 
 ### KEYCLOAK_TROUBLESHOOTING.md
+
 - Problemas comunes y soluciones
 - Logs importantes
 - Comandos útiles
 
 ## Criterios de Aceptación
+
 - [ ] Documentación completa en README
 - [ ] Guía de troubleshooting creada
 - [ ] Diagrama de arquitectura incluido
 - [ ] Ejemplos de configuración incluidos
+
 ```
 
 **Labels:** `documentation`, `auth`, `phase-1`
@@ -467,3 +523,4 @@ Crear documentación completa sobre el setup, configuración y uso de Keycloak e
 
 **Última actualización**: 2025-01-27
 
+```

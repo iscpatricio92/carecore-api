@@ -20,7 +20,9 @@ En Keycloak, **TODO se almacena en la base de datos PostgreSQL**:
 ### ¿Qué contiene cada parte del backup?
 
 #### 1. **Backup de la Base de Datos** (`keycloak-db-*.dump`)
+
 Este es el **archivo más importante** porque contiene:
+
 - ✅ Todos los roles
 - ✅ Todos los clientes (con sus secrets)
 - ✅ Todos los usuarios
@@ -29,7 +31,9 @@ Este es el **archivo más importante** porque contiene:
 - ✅ **TODO** lo que Keycloak necesita
 
 #### 2. **Backup del Realm JSON** (`carecore-realm-*.json`)
+
 Este archivo contiene:
+
 - ✅ Configuración básica del realm (settings, políticas, etc.)
 - ⚠️ Puede no incluir roles y clientes (depende de la versión de Keycloak)
 - ✅ Se usa como "fallback" si el realm no existe después del restore
@@ -75,11 +79,13 @@ docker exec carecore-postgres pg_restore --list keycloak/backups/db/keycloak-db-
 Si quieres estar 100% seguro, podríamos mejorar el script de backup para:
 
 1. Exportar roles explícitamente usando la API:
+
    ```bash
    GET /admin/realms/{realm}/roles
    ```
 
 2. Exportar clientes explícitamente usando la API:
+
    ```bash
    GET /admin/realms/{realm}/clients
    ```
@@ -91,4 +97,3 @@ Pero **no es necesario** porque la base de datos ya contiene todo.
 ---
 
 **Resumen:** El backup actual es suficiente y funcional. La base de datos PostgreSQL es la fuente de verdad y contiene todo lo necesario para restaurar Keycloak completamente.
-

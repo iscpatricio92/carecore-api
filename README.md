@@ -31,12 +31,14 @@ This repository contains the backend API, built with NestJS, FHIR, and an archit
 ### Initial Setup
 
 1. **Clone the repository**
+
    ```bash
    git clone <repository-url>
    cd carecore-api
    ```
 
 2. **Install dependencies** (installs for all packages in monorepo)
+
    ```bash
    npm install
    # or
@@ -44,6 +46,7 @@ This repository contains the backend API, built with NestJS, FHIR, and an archit
    ```
 
 3. **Configure environment variables**
+
    ```bash
    # Copy development example file
    cp .env.development.example .env.development
@@ -63,6 +66,7 @@ This repository contains the backend API, built with NestJS, FHIR, and an archit
    For detailed configuration, see [ENV_VARIABLES.md](ENV_VARIABLES.md)
 
 4. **Start PostgreSQL with Docker**
+
    ```bash
    docker-compose up -d
    # or
@@ -70,11 +74,13 @@ This repository contains the backend API, built with NestJS, FHIR, and an archit
    ```
 
 5. **Build shared package** (required before starting API)
+
    ```bash
    npm run build:shared
    ```
 
 6. **Start the application in development mode**
+
    ```bash
    npm run start:dev
    # or
@@ -91,11 +97,13 @@ This repository contains the backend API, built with NestJS, FHIR, and an archit
 ### Useful Commands
 
 View all available commands:
+
 ```bash
 make help
 ```
 
 Main commands:
+
 - `make setup` - Complete initial setup
 - `make dev` - Start in development mode
 - `make docker-up` - Start Docker containers
@@ -107,17 +115,20 @@ Main commands:
 ### Troubleshooting
 
 **Port 5432 already in use:**
+
 ```bash
 lsof -i :5432
 docker stop <container-id>
 ```
 
 **Cannot connect to database:**
+
 1. Verify container is running: `docker ps`
 2. Check logs: `docker-compose logs postgres`
 3. Verify environment variables in `.env.local`
 
 **Modules not found:**
+
 ```bash
 rm -rf node_modules package-lock.json
 npm install
@@ -186,6 +197,7 @@ carecore-api/
 ```
 
 **Stack Base:**
+
 - NestJS + TypeScript
 - PostgreSQL (prod) / SQLite (dev optional)
 - FHIR JSON as base format
@@ -204,6 +216,7 @@ carecore-api/
 #### Recursos FHIR MVP (100% Completado)
 
 **Patient** ✅
+
 - [x] CRUD completo (Create, Read, Update, Delete)
 - [x] Búsqueda por nombre
 - [x] Búsqueda por identificador
@@ -212,6 +225,7 @@ carecore-api/
 - [x] Tests unitarios completos
 
 **Endpoints:**
+
 - `POST /api/fhir/Patient` - Crear paciente
 - `GET /api/fhir/Patient/:id` - Obtener paciente por ID
 - `GET /api/fhir/Patient` - Buscar pacientes
@@ -219,6 +233,7 @@ carecore-api/
 - `DELETE /api/fhir/Patient/:id` - Eliminar paciente
 
 **Practitioner** ✅
+
 - [x] CRUD completo (Create, Read, Update, Delete)
 - [x] Búsqueda por nombre
 - [x] Búsqueda por identificador (licencia)
@@ -227,6 +242,7 @@ carecore-api/
 - [x] Tests unitarios completos
 
 **Endpoints:**
+
 - `POST /api/fhir/Practitioner` - Crear practicante
 - `GET /api/fhir/Practitioner/:id` - Obtener practicante por ID
 - `GET /api/fhir/Practitioner` - Buscar practicantes
@@ -234,6 +250,7 @@ carecore-api/
 - `DELETE /api/fhir/Practitioner/:id` - Eliminar practicante
 
 **Encounter** ✅
+
 - [x] CRUD completo (Create, Read, Update, Delete)
 - [x] Búsqueda por subject (Patient)
 - [x] Búsqueda por status
@@ -243,6 +260,7 @@ carecore-api/
 - [x] Tests unitarios completos
 
 **Endpoints:**
+
 - `POST /api/fhir/Encounter` - Crear encuentro
 - `GET /api/fhir/Encounter/:id` - Obtener encuentro por ID
 - `GET /api/fhir/Encounter` - Buscar encuentros
@@ -266,6 +284,7 @@ carecore-api/
 - [x] Patrón consistente en todos los tests
 
 **Cobertura de Tests:**
+
 - **Statements:** 95.38%
 - **Branches:** 80.62%
 - **Functions:** 92.13%
@@ -280,12 +299,14 @@ carecore-api/
 ### 📈 Estadísticas Actuales
 
 **Recursos FHIR Implementados:**
+
 - ✅ Patient
 - ✅ Practitioner
 - ✅ Encounter
 - ✅ OperationOutcome (error handling)
 
 **Endpoints Disponibles:**
+
 - ✅ 15 endpoints FHIR (5 por recurso × 3 recursos)
 - ✅ 1 endpoint de metadata
 - ✅ Health check endpoints
@@ -294,6 +315,7 @@ carecore-api/
 ✅ **MVP de Historial Clínico Básico COMPLETADO**
 
 El sistema ahora puede:
+
 - ✅ Gestionar perfiles de pacientes
 - ✅ Gestionar profesionales médicos
 - ✅ Registrar consultas/visitas médicas
@@ -302,6 +324,7 @@ El sistema ahora puede:
 - ✅ Manejar errores de forma estándar FHIR
 
 **Listo para:**
+
 - ✅ Desarrollo de frontend
 - ✅ Integración con otros sistemas
 - ✅ Expansión con nuevos recursos FHIR
@@ -313,11 +336,13 @@ El sistema ahora puede:
 ### Fase 1: MVP - Historial Clínico Básico ✅ COMPLETADO
 
 **Recursos FHIR Esenciales:**
+
 - ✅ Patient (Completo)
 - ✅ Practitioner (Completo)
 - ✅ Encounter (Completo)
 
 **Estructura Base:**
+
 - ✅ Interfaces FHIR R4
 - ✅ CapabilityStatement endpoint
 - ✅ Error handling (OperationOutcome)
@@ -329,16 +354,19 @@ El sistema ahora puede:
 **Recursos FHIR Adicionales:**
 
 **DocumentReference** (Documentos) ✅
+
 - Prioridad: MEDIA
 - Uso: Reportes, imágenes, documentos clínicos
 - Estado: ✅ Completado (almacenamiento local, preparado para S3/MinIO)
 
 **Consent** (Consentimientos) ✅
+
 - Prioridad: MEDIA
 - Uso: Consentimientos informados, autorizaciones
 - Estado: ✅ Completado (share with practitioner, validación de expiración)
 
 **Mejoras Técnicas:**
+
 - ✅ Migración a base de datos (TypeORM entities) - Completado
 - ✅ Audit Logging completo (inmutable) - Completado
 - ✅ Constantes para FHIR Resource Types - Completado
@@ -348,12 +376,14 @@ El sistema ahora puede:
 - [ ] Mejora en búsquedas (full-text search)
 
 **Recursos Pendientes para Fase 2:**
+
 - ⏳ Observation (Signos vitales, resultados) - Pendiente
 - ⏳ Condition (Diagnósticos) - Pendiente
 
 ### Fase 3: Seguridad Avanzada y Verificación ✅ COMPLETADO
 
 **Autenticación y Autorización Avanzada:**
+
 - ✅ OAuth 2.0 / OIDC - Completado (Keycloak integrado)
 - ✅ JWT Authentication - Completado
 - ✅ Role-based Authorization - Completado
@@ -362,6 +392,7 @@ El sistema ahora puede:
 - ✅ Scopes y permisos granulares - Completado
 
 **Verificación de Practitioners:** ✅ COMPLETADO
+
 - ✅ Endpoint POST /auth/verify-practitioner
 - ✅ Entidad PractitionerVerification
 - ✅ Upload de documentos (cédula/licencia)
@@ -369,11 +400,13 @@ El sistema ahora puede:
 - ✅ Actualización automática de roles en Keycloak
 
 **MFA (Multi-Factor Authentication):** ✅ COMPLETADO
+
 - ✅ Configuración MFA en Keycloak (TOTP)
 - ✅ Endpoints de setup/verify/disable MFA
 - ✅ Forzar MFA para roles críticos (admin, practitioner)
 
 **Scopes y Permisos:** ✅ COMPLETADO
+
 - ✅ Definir scopes en Keycloak (scripts y guía creados - ver `docs/SCOPES_SETUP_GUIDE.md`)
 - ✅ ScopesGuard para validación
 - ✅ Decorador @Scopes() para endpoints
@@ -381,6 +414,7 @@ El sistema ahora puede:
 - ✅ Constantes para acciones y scopes (type safety)
 
 **Recursos para Integraciones Futuras:**
+
 - ⏳ Observation - Signos vitales, resultados
 - ⏳ Condition - Diagnósticos
 - ⏳ Medication - Integración con farmacias, recetas electrónicas
@@ -389,24 +423,25 @@ El sistema ahora puede:
 
 ### Matriz de Prioridades
 
-| Recurso FHIR | MVP | Post-MVP | Integraciones | Prioridad |
-|--------------|-----|----------|---------------|-----------|
-| Patient | ✅ | ✅ | ✅ | CRÍTICA |
-| Practitioner | ✅ | ✅ | ✅ | CRÍTICA |
-| Encounter | ✅ | ✅ | ✅ | CRÍTICA |
-| Observation | ❌ | ⏳ | ✅ | ALTA |
-| Condition | ❌ | ⏳ | ✅ | ALTA |
-| DocumentReference | ❌ | ⏳ | ✅ | MEDIA |
-| Consent | ❌ | ⏳ | ✅ | MEDIA |
-| Medication | ❌ | ❌ | ⏳ | BAJA |
-| Procedure | ❌ | ❌ | ⏳ | BAJA |
-| Immunization | ❌ | ❌ | ⏳ | BAJA |
+| Recurso FHIR      | MVP | Post-MVP | Integraciones | Prioridad |
+| ----------------- | --- | -------- | ------------- | --------- |
+| Patient           | ✅  | ✅       | ✅            | CRÍTICA   |
+| Practitioner      | ✅  | ✅       | ✅            | CRÍTICA   |
+| Encounter         | ✅  | ✅       | ✅            | CRÍTICA   |
+| Observation       | ❌  | ⏳       | ✅            | ALTA      |
+| Condition         | ❌  | ⏳       | ✅            | ALTA      |
+| DocumentReference | ❌  | ⏳       | ✅            | MEDIA     |
+| Consent           | ❌  | ⏳       | ✅            | MEDIA     |
+| Medication        | ❌  | ❌       | ⏳            | BAJA      |
+| Procedure         | ❌  | ❌       | ⏳            | BAJA      |
+| Immunization      | ❌  | ❌       | ⏳            | BAJA      |
 
 ### Checklist de Implementación
 
 #### MVP (Fase 1) ✅
 
 **Autenticación y Autorización:** ✅ COMPLETADO
+
 - [x] Registro/login de pacientes ✅
 - [x] Registro/login de practitioners ✅
 - [x] Verificación básica de practitioner (documentos) ✅
@@ -417,6 +452,7 @@ El sistema ahora puede:
 - [x] SMART on FHIR integrado ✅
 
 **Recursos FHIR MVP:**
+
 - [x] Crear perfil Patient
 - [x] Registrar Encounter (sólo practitioners)
 - [x] Registrar Practitioner
@@ -424,11 +460,13 @@ El sistema ahora puede:
 - [x] Consentimiento básico (share with practitioner X for Y days)
 
 **Auditoría:**
+
 - [x] Logging básico
 - [x] Audit logging completo (inmutable)
 - [x] Registro de todos los accesos/modificaciones
 
 **Frontend:**
+
 - [ ] UI móvil para ver perfil y consentimientos
 - [ ] UI web para ver perfil y consentimientos
 - [ ] UI para gestión de consentimientos
@@ -436,17 +474,20 @@ El sistema ahora puede:
 #### Fase 2 (Post-MVP) ⏳
 
 **Integraciones:**
+
 - [x] Integración FHIR con laboratorios (SMART on FHIR) ✅
 - [ ] Integración con aseguradoras
 - [ ] CDS Hooks para decisiones clínicas
 
 **IA:**
+
 - [ ] Búsqueda semántica
 - [ ] Extracción con IA (NLP)
 - [ ] Resumen clínico automático
 - [ ] Alertas clínicas
 
 **Gobernanza de IA:**
+
 - [ ] Pipeline MLOps clínico
 - [ ] Validación clínica de modelos
 - [ ] Monitorización de desempeño
@@ -546,33 +587,33 @@ CareCore API implementa un sistema completo de autenticación y autorización ba
 
 #### Endpoints Principales
 
-| Endpoint | Método | Descripción | Autenticación |
-|----------|--------|-------------|---------------|
-| `/api/auth/register` | POST | Registro de nuevos pacientes | No requerida |
-| `/api/auth/email-verification-status` | GET | Verificar estado de verificación de email | Requerida |
-| `/api/auth/resend-verification-email` | POST | Reenviar email de verificación | Requerida |
-| `/api/auth/login` | POST | Inicia flujo OAuth2 | No requerida |
-| `/api/auth/callback` | GET | Callback de Keycloak | No requerida |
-| `/api/auth/refresh` | POST | Renueva tokens | Refresh token |
-| `/api/auth/logout` | POST | Cierra sesión | Refresh token |
-| `/api/auth/user` | GET | Información del usuario | JWT requerido |
-| `/api/fhir/authorize` | GET | Launch SMART on FHIR | No requerida |
-| `/api/fhir/auth` | GET | Authorization SMART on FHIR | No requerida |
-| `/api/fhir/token` | POST | Token exchange SMART on FHIR | Client credentials |
+| Endpoint                              | Método | Descripción                               | Autenticación      |
+| ------------------------------------- | ------ | ----------------------------------------- | ------------------ |
+| `/api/auth/register`                  | POST   | Registro de nuevos pacientes              | No requerida       |
+| `/api/auth/email-verification-status` | GET    | Verificar estado de verificación de email | Requerida          |
+| `/api/auth/resend-verification-email` | POST   | Reenviar email de verificación            | Requerida          |
+| `/api/auth/login`                     | POST   | Inicia flujo OAuth2                       | No requerida       |
+| `/api/auth/callback`                  | GET    | Callback de Keycloak                      | No requerida       |
+| `/api/auth/refresh`                   | POST   | Renueva tokens                            | Refresh token      |
+| `/api/auth/logout`                    | POST   | Cierra sesión                             | Refresh token      |
+| `/api/auth/user`                      | GET    | Información del usuario                   | JWT requerido      |
+| `/api/fhir/authorize`                 | GET    | Launch SMART on FHIR                      | No requerida       |
+| `/api/fhir/auth`                      | GET    | Authorization SMART on FHIR               | No requerida       |
+| `/api/fhir/token`                     | POST   | Token exchange SMART on FHIR              | Client credentials |
 
 #### Roles Disponibles
 
-| Rol | Descripción | Permisos Principales |
-|-----|-------------|---------------------|
-| `patient` | Paciente | Leer/escribir sus propios datos |
-| `practitioner` | Profesional médico | Crear/leer registros clínicos |
-| `practitioner-verified` | Practitioner verificado | Mismos permisos que practitioner |
-| `admin` | Administrador | Acceso completo al sistema |
-| `viewer` | Visualizador temporal | Solo lectura con consentimiento |
-| `lab` | Sistema de laboratorio | Crear/leer resultados de laboratorio |
-| `insurer` | Sistema de aseguradora | Leer datos con consentimiento |
-| `system` | Sistema externo | Permisos según integración |
-| `audit` | Auditoría | Solo lectura de logs |
+| Rol                     | Descripción             | Permisos Principales                 |
+| ----------------------- | ----------------------- | ------------------------------------ |
+| `patient`               | Paciente                | Leer/escribir sus propios datos      |
+| `practitioner`          | Profesional médico      | Crear/leer registros clínicos        |
+| `practitioner-verified` | Practitioner verificado | Mismos permisos que practitioner     |
+| `admin`                 | Administrador           | Acceso completo al sistema           |
+| `viewer`                | Visualizador temporal   | Solo lectura con consentimiento      |
+| `lab`                   | Sistema de laboratorio  | Crear/leer resultados de laboratorio |
+| `insurer`               | Sistema de aseguradora  | Leer datos con consentimiento        |
+| `system`                | Sistema externo         | Permisos según integración           |
+| `audit`                 | Auditoría               | Solo lectura de logs                 |
 
 #### Scopes Disponibles
 
@@ -587,6 +628,7 @@ Los scopes permiten control granular de acceso a recursos FHIR:
 #### Ejemplo de Uso Rápido
 
 **1. Registrar un Nuevo Paciente:**
+
 ```bash
 curl -X POST "http://localhost:3000/api/auth/register" \
   -H "Content-Type: application/json" \
@@ -605,23 +647,27 @@ curl -X POST "http://localhost:3000/api/auth/register" \
 ```
 
 **2. Iniciar Login:**
+
 ```bash
 curl -X POST "http://localhost:3000/api/auth/login?returnUrl=true"
 # Retorna: { "authorizationUrl": "http://keycloak:8080/realms/carecore/..." }
 ```
 
 **3. Autenticarse en Keycloak:**
+
 - Abrir `authorizationUrl` en navegador
 - Ingresar credenciales
 - Autorizar aplicación
 
 **4. Usar Token en Requests:**
+
 ```bash
 curl -H "Authorization: Bearer <access-token>" \
      "http://localhost:3000/api/fhir/Patient"
 ```
 
 **5. Refrescar Token:**
+
 ```bash
 curl -X POST "http://localhost:3000/api/auth/refresh" \
      -H "Content-Type: application/json" \
@@ -640,11 +686,13 @@ curl -X POST "http://localhost:3000/api/auth/refresh" \
 #### Keycloak Setup
 
 **Acceso rápido:**
+
 - Admin Console: `http://localhost:${KEYCLOAK_HTTP_PORT}` (ver `.env.local` para puerto)
 - Usuario: Valor de `KEYCLOAK_ADMIN` en `.env.local`
 - Contraseña: Valor de `KEYCLOAK_ADMIN_PASSWORD` en `.env.local`
 
 **Documentación de Keycloak:**
+
 - [keycloak/README.md](keycloak/README.md) - Documentación principal
 - [keycloak/TROUBLESHOOTING.md](keycloak/TROUBLESHOOTING.md) - Guía de troubleshooting
 - [keycloak/BACKUP_RESTORE.md](keycloak/BACKUP_RESTORE.md) - Guía de backup y restore
@@ -715,17 +763,20 @@ curl -X POST "http://localhost:3000/api/auth/refresh" \
 ### Environment Variables
 
 The project uses environment files per environment:
+
 - **`.env.development`** - Variables for development
 - **`.env.production`** - Variables for production
 - **`.env.local`** - Local variables (overrides the above)
 
 To get started:
+
 ```bash
 cp .env.development.example .env.development
 cp .env.development.example .env.local
 ```
 
 **Main variables:**
+
 - `PORT` - Application port (default: 3000)
 - `DB_HOST` - PostgreSQL host
 - `DB_PORT` - PostgreSQL port (default: 5432)
@@ -796,10 +847,12 @@ carecore-api/                   # Monorepo root
 **Ver [MONOREPO_GUIDE.md](docs/MONOREPO_GUIDE.md) para más detalles sobre el monorepo.**
 
 **Estructura de Datos:**
+
 - **Entidades TypeORM**: Almacenan recursos FHIR completos en JSONB (PostgreSQL)
 - **Campos indexados**: Campos comunes extraídos para búsquedas eficientes (status, active, references)
 - **Soft Delete**: Todos los recursos usan `deletedAt` para mantener historial
 - **Migraciones**: TypeORM migrations para versionado de esquema
+
 ```
 
 ---
@@ -897,8 +950,10 @@ The project follows [Conventional Commits](https://www.conventionalcommits.org/)
 
 **Commit format:**
 ```
+
 <type>(<scope>): <description>
-```
+
+````
 
 **Scopes disponibles:**
 - `api` - Backend API (NestJS)
@@ -919,15 +974,17 @@ The project follows [Conventional Commits](https://www.conventionalcommits.org/)
 **Usar Commitizen:**
 ```bash
 npm run commit
-```
+````
 
 **Crear branch con formato correcto:**
+
 ```bash
 ./scripts/create-branch.sh <tipo> <scope> <iniciales> <numero-tarea> <descripcion>
 # Ejemplo: ./scripts/create-branch.sh feat api ps 123 agregar-endpoint-pacientes
 ```
 
 For more details, see:
+
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Guía de contribución
 - [docs/COMMIT_CONVENTIONS.md](docs/COMMIT_CONVENTIONS.md) - Convenciones de commits y branches completas
 

@@ -11,6 +11,7 @@ Crear el realm principal "carecore" con configuración básica para el MVP.
 ### Paso 1: Acceder a Admin Console
 
 1. Iniciar servicios:
+
    ```bash
    npm run docker:up
    ```
@@ -118,12 +119,14 @@ docker-compose restart keycloak
 ## 📝 Configuración Aplicada
 
 ### Settings Generales
+
 - **Name:** carecore
 - **Display Name:** CareCore
 - **Enabled:** Yes
 - **User Managed Access:** No (MVP)
 
 ### Login Settings
+
 - **User Registration:** No (MVP - solo admins crean usuarios)
 - **Email as username:** No
 - **Remember me:** Yes
@@ -131,12 +134,14 @@ docker-compose restart keycloak
 - **Edit username:** No
 
 ### Security
+
 - **Brute force protection:** Enabled
 - **Max login failures:** 5
 - **Wait increment:** 60 seconds
 - **Max wait:** 900 seconds
 
 ### Tokens
+
 - **Access Token Lifespan:** 5 minutes
 - **SSO Session Idle:** 30 minutes
 - **SSO Session Max:** 30 days (controls refresh token lifespan)
@@ -159,6 +164,7 @@ docker cp carecore-keycloak:/var/lib/keycloak/data/export/carecore-realm.json \
 ## 📚 Próximos Pasos
 
 Después de crear el realm, continúa con:
+
 - [Tarea #5: Configurar cliente "carecore-api"](../docs/tasks/PHASE1_KEYCLOAK_SETUP.md#tarea-5-configurar-cliente-carecore-api-en-keycloak)
 - [Tarea #6: Configurar cliente "carecore-web"](../docs/tasks/PHASE1_KEYCLOAK_SETUP.md#tarea-6-configurar-cliente-carecore-web-en-keycloak)
 - [Tarea #7: Definir roles base](../docs/tasks/PHASE1_KEYCLOAK_SETUP.md#tarea-7-definir-roles-base-en-keycloak)
@@ -168,11 +174,13 @@ Después de crear el realm, continúa con:
 ### No puedo acceder a Admin Console
 
 1. Verificar que Keycloak esté corriendo:
+
    ```bash
    docker-compose ps keycloak
    ```
 
 2. Verificar credenciales en `.env.local`:
+
    ```bash
    grep KEYCLOAK_ADMIN .env.local
    ```
@@ -191,6 +199,7 @@ Después de crear el realm, continúa con:
 ### Error al importar JSON
 
 1. Verificar que el archivo JSON sea válido:
+
    ```bash
    cat keycloak/realms/carecore-realm.json | jq .
    ```
@@ -203,4 +212,3 @@ Después de crear el realm, continúa con:
 - [Keycloak Realm Configuration](https://www.keycloak.org/docs/latest/server_admin/#_realm)
 - [Keycloak Import/Export](https://www.keycloak.org/docs/latest/server_admin/#_export_import)
 - [Keycloak Security Settings](https://www.keycloak.org/docs/latest/server_admin/#_security-defenses)
-

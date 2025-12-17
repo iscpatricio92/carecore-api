@@ -26,8 +26,8 @@ carecore-api/
 ### 🎯 **Principios**
 
 1. **Variables Compartidas → Root**
-   - Base de datos (DB_*)
-   - Keycloak (KEYCLOAK_*)
+   - Base de datos (DB\_\*)
+   - Keycloak (KEYCLOAK\_\*)
    - URLs de servicios compartidos
    - Configuraciones de infraestructura
 
@@ -47,6 +47,7 @@ carecore-api/
 ### Estrategia 1: Todo en Root (✅ **RECOMENDADA**)
 
 **Ventajas:**
+
 - ✅ Un solo lugar para gestionar variables
 - ✅ Fácil de compartir entre packages
 - ✅ Consistente con la estructura actual
@@ -54,10 +55,12 @@ carecore-api/
 - ✅ Menos confusión sobre dónde buscar variables
 
 **Desventajas:**
+
 - ⚠️ Puede volverse grande con muchos packages
 - ⚠️ Requiere prefijos para variables específicas
 
 **Ejemplo:**
+
 ```env
 # Root: .env.development
 DB_HOST=localhost
@@ -80,6 +83,7 @@ MOBILE_API_URL=http://localhost:3000/api
 ### Estrategia 2: Separado por Package (⚠️ No recomendada)
 
 **Estructura:**
+
 ```
 packages/
 ├── api/.env.development
@@ -88,12 +92,14 @@ packages/
 ```
 
 **Desventajas:**
+
 - ❌ Duplicación de variables compartidas
 - ❌ Más difícil de mantener
 - ❌ Docker Compose necesita configuración adicional
 - ❌ Riesgo de inconsistencias
 
 **Cuándo usar:**
+
 - Solo si los packages son completamente independientes
 - Si hay configuraciones muy diferentes entre packages
 
@@ -102,6 +108,7 @@ packages/
 ### Estrategia 3: Híbrida (✅ Para casos específicos)
 
 **Estructura:**
+
 ```
 # Root: .env.development (variables compartidas)
 DB_HOST=localhost
@@ -113,6 +120,7 @@ VITE_API_URL=http://localhost:3000/api
 ```
 
 **Cuándo usar:**
+
 - Variables de build-time del frontend (Next.js, Vite, etc.)
 - Variables que solo el frontend necesita
 - Configuraciones de herramientas específicas (ej: Vercel, Expo)
@@ -128,7 +136,7 @@ VITE_API_URL=http://localhost:3000/api
 ConfigModule.forRoot({
   isGlobal: true,
   envFilePath: getEnvFilePaths(), // Busca en root del monorepo
-})
+});
 ```
 
 **Funciona correctamente:** ✅
@@ -194,6 +202,7 @@ config({ path: path.join(monorepoRoot, '.env.local'), override: true });
 ## 📝 Convenciones de Nomenclatura
 
 ### Variables Compartidas (sin prefijo)
+
 ```env
 DB_HOST=localhost
 DB_PORT=5432
@@ -202,6 +211,7 @@ KEYCLOAK_REALM=carecore
 ```
 
 ### Variables Específicas (con prefijo)
+
 ```env
 # API
 API_PORT=3000
@@ -224,11 +234,14 @@ EXPO_PUBLIC_KEYCLOAK_URL=http://localhost:8080
 ## 🚀 Migración Recomendada
 
 ### Fase 1: Mantener estructura actual (✅ Ya hecho)
+
 - Variables en root del monorepo
 - API lee del root correctamente
 
 ### Fase 2: Cuando se agregue Web
+
 1. Agregar variables específicas del web al `.env.development`:
+
    ```env
    WEB_PORT=3001
    NEXT_PUBLIC_API_URL=http://localhost:3000/api
@@ -238,6 +251,7 @@ EXPO_PUBLIC_KEYCLOAK_URL=http://localhost:8080
    ```
 
 2. Configurar Next.js para leer del root:
+
    ```typescript
    // packages/web/next.config.js
    import { config } from 'dotenv';
@@ -249,6 +263,7 @@ EXPO_PUBLIC_KEYCLOAK_URL=http://localhost:8080
    ```
 
 ### Fase 3: Cuando se agregue Mobile
+
 1. Agregar variables específicas del mobile al `.env.development`
 2. Usar `react-native-config` o `expo-constants` para leer del root
 
@@ -289,4 +304,3 @@ EXPO_PUBLIC_KEYCLOAK_URL=http://localhost:8080
 
 **Última actualización:** 2025-12-14
 **Mantenido por:** Equipo CareCore
-

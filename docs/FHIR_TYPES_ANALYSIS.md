@@ -13,6 +13,7 @@
 ### `@types/fhir` (Paquete externo)
 
 **Ventajas:**
+
 - ✅ Definiciones oficiales y completas de FHIR R4
 - ✅ Cubre TODOS los recursos FHIR (no solo los que usas)
 - ✅ Se mantiene actualizado por la comunidad
@@ -20,6 +21,7 @@
 - ✅ Reduce código propio a mantener
 
 **Desventajas:**
+
 - ❌ Muy pesado (~6.2 MB unpacked)
 - ❌ Incluye recursos que probablemente no usarás
 - ❌ Puede tener tipos muy complejos/anidados
@@ -30,6 +32,7 @@
 ### Interfaces Propias (Actual)
 
 **Ventajas:**
+
 - ✅ Ligero: solo lo que necesitas
 - ✅ Control total sobre la estructura
 - ✅ Personalizable según necesidades del proyecto
@@ -39,6 +42,7 @@
 - ✅ Adaptado específicamente a tu dominio
 
 **Desventajas:**
+
 - ❌ Debes mantener las interfaces tú mismo
 - ❌ Puede no cubrir todos los casos edge de FHIR
 - ❌ Requiere conocimiento de la especificación FHIR
@@ -51,6 +55,7 @@
 ### Usar Interfaces Propias (Recomendado) ✅
 
 **Razones:**
+
 1. **Proyecto en crecimiento:** Estás empezando y solo necesitas algunos recursos (Patient, Practitioner, Encounter)
 2. **Performance:** No necesitas cargar 6MB+ de tipos que no usarás
 3. **Control:** Puedes ajustar los tipos según tu perfil médico específico
@@ -59,6 +64,7 @@
 ### Cuándo considerar `@types/fhir`
 
 Usa `@types/fhir` si:
+
 - Necesitas soporte completo para todos los recursos FHIR
 - Estás construyendo un servidor FHIR genérico
 - Trabajas con múltiples sistemas que requieren todos los recursos
@@ -89,6 +95,7 @@ type Patient = FHIRPatient;
 ## 📊 Análisis del Código Actual
 
 ### Interfaces usadas actualmente:
+
 - ✅ `Patient` - Completo
 - ✅ `Practitioner` - Completo
 - ✅ `Encounter` - Completo
@@ -122,12 +129,14 @@ type Patient = FHIRPatient;
 **Para CareCore API: Mantén las interfaces propias**
 
 Las interfaces actuales son:
+
 - ✅ Adecuadas para el alcance del proyecto
 - ✅ Fáciles de mantener
 - ✅ Performantes
 - ✅ Bien documentadas
 
 Solo considera `@types/fhir` si:
+
 - Necesitas soportar más recursos FHIR
 - Quieres validación completa de la especificación
 - El proyecto crece significativamente en alcance
@@ -139,4 +148,3 @@ Solo considera `@types/fhir` si:
 - [FHIR R4 Specification](https://www.hl7.org/fhir/)
 - [@types/fhir en npm](https://www.npmjs.com/package/@types/fhir)
 - [DefinitelyTyped Repository](https://github.com/DefinitelyTyped/DefinitelyTyped)
-

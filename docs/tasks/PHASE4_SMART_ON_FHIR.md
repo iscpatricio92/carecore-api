@@ -3,6 +3,7 @@
 > ⚠️ **ARCHIVO TEMPORAL**
 > Este archivo contiene tareas detalladas para agregar en GitHub Projects.
 > **Puede ser eliminado** una vez que:
+>
 > - Las tareas estén agregadas a GitHub Projects
 > - Las tareas estén completadas
 > - Ya no se necesite como referencia
@@ -35,6 +36,7 @@
 Esta HU incluye las siguientes tareas (ver detalles abajo):
 
 **SMART on FHIR Launch Sequence:**
+
 - ✅ **Tarea 1**: Implementar endpoint GET /fhir/auth - Authorization endpoint (Issue #78)
 - ✅ **Tarea 2**: Implementar endpoint POST /fhir/token - Token endpoint (Issue #79)
 - ✅ **Tarea 3**: Implementar endpoint GET /fhir/authorize - Launch endpoint (Issue #80)
@@ -42,6 +44,7 @@ Esta HU incluye las siguientes tareas (ver detalles abajo):
 - ✅ **Tarea 5**: Actualizar CapabilityStatement con endpoints SMART on FHIR
 
 **Protección y Validación:**
+
 - ✅ **Tarea 6**: Aplicar guards a endpoints FHIR (completado)
 - ✅ **Tarea 7**: Validar scopes en endpoints FHIR (completado)
 - ✅ **Tarea 8**: Implementar filtrado por paciente (completado)
@@ -72,11 +75,14 @@ Esta HU incluye las siguientes tareas (ver detalles abajo):
 **Título:** `PHASE-4 - feat(smart): crear endpoint GET /fhir/auth para autorización SMART on FHIR`
 
 **Descripción:**
+
 ```markdown
 ## Objetivo
+
 Crear endpoint de autorización OAuth2 que permite a aplicaciones externas solicitar acceso a recursos FHIR.
 
 ## Tareas
+
 - [x] Crear controlador `SmartFhirController` en `src/modules/smart-fhir/` (implementado en `FhirController`)
 - [x] Implementar método `authorize()` que maneja GET /fhir/auth
 - [x] Validar parámetros OAuth2:
@@ -94,9 +100,10 @@ Crear endpoint de autorización OAuth2 que permite a aplicaciones externas solic
 - [x] Agregar documentación Swagger
 
 ## Endpoint Esperado
-
 ```
+
 GET /api/fhir/auth?client_id=app-123&response_type=code&redirect_uri=https://app.com/callback&scope=patient:read&state=xyz
+
 ```
 
 ## Respuesta
@@ -135,11 +142,14 @@ Redirección a Keycloak para autenticación, luego redirección a `redirect_uri`
 **Título:** `PHASE-4 - feat(smart): crear endpoint POST /fhir/token para intercambiar código por token`
 
 **Descripción:**
-```markdown
+
+````markdown
 ## Objetivo
+
 Crear endpoint que intercambia un código de autorización por un token de acceso JWT.
 
 ## Tareas
+
 - [x] Implementar método `token()` en `SmartFhirController`
 - [x] Validar parámetros OAuth2:
   - `grant_type` (required) - Debe ser "authorization_code" o "refresh_token"
@@ -163,6 +173,8 @@ Crear endpoint que intercambia un código de autorización por un token de acces
     "patient": "Patient/123" // Si aplica
   }
   ```
+````
+
 - [x] Manejar errores y retornar formato OAuth2 estándar
 - [x] Agregar documentación Swagger
 
@@ -198,6 +210,7 @@ grant_type=authorization_code&code=abc123&redirect_uri=https://app.com/callback&
 ```
 
 ## Criterios de Aceptación
+
 - [x] Endpoint creado y funcional
 - [x] Intercambio de código por token funcionando
 - [x] Integración con Keycloak funcionando
@@ -208,9 +221,11 @@ grant_type=authorization_code&code=abc123&redirect_uri=https://app.com/callback&
 - [x] Tests unitarios pasando
 
 ## Referencias
+
 - [SMART on FHIR Token Exchange](http://docs.smarthealthit.org/authorization/)
 - [OAuth2 Token Endpoint](https://oauth.net/2/grant-types/authorization-code/)
-```
+
+````
 
 **Labels:** `enhancement`, `auth`, `phase-4`, `integration`
 
@@ -243,8 +258,10 @@ Crear endpoint que maneja el launch sequence de SMART on FHIR, permitiendo a apl
 
 ## Endpoint Esperado
 
-```
+````
+
 GET /api/fhir/authorize?iss=https://carecore.example.com&launch=xyz123&client_id=app-123&redirect_uri=https://app.com/callback&scope=patient:read&state=abc
+
 ```
 
 ## Flujo
@@ -281,11 +298,14 @@ GET /api/fhir/authorize?iss=https://carecore.example.com&launch=xyz123&client_id
 **Título:** `PHASE-4 - feat(smart): implementar flujo completo de launch sequence SMART on FHIR`
 
 **Descripción:**
+
 ```markdown
 ## Objetivo
+
 Completar la implementación del flujo completo de launch sequence, conectando todos los endpoints y validando el flujo end-to-end.
 
 ## Tareas
+
 - [x] Crear servicio `SmartFhirService` para lógica de negocio
 - [x] Implementar almacenamiento temporal de launch context:
   - Usar Redis o cache en memoria
@@ -309,8 +329,8 @@ Completar la implementación del flujo completo de launch sequence, conectando t
 - [x] Crear tests unitarios del flujo completo (tests E2E pendientes)
 
 ## Flujo Completo
-
 ```
+
 1. EHR → GET /fhir/authorize?launch=xyz&...
 2. API → Valida launch, almacena contexto
 3. API → Redirige a GET /fhir/auth?client_id=...&...
@@ -320,6 +340,7 @@ Completar la implementación del flujo completo de launch sequence, conectando t
 7. API → Redirige a app con code
 8. App → POST /fhir/token con code
 9. API → Retorna token con contexto de paciente
+
 ```
 
 ## Criterios de Aceptación
@@ -345,11 +366,14 @@ Completar la implementación del flujo completo de launch sequence, conectando t
 **Título:** `PHASE-4 - feat(smart): actualizar CapabilityStatement con información de endpoints SMART on FHIR`
 
 **Descripción:**
-```markdown
+
+````markdown
 ## Objetivo
+
 Actualizar el CapabilityStatement FHIR para incluir información sobre los endpoints SMART on FHIR disponibles.
 
 ## Tareas
+
 - [x] Modificar método `getCapabilityStatement()` en `FhirService`
 - [x] Agregar extensión `http://fhir-registry.smarthealthit.org/StructureDefinition/oauth-uris`:
   ```json
@@ -371,6 +395,8 @@ Actualizar el CapabilityStatement FHIR para incluir información sobre los endpo
     ]
   }
   ```
+````
+
 - [x] Agregar información de scopes soportados
 - [x] Agregar información de tipos de launch soportados
 - [x] Incluir URLs de redirect_uri permitidas (si aplica)
@@ -417,6 +443,7 @@ Actualizar el CapabilityStatement FHIR para incluir información sobre los endpo
 ```
 
 ## Criterios de Aceptación
+
 - [x] CapabilityStatement actualizado
 - [x] Extensiones SMART on FHIR incluidas
 - [x] URLs correctas configuradas
@@ -426,9 +453,11 @@ Actualizar el CapabilityStatement FHIR para incluir información sobre los endpo
 - [x] Documentación actualizada
 
 ## Referencias
+
 - [SMART on FHIR CapabilityStatement](http://docs.smarthealthit.org/authorization/capability-statement/)
 - [FHIR CapabilityStatement](https://www.hl7.org/fhir/capabilitystatement.html)
-```
+
+````
 
 **Labels:** `enhancement`, `fhir`, `phase-4`, `documentation`
 
@@ -473,9 +502,10 @@ Asegurar que todos los endpoints FHIR requieren autenticación y validan permiso
 async searchPatients(@Query() params: SearchParams) {
   // ...
 }
-```
+````
 
 ## Criterios de Aceptación
+
 - [x] Todos los endpoints FHIR protegidos
 - [x] Guards aplicados correctamente
 - [x] Scopes validados en endpoints
@@ -484,9 +514,11 @@ async searchPatients(@Query() params: SearchParams) {
 - [x] Documentación Swagger actualizada
 
 ## Referencias
+
 - Ver `ScopesGuard`, `RolesGuard`, `MFARequiredGuard` de Fase 3
 - Ver `@Scopes()` y `@Roles()` decorators
-```
+
+````
 
 **Labels:** `enhancement`, `auth`, `phase-4`, `security`, `fhir`
 
@@ -546,7 +578,7 @@ Asegurar que cada endpoint FHIR valida que el token contiene los scopes necesari
 ## Referencias
 - Ver `ScopesGuard` y `@Scopes()` de Fase 3
 - Ver `ScopePermissionService` para mapeo de scopes
-```
+````
 
 **Labels:** `enhancement`, `auth`, `phase-4`, `security`, `fhir`
 
@@ -557,11 +589,14 @@ Asegurar que cada endpoint FHIR valida que el token contiene los scopes necesari
 **Título:** `PHASE-4 - feat(smart): implementar filtrado automático de recursos por contexto de paciente`
 
 **Descripción:**
-```markdown
+
+````markdown
 ## Objetivo
+
 Implementar filtrado automático de recursos FHIR basado en el contexto de paciente del token SMART on FHIR.
 
 ## Tareas
+
 - [x] Extraer contexto de paciente del token JWT:
   - Campo `patient` en token (ej: "Patient/123")
   - O campo `fhirUser` si aplica
@@ -588,7 +623,7 @@ Implementar filtrado automático de recursos FHIR basado en el contexto de pacie
 if (token.patient) {
   // Filtrar búsquedas por paciente
   queryBuilder.where('patientReference = :patientId', {
-    patientId: token.patient
+    patientId: token.patient,
   });
 
   // Validar pertenencia en lecturas
@@ -597,8 +632,10 @@ if (token.patient) {
   }
 }
 ```
+````
 
 ## Criterios de Aceptación
+
 - [x] Extracción de contexto de paciente funcionando
 - [x] Filtrado automático implementado
 - [x] Validación de pertenencia funcionando
@@ -608,9 +645,11 @@ if (token.patient) {
 - [x] Documentación actualizada
 
 ## Referencias
+
 - [SMART on FHIR Patient Context](http://docs.smarthealthit.org/authorization/scopes-and-launch-context/)
 - Ver `FhirService` para implementación actual de filtrado
-```
+
+````
 
 **Labels:** `enhancement`, `auth`, `phase-4`, `security`, `fhir`
 
@@ -689,9 +728,10 @@ Implementar logging de auditoría específico para accesos SMART on FHIR, incluy
     }
   ]
 }
-```
+````
 
 ## Criterios de Aceptación
+
 - [x] Audit logging extendido con información SMART
 - [x] Logging en endpoints SMART implementado
 - [x] Logging en accesos a recursos implementado
@@ -701,9 +741,11 @@ Implementar logging de auditoría específico para accesos SMART on FHIR, incluy
 - [x] Documentación actualizada
 
 ## Referencias
+
 - Ver `AuditService` y `AuditLog` de Fase 2
 - [FHIR AuditEvent](https://www.hl7.org/fhir/auditevent.html)
 - [SMART on FHIR Audit](http://docs.smarthealthit.org/authorization/audit/)
+
 ```
 
 **Labels:** `enhancement`, `audit`, `phase-4`, `security`
@@ -902,3 +944,4 @@ Implementar logging de auditoría específico para accesos SMART on FHIR, incluy
 **Fecha de finalización**: 2025-01-27
 **Tiempo total invertido**: ~33-45 horas (dentro del rango estimado de 32-45 horas)
 
+```

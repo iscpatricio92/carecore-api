@@ -14,11 +14,13 @@ Esta guía explica cómo configurar Multi-Factor Authentication (MFA) usando TOT
 - Credenciales de administrador de Keycloak
 
 **Acceso rápido:**
+
 - Admin Console: `http://localhost:${KEYCLOAK_HTTP_PORT:-8080}` (ver `.env.local` para puerto)
 - Usuario: Valor de `KEYCLOAK_ADMIN` en `.env.local`
 - Contraseña: Valor de `KEYCLOAK_ADMIN_PASSWORD` en `.env.local`
 
 **Verificar versión:**
+
 ```bash
 docker exec carecore-keycloak /opt/keycloak/bin/kc.sh version
 # Debería mostrar: Keycloak 25.0.4
@@ -29,6 +31,7 @@ docker exec carecore-keycloak /opt/keycloak/bin/kc.sh version
 ## 🎯 Objetivo
 
 Configurar MFA TOTP en Keycloak para que los usuarios puedan:
+
 - Configurar MFA usando aplicaciones autenticadoras (Google Authenticator, Authy, etc.)
 - Usar códigos TOTP de 6 dígitos para autenticación
 - Tener MFA obligatorio para roles críticos (admin, practitioner)
@@ -40,6 +43,7 @@ Configurar MFA TOTP en Keycloak para que los usuarios puedan:
 ### Paso 1: Acceder a la Consola de Administración
 
 1. Asegúrate de que Keycloak esté corriendo:
+
    ```bash
    docker ps | grep carecore-keycloak
    # O verifica con: make docker-up
@@ -92,6 +96,7 @@ Configurar MFA TOTP en Keycloak para que los usuarios puedan:
 4. La ejecución "OTP Form" aparecerá en la lista de ejecuciones del flow
 
 **Nota para Keycloak 25.x:**
+
 - El botón puede aparecer como **"Add step"** o **"Add execution"**
 - Puede haber un modal con búsqueda para encontrar "OTP Form"
 
@@ -103,6 +108,7 @@ Configurar MFA TOTP en Keycloak para que los usuarios puedan:
 4. Haz clic en **"Save"** o **"Update"**
 
 **Nota para Keycloak 25.x:**
+
 - El campo "Requirement" puede aparecer como un dropdown o como botones de radio
 - Opciones disponibles: **Required**, **Conditional**, **Disabled**, **Alternative**
 
@@ -122,6 +128,7 @@ Configurar MFA TOTP en Keycloak para que los usuarios puedan:
 5. Haz clic en **"Save"** si es necesario
 
 **Nota para Keycloak 25.x:**
+
 - La interfaz usa toggles (interruptores) en lugar de checkboxes
 - "Configure OTP" puede aparecer como "Configure TOTP" dependiendo de la versión
 
@@ -140,6 +147,7 @@ Configurar MFA TOTP en Keycloak para que los usuarios puedan:
 3. Haz clic en **"Save"**
 
 **Configuración Recomendada:**
+
 ```
 OTP Hash Algorithm: SHA1
 OTP Digits: 6
@@ -149,6 +157,7 @@ OTP Initial Counter: 0
 ```
 
 **Alternativa (si no encuentras OTP Policy):**
+
 - La configuración también puede estar en **"Realm Settings"** > **"Login"** > **"OTP Policy"**
 
 ### Paso 7: Configurar MFA Condicional (Opcional - Para Roles Críticos)
@@ -156,23 +165,25 @@ OTP Initial Counter: 0
 Si quieres que MFA sea obligatorio solo para ciertos roles:
 
 **⚠️ IMPORTANTE:** Los roles deben estar:
+
 1. **Asignados a usuarios** (no a clientes) - Ve a Users > [usuario] > Role Mappings
 2. **Incluidos en el token JWT** - Los clientes deben tener el scope "roles" (ya configurado)
 
-1. En el flow **"Browser with MFA"**, encuentra **"OTP Form"**
-2. Haz clic en el icono de configuración (⚙️)
-3. En **"Requirement"**, selecciona **"Conditional"**
-4. Haz clic en **"Save"**
-5. Haz clic en **"Add execution"** o **"Add step"** y selecciona **"Conditional OTP"** o **"Conditional - OTP"**
-6. Configura la condición:
+3. En el flow **"Browser with MFA"**, encuentra **"OTP Form"**
+4. Haz clic en el icono de configuración (⚙️)
+5. En **"Requirement"**, selecciona **"Conditional"**
+6. Haz clic en **"Save"**
+7. Haz clic en **"Add execution"** o **"Add step"** y selecciona **"Conditional OTP"** o **"Conditional - OTP"**
+8. Configura la condición:
    - Haz clic en el icono de configuración (⚙️) de "Conditional OTP"
    - En **"Condition"** o **"Condition type"**, selecciona **"Required for roles"** o **"Role-based"**
    - En **"Roles"**, deberías ver los realm roles (patient, practitioner, admin, etc.)
    - Selecciona los roles que requieren MFA: `admin`, `practitioner`
    - Puedes usar el botón **"Add role"** o buscar roles en el dropdown
-7. Haz clic en **"Save"**
+9. Haz clic en **"Save"**
 
 **Nota para Keycloak 25.x:**
+
 - "Conditional OTP" puede aparecer como "Conditional - OTP" o "OTP - Conditional"
 - La configuración de roles puede requerir buscar y seleccionar roles desde un dropdown
 - Si no ves roles, verifica que:
@@ -192,6 +203,7 @@ Si quieres que MFA sea obligatorio solo para ciertos roles:
 ⚠️ **Nota:** Esto cambiará el flow de autenticación para todos los usuarios del realm. Asegúrate de probar primero con un usuario de prueba.
 
 **Nota para Keycloak 25.x:**
+
 - El campo puede aparecer como un dropdown con todos los flows disponibles
 - Puede haber una sección separada para "Authentication flows" en lugar de estar en "Login"
 
@@ -204,12 +216,14 @@ Si quieres que MFA sea obligatorio solo para ciertos roles:
 5. Guarda el archivo JSON en `keycloak/realms/carecore-mfa.json` (o similar)
 
 **Alternativa usando script de backup:**
+
 ```bash
 # Hacer backup completo (incluye realm + base de datos)
 make keycloak-backup
 ```
 
 **Estructura recomendada:**
+
 ```
 keycloak/
 └── realms/
@@ -218,6 +232,7 @@ keycloak/
 ```
 
 **Nota para Keycloak 25.x:**
+
 - El botón "Export" puede estar en la parte superior de la página de Realm Settings
 - Puede haber opciones para exportar solo configuración o incluir usuarios
 
@@ -245,6 +260,7 @@ Para hacer MFA obligatorio solo para ciertos roles:
 ### Múltiples Flows de Autenticación
 
 Puedes crear múltiples flows:
+
 - **Browser** - Sin MFA (para usuarios normales)
 - **Browser with MFA** - Con MFA (para roles críticos)
 - **Direct Grant** - Para APIs (sin MFA)
@@ -280,6 +296,7 @@ Y asignarlos según el tipo de cliente o usuario.
 ### Problema: No aparece la opción de configurar TOTP
 
 **Solución:**
+
 - Verifica que "Configure OTP" esté habilitado en Required Actions
 - Verifica que el flow tenga OTP Form configurado
 - Verifica que el usuario tenga permisos para configurar MFA
@@ -287,6 +304,7 @@ Y asignarlos según el tipo de cliente o usuario.
 ### Problema: Los códigos TOTP no funcionan
 
 **Solución:**
+
 - Verifica que el reloj del servidor esté sincronizado (NTP)
 - Verifica la configuración del TOTP Provider (Period, Look Ahead Window)
 - Asegúrate de que la app autenticadora esté sincronizada
@@ -294,6 +312,7 @@ Y asignarlos según el tipo de cliente o usuario.
 ### Problema: MFA no se requiere para roles críticos
 
 **Solución:**
+
 - Verifica que Conditional OTP esté configurado correctamente
 - Verifica que los roles estén asignados correctamente al usuario
 - Verifica que el flow esté asignado al realm o cliente correcto
@@ -303,4 +322,3 @@ Y asignarlos según el tipo de cliente o usuario.
 **Última actualización:** 2025-12-06
 **Versión:** 1.1.0
 **Keycloak Version:** 25.0.4
-
