@@ -6,6 +6,7 @@
   "description": "CareCore Mobile - Frontend React Native (placeholder)",
   "scripts": {
     "start": "expo start",
+    "dev": "expo start --dev-client",
     "android": "expo run:android --device Pixel_5",
     "ios": "expo run:ios",
     "web": "expo start --web",
@@ -19,7 +20,6 @@
     "@carecore/shared": "*",
     "@expo/metro-runtime": "~6.1.2",
     "@expo/vector-icons": "^15.0.3",
-    "dotenv": "^17.2.3",
     "expo": "~54.0.0",
     "expo-auth-session": "~7.0.10",
     "expo-constants": "~18.0.12",
