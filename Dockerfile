@@ -65,6 +65,10 @@ RUN npm ci && \
 COPY packages/shared/src ./packages/shared/src
 COPY packages/api/src ./packages/api/src
 
+# Copy build scripts
+COPY packages/api/scripts/create-main-symlink.sh ./packages/api/scripts/
+RUN chmod +x ./packages/api/scripts/create-main-symlink.sh
+
 # Build shared package first
 WORKDIR /app/packages/shared
 RUN npm run build
