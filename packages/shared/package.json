@@ -1,0 +1,16 @@
+{
+  "name": "@carecore/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CareCore Shared - Shared code (types, constants, utilities)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}

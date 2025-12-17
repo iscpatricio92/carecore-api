@@ -1,0 +1,54 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Validar formato de nombre de branch antes de hacer push
+# Formato esperado: <tipo>(<scope>)/<iniciales>-#<numero>/<descripcion>
+# Ejemplo: feat(api)/ps-#123/agregar-endpoint-pacientes
+
+BRANCH_NAME=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
+
+if [ -z "$BRANCH_NAME" ]; then
+  echo "⚠️  No se pudo determinar el nombre del branch actual"
+  exit 0
+fi
+
+# Ignorar branches principales
+if [ "$BRANCH_NAME" = "main" ] || [ "$BRANCH_NAME" = "master" ] || [ "$BRANCH_NAME" = "develop" ]; then
+  exit 0
+fi
+
+# Patrón de validación
+# Formato: <tipo>(<scope>)/<iniciales>-#<numero>/<descripcion>
+# Ejemplos válidos:
+# - feat(api)/ps-#123/agregar-endpoint-pacientes
+# - fix(web)/ps-#456/corregir-error-login
+# - docs(root)/ps-#789/actualizar-readme
+
+BRANCH_PATTERN="^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)\([a-z]+\)/[a-z]+-#[0-9]+/[a-z0-9-]+$"
+
+if ! echo "$BRANCH_NAME" | grep -qE "$BRANCH_PATTERN"; then
+  echo ""
+  echo "❌ The branch name does not follow the required convention"
+  echo ""
+  echo "📋 Expected format:"
+  echo "   <type>(<scope>)/<initials>-#<number>/<description>"
+  echo ""
+  echo "📝 Valid examples:"
+  echo "   feat(api)/ps-#123/add-endpoint-patients"
+  echo "   fix(web)/ps-#456/fix-login-error"
+  echo "   docs(root)/ps-#789/update-readme"
+  echo "   build(infra)/ps-#101/update-dockerfile"
+  echo ""
+  echo "🔍 Your current branch: $BRANCH_NAME"
+  echo ""
+  echo "💡 Allowed types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert"
+  echo "💡 Allowed scopes: api, web, mobile, shared, infra, keycloak, root"
+  echo ""
+  echo "To rename the current branch:"
+  echo "   git branch -m <new-name>"
+  echo ""
+  exit 1
+fi
+
+echo "✅ Valid branch name: $BRANCH_NAME"
+

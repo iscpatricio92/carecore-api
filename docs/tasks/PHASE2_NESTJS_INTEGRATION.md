@@ -3,6 +3,7 @@
 > ⚠️ **ARCHIVO TEMPORAL**
 > Este archivo contiene tareas detalladas para agregar en GitHub Projects.
 > **Puede ser eliminado** una vez que:
+>
 > - Las tareas estén agregadas a GitHub Projects
 > - Las tareas estén completadas
 > - Ya no se necesite como referencia
@@ -78,9 +79,11 @@ Esta HU incluye las siguientes tareas (ver detalles abajo):
 **Descripción:**
 
 ## Objetivo
+
 Definir la estructura de carpetas y los tipos de TypeScript/clases de NestJS para manejar los recursos FHIR mínimos (Patient, Practitioner, Encounter, Consent, DocumentReference).
 
 ## Tareas
+
 - [x] Completar interfaces TypeScript faltantes:
   - [x] `Consent` en `src/common/interfaces/fhir.interface.ts`
   - [x] `DocumentReference` en `src/common/interfaces/fhir.interface.ts`
@@ -131,6 +134,7 @@ src/
 ```
 
 ## Criterios de Aceptación
+
 - [x] Todas las interfaces TypeScript definidas (Patient, Practitioner, Encounter, Consent, DocumentReference)
 - [x] Todos los DTOs creados con validación
 - [x] Todas las entidades TypeORM creadas
@@ -140,10 +144,12 @@ src/
 - [x] Documentación actualizada
 
 ## DoD (Definition of Done)
+
 - ✅ La estructura de la carpeta está lista
 - ✅ Los types de datos FHIR básicos están definidos en la aplicación
 
 ## Referencias
+
 - [FHIR R4 Specification](https://www.hl7.org/fhir/)
 - [TypeORM Entities](https://typeorm.io/entities)
 - [NestJS Modules](https://docs.nestjs.com/modules)
@@ -159,9 +165,11 @@ src/
 **Descripción:**
 
 ## Objetivo
+
 Crear la estructura base del módulo de autenticación en NestJS con la estructura de carpetas necesaria.
 
 ## Tareas
+
 - [x] Crear carpeta `src/modules/auth/`
 - [x] Crear `auth.module.ts` con configuración básica
 - [x] Crear subcarpetas:
@@ -173,6 +181,7 @@ Crear la estructura base del módulo de autenticación en NestJS con la estructu
 - [x] Configurar imports necesarios (ConfigModule, PassportModule, JwtModule)
 
 ## Estructura Esperada
+
 ```
 src/modules/auth/
 ├── auth.module.ts
@@ -190,14 +199,15 @@ src/modules/auth/
 ```
 
 ## Criterios de Aceptación
+
 - [x] Módulo auth creado y estructurado
 - [x] Módulo integrado en AppModule
 - [x] Estructura de carpetas lista para implementación
 
 ## Referencias
+
 - [NestJS Modules](https://docs.nestjs.com/modules)
 - [NestJS Authentication](https://docs.nestjs.com/security/authentication)
-
 
 **Labels:** `enhancement`, `auth`, `phase-2`
 
@@ -210,9 +220,11 @@ src/modules/auth/
 **Descripción:**
 
 ## Objetivo
+
 Instalar y configurar todas las dependencias necesarias para implementar autenticación JWT con Passport.
 
 ## Tareas
+
 - [x] Verificar dependencias ya instaladas:
   - [x] `@nestjs/passport` ✅ (ya instalado - v10.0.3)
   - [x] `passport` ✅ (ya instalado - v0.7.0)
@@ -224,6 +236,7 @@ Instalar y configurar todas las dependencias necesarias para implementar autenti
 - [x] Documentar dependencias en README
 
 ## Dependencias Requeridas
+
 ```json
 {
   "@nestjs/passport": "^10.0.3",
@@ -235,14 +248,15 @@ Instalar y configurar todas las dependencias necesarias para implementar autenti
 ```
 
 ## Criterios de Aceptación
+
 - [x] Todas las dependencias instaladas
 - [x] Versiones compatibles verificadas
 - [x] Dependencias documentadas
 
 ## Notas
+
 - Las dependencias ya están instaladas según package.json
 - Solo verificar y documentar
-
 
 **Labels:** `chore`, `auth`, `phase-2`
 
@@ -255,9 +269,11 @@ Instalar y configurar todas las dependencias necesarias para implementar autenti
 **Descripción:**
 
 ## Objetivo
+
 Implementar la estrategia JWT de Passport para validar tokens emitidos por Keycloak.
 
 ## Tareas
+
 - [x] Crear `src/modules/auth/strategies/jwt.strategy.ts`
 - [x] Configurar extracción del token desde header `Authorization: Bearer <token>`
 - [x] Configurar validación del token usando la clave pública de Keycloak
@@ -270,6 +286,7 @@ Implementar la estrategia JWT de Passport para validar tokens emitidos por Keycl
 - [x] Agregar tests unitarios
 
 ## Configuración Esperada
+
 ```typescript
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -297,15 +314,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 ```
 
 ## Criterios de Aceptación
+
 - [x] Strategy valida tokens de Keycloak correctamente
 - [x] Extrae información del usuario del token
 - [x] Maneja errores de token inválido
 - [x] Tests unitarios pasando
 
 ## Referencias
+
 - [Passport JWT Strategy](http://www.passportjs.org/packages/passport-jwt/)
 - [Keycloak Token Validation](https://www.keycloak.org/docs/latest/securing_apps/#_token_validation)
-
 
 **Labels:** `enhancement`, `auth`, `phase-2`, `security`
 
@@ -318,9 +336,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 **Descripción:**
 
 ## Objetivo
+
 Crear un guard de autenticación que proteja endpoints usando la estrategia JWT.
 
 ## Tareas
+
 - [x] Crear `src/modules/auth/guards/jwt-auth.guard.ts`
 - [x] Extender `AuthGuard('jwt')` de `@nestjs/passport`
 - [x] Configurar como guard global opcional (puede ser sobrescrito con `@Public()`)
@@ -328,6 +348,7 @@ Crear un guard de autenticación que proteja endpoints usando la estrategia JWT.
 - [x] Agregar tests unitarios
 
 ## Implementación Esperada
+
 ```typescript
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
@@ -345,14 +366,15 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 ```
 
 ## Criterios de Aceptación
+
 - [x] Guard protege endpoints correctamente
 - [x] Retorna 401 para tokens inválidos
 - [x] Permite acceso con token válido
 - [x] Tests unitarios pasando
 
 ## Referencias
-- [NestJS Guards](https://docs.nestjs.com/guards)
 
+- [NestJS Guards](https://docs.nestjs.com/guards)
 
 **Labels:** `enhancement`, `auth`, `phase-2`, `security`
 
@@ -365,9 +387,11 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 **Descripción:**
 
 ## Objetivo
+
 Crear un decorador que marque endpoints como públicos, excluyéndolos de la autenticación.
 
 ## Tareas
+
 - [x] Crear `src/modules/auth/decorators/public.decorator.ts`
 - [x] Usar `SetMetadata` para marcar endpoints como públicos
 - [x] Actualizar `JwtAuthGuard` para verificar el metadata y permitir acceso público
@@ -379,6 +403,7 @@ Crear un decorador que marque endpoints como públicos, excluyéndolos de la aut
 - [x] Agregar tests - Completado (el decorador se prueba indirectamente en JwtAuthGuard tests)
 
 ## Implementación Esperada
+
 ```typescript
 import { SetMetadata } from '@nestjs/common';
 
@@ -387,6 +412,7 @@ export const Public = () => SetMetadata(IS_PUBLIC_KEY, true);
 ```
 
 ## Uso
+
 ```typescript
 @Public()
 @Get('health')
@@ -396,14 +422,15 @@ getHealth() {
 ```
 
 ## Criterios de Aceptación
+
 - [x] Decorador marca endpoints como públicos
 - [x] Guard permite acceso sin autenticación
 - [x] Endpoints protegidos siguen requiriendo autenticación
 - [x] Tests pasando
 
 ## Referencias
-- [NestJS Custom Decorators](https://docs.nestjs.com/custom-decorators)
 
+- [NestJS Custom Decorators](https://docs.nestjs.com/custom-decorators)
 
 **Labels:** `enhancement`, `auth`, `phase-2`
 
@@ -416,9 +443,11 @@ getHealth() {
 **Descripción:**
 
 ## Objetivo
+
 Crear un decorador que extraiga el usuario autenticado del request de forma limpia.
 
 ## Tareas
+
 - [x] Crear `src/modules/auth/decorators/current-user.decorator.ts`
 - [x] Usar `createParamDecorator` para extraer usuario del request
 - [x] Retornar objeto de usuario con información del token JWT
@@ -426,18 +455,18 @@ Crear un decorador que extraiga el usuario autenticado del request de forma limp
 - [x] Agregar tests - Completado (el decorador se prueba indirectamente en auth.controller.spec.ts cuando se usa en el endpoint getUser)
 
 ## Implementación Esperada
+
 ```typescript
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 
-export const CurrentUser = createParamDecorator(
-  (data: unknown, ctx: ExecutionContext) => {
-    const request = ctx.switchToHttp().getRequest();
-    return request.user;
-  },
-);
+export const CurrentUser = createParamDecorator((data: unknown, ctx: ExecutionContext) => {
+  const request = ctx.switchToHttp().getRequest();
+  return request.user;
+});
 ```
 
 ## Uso
+
 ```typescript
 @Get('profile')
 getProfile(@CurrentUser() user: any) {
@@ -446,14 +475,15 @@ getProfile(@CurrentUser() user: any) {
 ```
 
 ## Criterios de Aceptación
+
 - [x] Decorador extrae usuario del request
 - [x] Funciona correctamente en endpoints protegidos
 - [x] Soporte para extraer propiedades específicas del usuario
 - [x] Tests pasando - Completado (se prueba indirectamente en auth.controller.spec.ts)
 
 ## Referencias
-- [NestJS Custom Decorators](https://docs.nestjs.com/custom-decorators)
 
+- [NestJS Custom Decorators](https://docs.nestjs.com/custom-decorators)
 
 **Labels:** `enhancement`, `auth`, `phase-2`
 
@@ -466,9 +496,11 @@ getProfile(@CurrentUser() user: any) {
 **Descripción:**
 
 ## Objetivo
+
 Crear el controlador de autenticación con la estructura base para los endpoints de auth.
 
 ## Tareas
+
 - [x] Crear `src/modules/auth/auth.controller.ts`
 - [x] Crear `src/modules/auth/auth.service.ts`
 - [x] Configurar rutas base `/auth`
@@ -477,6 +509,7 @@ Crear el controlador de autenticación con la estructura base para los endpoints
 - [x] Agregar tests básicos
 
 ## Estructura Esperada
+
 ```typescript
 @Controller('auth')
 @ApiTags('Authentication')
@@ -515,14 +548,15 @@ export class AuthController {
 ```
 
 ## Criterios de Aceptación
+
 - [x] Controller creado con estructura base
 - [x] Rutas configuradas correctamente
 - [x] Swagger documentado
 - [x] Tests básicos pasando
 
 ## Referencias
-- [NestJS Controllers](https://docs.nestjs.com/controllers)
 
+- [NestJS Controllers](https://docs.nestjs.com/controllers)
 
 **Labels:** `enhancement`, `auth`, `phase-2`
 
@@ -535,9 +569,11 @@ export class AuthController {
 **Descripción:**
 
 ## Objetivo
+
 Implementar el endpoint de login que inicia el flujo OAuth2 redirigiendo al usuario a Keycloak.
 
 ## Tareas
+
 - [x] Implementar método `login()` en `AuthController`
 - [x] Construir URL de autorización de Keycloak:
   - `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/auth`
@@ -552,6 +588,7 @@ Implementar el endpoint de login que inicia el flujo OAuth2 redirigiendo al usua
 - [x] Agregar tests
 
 ## Implementación Esperada
+
 ```typescript
 @Post('login')
 @Public()
@@ -563,14 +600,15 @@ async login(@Res() res: Response) {
 ```
 
 ## Criterios de Aceptación
+
 - [x] Endpoint redirige a Keycloak correctamente
 - [x] Parámetros OAuth2 configurados correctamente
 - [x] State token generado para CSRF protection
 - [x] Tests pasando
 
 ## Referencias
-- [OAuth2 Authorization Code Flow](https://oauth.net/2/grant-types/authorization-code/)
 
+- [OAuth2 Authorization Code Flow](https://oauth.net/2/grant-types/authorization-code/)
 
 **Labels:** `enhancement`, `auth`, `phase-2`, `oauth2`
 
@@ -583,9 +621,11 @@ async login(@Res() res: Response) {
 **Descripción:**
 
 ## Objetivo
+
 Implementar el endpoint de callback que recibe el código de autorización de Keycloak y obtiene los tokens.
 
 ## Tareas
+
 - [x] Implementar método `callback()` en `AuthController`
 - [x] Validar parámetro `state` (CSRF protection)
 - [x] Extraer `code` del query parameter
@@ -603,6 +643,7 @@ Implementar el endpoint de callback que recibe el código de autorización de Ke
 - [x] Agregar tests
 
 ## Implementación Esperada
+
 ```typescript
 @Get('callback')
 @Public()
@@ -620,6 +661,7 @@ async callback(
 ```
 
 ## Criterios de Aceptación
+
 - [x] Callback recibe código correctamente
 - [x] Intercambia código por tokens
 - [x] Tokens guardados de forma segura
@@ -627,8 +669,8 @@ async callback(
 - [x] Tests pasando
 
 ## Referencias
-- [OAuth2 Token Exchange](https://oauth.net/2/grant-types/authorization-code/)
 
+- [OAuth2 Token Exchange](https://oauth.net/2/grant-types/authorization-code/)
 
 **Labels:** `enhancement`, `auth`, `phase-2`, `oauth2`
 
@@ -641,9 +683,11 @@ async callback(
 **Descripción:**
 
 ## Objetivo
+
 Implementar el endpoint que refresca el access token usando el refresh token.
 
 ## Tareas
+
 - [x] Implementar método `refresh()` en `AuthController`
 - [x] Extraer refresh token del request (cookie o body)
 - [x] Intercambiar refresh token por nuevo access token:
@@ -658,6 +702,7 @@ Implementar el endpoint que refresca el access token usando el refresh token.
 - [x] Agregar tests
 
 ## Implementación Esperada
+
 ```typescript
 @Post('refresh')
 @Public()
@@ -669,14 +714,15 @@ async refresh(@Body() body: { refresh_token: string }) {
 ```
 
 ## Criterios de Aceptación
+
 - [x] Endpoint refresca tokens correctamente
 - [x] Maneja tokens expirados
 - [x] Retorna nuevos tokens
 - [x] Tests pasando
 
 ## Referencias
-- [OAuth2 Refresh Token](https://oauth.net/2/grant-types/refresh-token/)
 
+- [OAuth2 Refresh Token](https://oauth.net/2/grant-types/refresh-token/)
 
 **Labels:** `enhancement`, `auth`, `phase-2`, `oauth2`
 
@@ -689,9 +735,11 @@ async refresh(@Body() body: { refresh_token: string }) {
 **Descripción:**
 
 ## Objetivo
+
 Implementar el endpoint de logout que revoca los tokens en Keycloak y limpia la sesión.
 
 ## Tareas
+
 - [x] Implementar método `logout()` en `AuthController`
 - [x] Extraer refresh token del request
 - [x] Revocar tokens en Keycloak:
@@ -706,6 +754,7 @@ Implementar el endpoint de logout que revoca los tokens en Keycloak y limpia la 
 - [x] Agregar tests
 
 ## Implementación Esperada
+
 ```typescript
 @Post('logout')
 @ApiOperation({ summary: 'Cerrar sesión y revocar tokens' })
@@ -719,14 +768,15 @@ async logout(
 ```
 
 ## Criterios de Aceptación
+
 - [x] Endpoint revoca tokens en Keycloak
 - [x] Limpia sesión local
 - [x] Maneja errores correctamente
 - [x] Tests pasando
 
 ## Referencias
-- [Keycloak Logout](https://www.keycloak.org/docs/latest/securing_apps/#_logout_endpoint)
 
+- [Keycloak Logout](https://www.keycloak.org/docs/latest/securing_apps/#_logout_endpoint)
 
 **Labels:** `enhancement`, `auth`, `phase-2`, `oauth2`
 
@@ -739,9 +789,11 @@ async logout(
 **Descripción:**
 
 ## Objetivo
+
 Implementar el endpoint que retorna la información del usuario autenticado desde el token JWT.
 
 ## Tareas
+
 - [x] Implementar método `getUser()` en `AuthController`
 - [x] Usar decorador `@CurrentUser()` para obtener usuario del request
 - [x] Retornar información del usuario (id, username, email, roles)
@@ -749,6 +801,7 @@ Implementar el endpoint que retorna la información del usuario autenticado desd
 - [x] Agregar tests (incluido en auth.controller.spec.ts)
 
 ## Implementación Esperada
+
 ```typescript
 @Get('user')
 @ApiBearerAuth()
@@ -764,14 +817,15 @@ async getUser(@CurrentUser() user: any) {
 ```
 
 ## Criterios de Aceptación
+
 - [x] Endpoint retorna información del usuario
 - [x] Requiere autenticación (protegido por JwtAuthGuard)
 - [x] Documentado en Swagger
 - [x] Tests pasando
 
 ## Referencias
-- [NestJS Custom Decorators](https://docs.nestjs.com/custom-decorators)
 
+- [NestJS Custom Decorators](https://docs.nestjs.com/custom-decorators)
 
 **Labels:** `enhancement`, `auth`, `phase-2`
 
@@ -784,22 +838,24 @@ async getUser(@CurrentUser() user: any) {
 **Descripción:**
 
 ## Objetivo
+
 Configurar Swagger para que los usuarios puedan autenticarse y probar endpoints protegidos desde la UI.
 
 ## Tareas
+
 - [x] Configurar `@ApiBearerAuth()` en endpoints protegidos
 - [x] Agregar configuración de seguridad en `main.ts`:
 
   ```typescript
-  const config = new DocumentBuilder()
-    .addBearerAuth()
-    .build();
+  const config = new DocumentBuilder().addBearerAuth().build();
   ```
+
 - [x] Configurar botón de autenticación en Swagger UI
 - [x] Documentar cómo usar autenticación en Swagger
 - [x] Agregar ejemplos de requests
 
 ## Configuración Esperada
+
 ```typescript
 const config = new DocumentBuilder()
   .setTitle('CareCore API')
@@ -820,6 +876,7 @@ const config = new DocumentBuilder()
 ```
 
 ## Criterios de Aceptación
+
 - [x] Swagger muestra botón de autenticación
 - [x] Usuarios pueden ingresar token JWT
 - [x] Endpoints protegidos funcionan desde Swagger
@@ -866,8 +923,8 @@ const config = new DocumentBuilder()
 5. Probar endpoints protegidos
 
 ## Referencias
-- [NestJS Swagger](https://docs.nestjs.com/openapi/introduction)
 
+- [NestJS Swagger](https://docs.nestjs.com/openapi/introduction)
 
 **Labels:** `enhancement`, `auth`, `phase-2`, `documentation`
 
@@ -880,9 +937,11 @@ const config = new DocumentBuilder()
 **Descripción:**
 
 ## Objetivo
+
 Crear un guard que valide que el usuario tenga los roles necesarios para acceder a un endpoint.
 
 ## Tareas
+
 - [x] Crear `src/modules/auth/guards/roles.guard.ts`
 - [x] Implementar `CanActivate` interface
 - [x] Extraer roles requeridos del metadata (decorador `@Roles()`)
@@ -892,16 +951,17 @@ Crear un guard que valide que el usuario tenga los roles necesarios para acceder
 - [x] Agregar tests
 
 ## Implementación Esperada
+
 ```typescript
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const requiredRoles = this.reflector.getAllAndOverride<string[]>(
-      ROLES_KEY,
-      [context.getHandler(), context.getClass()],
-    );
+    const requiredRoles = this.reflector.getAllAndOverride<string[]>(ROLES_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
 
     if (!requiredRoles) {
       return true;
@@ -914,14 +974,15 @@ export class RolesGuard implements CanActivate {
 ```
 
 ## Criterios de Aceptación
+
 - [x] Guard valida roles correctamente
 - [x] Retorna 403 Forbidden si no tiene permisos
 - [x] Permite acceso si tiene rol requerido
 - [x] Tests pasando
 
 ## Referencias
-- [NestJS Guards](https://docs.nestjs.com/guards)
 
+- [NestJS Guards](https://docs.nestjs.com/guards)
 
 **Labels:** `enhancement`, `auth`, `phase-2`, `security`
 
@@ -934,9 +995,11 @@ export class RolesGuard implements CanActivate {
 **Descripción:**
 
 ## Objetivo
+
 Crear un decorador que defina qué roles pueden acceder a un endpoint.
 
 ## Tareas
+
 - [x] Crear `src/modules/auth/decorators/roles.decorator.ts`
 - [x] Usar `SetMetadata` para almacenar roles requeridos
 - [x] Aplicar decorador junto con `RolesGuard`
@@ -944,6 +1007,7 @@ Crear un decorador que defina qué roles pueden acceder a un endpoint.
 - [x] Agregar tests (incluidos en RolesGuard tests)
 
 ## Implementación Esperada
+
 ```typescript
 import { SetMetadata } from '@nestjs/common';
 
@@ -952,6 +1016,7 @@ export const Roles = (...roles: string[]) => SetMetadata(ROLES_KEY, roles);
 ```
 
 ## Uso
+
 ```typescript
 @Get('admin')
 @Roles('admin')
@@ -967,13 +1032,14 @@ async practitionerEndpoint() {
 ```
 
 ## Criterios de Aceptación
+
 - [x] Decorador define roles requeridos
 - [x] Funciona con `RolesGuard`
 - [x] Tests pasando
 
 ## Referencias
-- [NestJS Custom Decorators](https://docs.nestjs.com/custom-decorators)
 
+- [NestJS Custom Decorators](https://docs.nestjs.com/custom-decorators)
 
 **Labels:** `enhancement`, `auth`, `phase-2`, `security`
 
@@ -986,9 +1052,11 @@ async practitionerEndpoint() {
 **Descripción:**
 
 ## Objetivo
+
 Asegurar que los roles definidos en Keycloak se mapeen correctamente a la aplicación y estén disponibles en el token JWT.
 
 ## Tareas
+
 - [x] Verificar que roles de Keycloak estén en el token JWT:
   - `patient`
   - `practitioner`
@@ -1007,6 +1075,7 @@ Asegurar que los roles definidos en Keycloak se mapeen correctamente a la aplica
 - [x] Agregar tests (incluidos en jwt.strategy.spec.ts)
 
 ## Implementación Esperada
+
 ```typescript
 // src/common/constants/roles.ts
 export const ROLES = {
@@ -1032,6 +1101,7 @@ async validate(payload: any) {
 ```
 
 ## Criterios de Aceptación
+
 - [x] Roles extraídos correctamente del token
 - [x] Roles disponibles en `@CurrentUser()`
 - [x] Constantes de roles definidas
@@ -1039,8 +1109,8 @@ async validate(payload: any) {
 - [x] Tests pasando
 
 ## Referencias
-- [Keycloak Token Claims](https://www.keycloak.org/docs/latest/securing_apps/#_token_claims)
 
+- [Keycloak Token Claims](https://www.keycloak.org/docs/latest/securing_apps/#_token_claims)
 
 **Labels:** `enhancement`, `auth`, `phase-2`, `security`
 
@@ -1048,25 +1118,25 @@ async validate(payload: any) {
 
 ## 📊 Resumen de Tareas
 
-| # | Tarea | Estimación | Prioridad | Labels |
-|---|-------|------------|-----------|--------|
-| 0 | Definir estructura de carpetas y tipos FHIR | 4-6 horas | Alta | `enhancement`, `fhir`, `phase-2`, `database` |
-| 1 | Crear módulo `auth` | 1-2 horas | Alta | `enhancement`, `auth`, `phase-2` |
-| 2 | Instalar dependencias Passport | 0.5 horas | Alta | `chore`, `auth`, `phase-2` |
-| 3 | Implementar JWT strategy | 3-4 horas | Alta | `enhancement`, `auth`, `phase-2`, `security` |
-| 4 | Crear `JwtAuthGuard` | 2-3 horas | Alta | `enhancement`, `auth`, `phase-2`, `security` |
-| 5 | Crear decorador `@Public()` | 1-2 horas | Media | `enhancement`, `auth`, `phase-2` |
-| 6 | Crear decorador `@CurrentUser()` | 1-2 horas | Media | `enhancement`, `auth`, `phase-2` |
-| 7 | Implementar `AuthController` | 2-3 horas | Alta | `enhancement`, `auth`, `phase-2` |
-| 8 | Implementar endpoint `/auth/login` | 2-3 horas | Alta | `enhancement`, `auth`, `phase-2`, `oauth2` |
-| 9 | Implementar endpoint `/auth/callback` | 3-4 horas | Alta | `enhancement`, `auth`, `phase-2`, `oauth2` |
-| 10 | Implementar endpoint `/auth/refresh` | 2-3 horas | Media | `enhancement`, `auth`, `phase-2`, `oauth2` |
-| 11 | Implementar endpoint `/auth/logout` | 2-3 horas | Media | `enhancement`, `auth`, `phase-2`, `oauth2` |
-| 12 | Implementar endpoint `/auth/user` | 1-2 horas | Media | `enhancement`, `auth`, `phase-2` |
-| 13 | Integrar con Swagger | 2-3 horas | Media | `enhancement`, `auth`, `phase-2`, `documentation` |
-| 14 | Crear `RolesGuard` | 2-3 horas | Alta | `enhancement`, `auth`, `phase-2`, `security` |
-| 15 | Crear decorador `@Roles()` | 1-2 horas | Alta | `enhancement`, `auth`, `phase-2`, `security` |
-| 16 | Mapear roles de Keycloak | 2-3 horas | Alta | `enhancement`, `auth`, `phase-2`, `security` |
+| #   | Tarea                                       | Estimación | Prioridad | Labels                                            |
+| --- | ------------------------------------------- | ---------- | --------- | ------------------------------------------------- |
+| 0   | Definir estructura de carpetas y tipos FHIR | 4-6 horas  | Alta      | `enhancement`, `fhir`, `phase-2`, `database`      |
+| 1   | Crear módulo `auth`                         | 1-2 horas  | Alta      | `enhancement`, `auth`, `phase-2`                  |
+| 2   | Instalar dependencias Passport              | 0.5 horas  | Alta      | `chore`, `auth`, `phase-2`                        |
+| 3   | Implementar JWT strategy                    | 3-4 horas  | Alta      | `enhancement`, `auth`, `phase-2`, `security`      |
+| 4   | Crear `JwtAuthGuard`                        | 2-3 horas  | Alta      | `enhancement`, `auth`, `phase-2`, `security`      |
+| 5   | Crear decorador `@Public()`                 | 1-2 horas  | Media     | `enhancement`, `auth`, `phase-2`                  |
+| 6   | Crear decorador `@CurrentUser()`            | 1-2 horas  | Media     | `enhancement`, `auth`, `phase-2`                  |
+| 7   | Implementar `AuthController`                | 2-3 horas  | Alta      | `enhancement`, `auth`, `phase-2`                  |
+| 8   | Implementar endpoint `/auth/login`          | 2-3 horas  | Alta      | `enhancement`, `auth`, `phase-2`, `oauth2`        |
+| 9   | Implementar endpoint `/auth/callback`       | 3-4 horas  | Alta      | `enhancement`, `auth`, `phase-2`, `oauth2`        |
+| 10  | Implementar endpoint `/auth/refresh`        | 2-3 horas  | Media     | `enhancement`, `auth`, `phase-2`, `oauth2`        |
+| 11  | Implementar endpoint `/auth/logout`         | 2-3 horas  | Media     | `enhancement`, `auth`, `phase-2`, `oauth2`        |
+| 12  | Implementar endpoint `/auth/user`           | 1-2 horas  | Media     | `enhancement`, `auth`, `phase-2`                  |
+| 13  | Integrar con Swagger                        | 2-3 horas  | Media     | `enhancement`, `auth`, `phase-2`, `documentation` |
+| 14  | Crear `RolesGuard`                          | 2-3 horas  | Alta      | `enhancement`, `auth`, `phase-2`, `security`      |
+| 15  | Crear decorador `@Roles()`                  | 1-2 horas  | Alta      | `enhancement`, `auth`, `phase-2`, `security`      |
+| 16  | Mapear roles de Keycloak                    | 2-3 horas  | Alta      | `enhancement`, `auth`, `phase-2`, `security`      |
 
 **Tiempo Total Estimado:** 30-42 horas (4-6 días)
 
@@ -1075,17 +1145,20 @@ async validate(payload: any) {
 ## 🚀 Cómo Usar Esta Lista
 
 ### Opción 1: Crear Issues Individuales
+
 1. Copia cada tarea como un nuevo Issue en GitHub
 2. Usa el título y descripción proporcionados
 3. Agrega los labels sugeridos
 4. Asigna a un milestone "Fase 2: Integración NestJS"
 
 ### Opción 2: Crear Issue Épico
+
 1. Crea un issue principal "Fase 2: Integración NestJS"
 2. Crea issues hijos para cada tarea
 3. Usa GitHub Projects para organizar
 
 ### Opción 3: Usar GitHub Projects Directamente
+
 1. Crea cards en GitHub Projects
 2. Copia el título de cada tarea
 3. Agrega la descripción en el body de la card
@@ -1115,4 +1188,3 @@ async validate(payload: any) {
 
 **Última actualización**: 2025-12-03
 **Versión**: 1.0.0
-

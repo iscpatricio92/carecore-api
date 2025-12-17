@@ -42,8 +42,8 @@ jobs:
       - name: Check formatting
         run: |
           echo "🔍 Verificando formato de archivos..."
-          # Verificar formato de archivos TypeScript (incluyendo tests .spec.ts)
-          if npx prettier --check "src/**/*.ts" "src/**/*.spec.ts"; then
+          # Verificar formato de archivos en el monorepo
+          if npm run format:check; then
             echo "✅ Todos los archivos están correctamente formateados"
           else
             echo "⚠️  Algunos archivos no están formateados correctamente"
@@ -153,7 +153,11 @@ jobs:
             echo "⚠️  PostgreSQL puede no estar completamente listo, pero continuando..."
           fi
 
+      - name: Build shared package
+        run: npm run build:shared
+
       - name: Run unit tests
+        working-directory: packages/api
         env:
           NODE_ENV: test
           DB_HOST: localhost
@@ -165,6 +169,7 @@ jobs:
         run: npm run test:cov
 
       - name: Run integration tests (coverage)
+        working-directory: packages/api
         env:
           NODE_ENV: test
           DB_HOST: localhost
@@ -176,6 +181,7 @@ jobs:
         run: npm run test:integration:cov
 
       - name: Run E2E tests (coverage)
+        working-directory: packages/api
         env:
           NODE_ENV: test
           DB_TYPE: postgres
@@ -200,6 +206,7 @@ jobs:
       - name: Parse coverage summary (unit, integration, e2e)
         if: always() && github.event_name == 'pull_request'
         id: coverage
+        working-directory: packages/api
         run: |
           parse() {
             FILE=$1
@@ -294,7 +301,7 @@ jobs:
         if: always()
         uses: codecov/codecov-action@v3
         with:
-          files: ./coverage/lcov.info
+          files: ./packages/api/coverage/lcov.info
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -321,8 +328,12 @@ jobs:
 
       - name: Check build artifacts
         run: |
-          if [ ! -d "dist" ]; then
+          if [ ! -d "packages/api/dist" ]; then
             echo "❌ Build failed: dist directory not found"
+            exit 1
+          fi
+          if [ ! -d "packages/shared/dist" ]; then
+            echo "❌ Build failed: shared dist directory not found"
             exit 1
           fi
           echo "✅ Build successful"

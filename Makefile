@@ -8,19 +8,19 @@ install: ## Instalar dependencias
 	npm install
 
 dev: ## Iniciar en modo desarrollo
-	npm run start:dev
+	cd packages/api && npm run start:dev
 
 build: ## Compilar el proyecto
-	npm run build
+	npm run build:shared && npm run build
 
 start: ## Iniciar en modo producción
-	npm run start:prod
+	cd packages/api && npm run start:prod
 
 stop: ## Detener la aplicación
 	@echo "Deteniendo aplicación..."
 
 clean: docker-clean-env ## Limpiar archivos generados
-	rm -rf dist node_modules coverage
+	rm -rf dist node_modules coverage packages/*/dist packages/*/node_modules packages/*/coverage
 
 docker-up: ## Iniciar contenedores Docker (PostgreSQL + Keycloak + API)
 	@ENV_BASE=$$(echo .env.$${NODE_ENV:-development}); \
@@ -66,9 +66,7 @@ docker-up: ## Iniciar contenedores Docker (PostgreSQL + Keycloak + API)
 		echo "⚠️  No se pudo verificar/crear la base de datos de Keycloak (puede que el contenedor aún no esté listo)"; \
 	fi; \
 	echo "🔧 Verificando configuración de Keycloak..."; \
-	# El script es silencioso cuando todo está bien (0 líneas de output)
-	# Solo muestra output si falta algo o hay un problema
-	OUTPUT=$$(bash scripts/init-keycloak-config.sh 2>&1); \
+	OUTPUT=$$(bash packages/api/scripts/init-keycloak-config.sh 2>&1); \
 	if [ -z "$$OUTPUT" ]; then \
 		echo "✅ Configuración de Keycloak verificada (todo está bien)"; \
 	else \
@@ -144,10 +142,10 @@ docker-clean-env: ## Limpiar archivo temporal .env.docker
 	@echo "✅ Archivo .env.docker eliminado"
 
 db-migrate: ## Ejecutar migraciones
-	npm run migration:run
+	cd packages/api && npm run migration:run
 
 db-migrate-revert: ## Revertir última migración
-	npm run migration:revert
+	cd packages/api && npm run migration:revert
 
 lint: ## Ejecutar linter
 	npm run lint
@@ -180,21 +178,21 @@ setup: install docker-up ## Configuración inicial completa
 
 keycloak-setup: ## Configurar Keycloak (realm, roles, clientes)
 	@echo "🔧 Configurando Keycloak..."
-	@bash keycloak/init/setup-keycloak.sh
+	@bash packages/api/keycloak/init/setup-keycloak.sh
 	@echo ""
 	@echo "✅ Configuración de Keycloak completada"
 	@echo "📝 No olvides guardar el Client Secret de carecore-api en .env.local"
 	@echo "💡 Ejecuta 'make keycloak-get-secret' para obtener el Client Secret automáticamente"
 
 keycloak-get-secret: ## Obtener Client Secret de carecore-api
-	@bash keycloak/init/get-client-secret.sh
+	@bash packages/api/keycloak/init/get-client-secret.sh
 
 keycloak-backup: ## Hacer backup completo de Keycloak (realm + base de datos)
 	@echo "💾 Iniciando backup de Keycloak..."
-	@bash scripts/backup-keycloak.sh
+	@bash packages/api/scripts/backup-keycloak.sh
 
 keycloak-backup-realm: ## Hacer backup solo del realm de Keycloak (incluye scopes)
-	@bash scripts/backup-keycloak-realm.sh
+	@bash packages/api/scripts/backup-keycloak-realm.sh
 
 keycloak-create-scopes: ## Crear client scopes OAuth2 en Keycloak
 	@if [ -z "$${KEYCLOAK_ADMIN}" ] || [ -z "$${KEYCLOAK_ADMIN_PASSWORD}" ]; then \
@@ -218,7 +216,7 @@ keycloak-create-scopes: ## Crear client scopes OAuth2 en Keycloak
 		echo "   Verifica KEYCLOAK_ADMIN y KEYCLOAK_ADMIN_PASSWORD en .env.local"; \
 		exit 1; \
 	fi; \
-	bash keycloak/init/create-scopes.sh "$$ACCESS_TOKEN"
+	bash packages/api/keycloak/init/create-scopes.sh "$$ACCESS_TOKEN"
 
 keycloak-restore: ## Restaurar backup de Keycloak (requiere BACKUP_TIMESTAMP=YYYYMMDD-HHMMSS)
 	@if [ -z "$(BACKUP_TIMESTAMP)" ]; then \
@@ -228,10 +226,10 @@ keycloak-restore: ## Restaurar backup de Keycloak (requiere BACKUP_TIMESTAMP=YYY
 		echo "  make keycloak-restore BACKUP_TIMESTAMP=20251205-143022"; \
 		echo ""; \
 		echo "Para ver backups disponibles:"; \
-		echo "  ls -la keycloak/backups/realms/"; \
+		echo "  ls -la packages/api/keycloak/backups/realms/"; \
 		exit 1; \
 	fi
-	@bash scripts/restore-keycloak.sh $(BACKUP_TIMESTAMP)
+	@bash packages/api/scripts/restore-keycloak.sh $(BACKUP_TIMESTAMP)
 
 keycloak-verify-backup: ## Verificar que un backup de Keycloak es válido (requiere BACKUP_TIMESTAMP=YYYYMMDD-HHMMSS)
 	@if [ -z "$(BACKUP_TIMESTAMP)" ]; then \
@@ -241,10 +239,10 @@ keycloak-verify-backup: ## Verificar que un backup de Keycloak es válido (requi
 		echo "  make keycloak-verify-backup BACKUP_TIMESTAMP=20251205-143022"; \
 		echo ""; \
 		echo "Para ver backups disponibles:"; \
-		echo "  ls -la keycloak/backups/realms/"; \
+		echo "  ls -la packages/api/keycloak/backups/realms/"; \
 		exit 1; \
 	fi
-	@bash scripts/verify-keycloak-backup.sh $(BACKUP_TIMESTAMP)
+	@bash packages/api/scripts/verify-keycloak-backup.sh $(BACKUP_TIMESTAMP)
 
 assign-practitioner-role: ## Asignar rol 'practitioner' a un usuario (requiere USERNAME=username)
 	@if [ -z "$(USERNAME)" ]; then \
@@ -257,5 +255,5 @@ assign-practitioner-role: ## Asignar rol 'practitioner' a un usuario (requiere U
 		echo "  make assign-practitioner-role USERNAME=dr.smith"; \
 		exit 1; \
 	fi
-	@bash scripts/assign-practitioner-role.sh $(USERNAME)
+	@bash packages/api/scripts/assign-practitioner-role.sh $(USERNAME)
 

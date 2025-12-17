@@ -10,11 +10,13 @@ The project uses an environment-specific variable configuration with loading pri
 ### For Development:
 
 1. Copy the development example file:
+
    ```bash
    cp .env.development.example .env.development
    ```
 
 2. Create your `.env.local` file with values specific to your machine:
+
    ```bash
    cp .env.development.example .env.local
    ```
@@ -35,6 +37,7 @@ The project uses an environment-specific variable configuration with loading pri
 ### For Production:
 
 1. Copy the production example file:
+
    ```bash
    cp .env.production.example .env.production
    ```
@@ -104,8 +107,11 @@ FRONTEND_URL=http://localhost:3000
 RATE_LIMIT_TTL=60
 RATE_LIMIT_MAX=100
 
+# Document Storage (FHIR DocumentReference attachments)
+DOCUMENTS_STORAGE_PATH=.tmp/storage/documents
+
 # Practitioner Verification Documents Storage
-VERIFICATION_DOCUMENTS_PATH=storage/verifications
+VERIFICATION_DOCUMENTS_PATH=.tmp/storage/verifications
 MAX_DOCUMENT_SIZE=10485760
 
 # PgAdmin (Optional)
@@ -134,12 +140,14 @@ KEYCLOAK_HTTP_ENABLED=true
 ## Variable Descriptions
 
 ### Application
+
 - `NODE_ENV`: Runtime environment (`development`, `production`, `test`) (**required**)
 - `PORT`: External port where the application will be accessible from the host (**required**)
 - `API_INTERNAL_PORT`: Internal port where the application runs inside the container (**required**, default: 3000)
 - `APP_NAME`: Application name
 
 ### Database
+
 - `DB_TYPE`: Database type (currently only `postgres`) (**required**)
 - `DB_HOST`: PostgreSQL host (**required**)
   - Use `postgres` when running in Docker (service name)
@@ -152,14 +160,17 @@ KEYCLOAK_HTTP_ENABLED=true
 - `DB_SYNCHRONIZE`: Automatically synchronize schema (only `true` in development) (**required**)
 
 ### JWT
+
 - `JWT_SECRET`: Secret key for signing JWT tokens (**change in production!**)
 - `JWT_EXPIRATION`: Token expiration time (e.g., `24h`, `7d`)
 
 ### FHIR
+
 - `FHIR_VERSION`: FHIR version (default: `R4`)
 - `FHIR_BASE_URL`: Base URL for FHIR resources
 
 ### Security
+
 - `BCRYPT_ROUNDS`: Number of rounds for password hashing (default: 10)
 - `ENCRYPTION_KEY`: Encryption key for pgcrypto (at least 32 characters) (**required for encryption**)
   - Used to encrypt sensitive data at rest in the database
@@ -168,9 +179,11 @@ KEYCLOAK_HTTP_ENABLED=true
   - **DO NOT** commit this value to the repository
 
 ### CORS
+
 - `CORS_ORIGIN`: Allowed origin for CORS (use `*` in development, specific in production)
 
 ### Frontend URL
+
 - `FRONTEND_URL`: Frontend URL for OAuth callback redirects (**optional**)
   - Used to redirect users after successful OAuth authentication
   - Default: `http://localhost:3001` (if not set)
@@ -179,24 +192,38 @@ KEYCLOAK_HTTP_ENABLED=true
   - **Note:** This variable is used for OAuth redirects, not for email verification
 
 ### Rate Limiting
+
 - `RATE_LIMIT_TTL`: Time window in seconds for rate limiting
 - `RATE_LIMIT_MAX`: Maximum number of requests per window
 
-### Practitioner Verification Documents Storage
-- `VERIFICATION_DOCUMENTS_PATH`: Path where verification documents (cedula/licencia) are stored (default: `storage/verifications`)
-  - Documents are stored temporarily on local disk (not committed to git)
+### Document Storage (FHIR DocumentReference)
+
+- `DOCUMENTS_STORAGE_PATH`: Path where FHIR DocumentReference attachments are stored (default: `.tmp/storage/documents`)
+  - Attachments provided as base64 are saved to disk and the resource is updated with the generated URL
+  - Documents are stored temporarily on local disk (not committed to git, see `.gitignore`)
   - TODO: Migrate to cloud storage (S3/MinIO) in the future for production
   - Can be absolute or relative to project root
+  - Used by `DocumentsService` to store binary attachments from FHIR DocumentReference resources
+
+### Practitioner Verification Documents Storage
+
+- `VERIFICATION_DOCUMENTS_PATH`: Path where verification documents (cedula/licencia) are stored (default: `.tmp/storage/verifications`)
+  - Documents are stored temporarily on local disk (not committed to git, see `.gitignore`)
+  - TODO: Migrate to cloud storage (S3/MinIO) in the future for production
+  - Can be absolute or relative to project root
+  - Used by `DocumentStorageService` for practitioner verification workflow
 - `MAX_DOCUMENT_SIZE`: Maximum file size in bytes for verification documents (default: `10485760` = 10MB)
   - Used to validate uploaded documents before storage
   - Documents exceeding this size will be rejected
 
 ### PgAdmin (Optional)
+
 - `PGADMIN_EMAIL`: Email to access PgAdmin
 - `PGADMIN_PASSWORD`: Password for PgAdmin
 - `PGADMIN_PORT`: Port for PgAdmin (default: 5050)
 
 ### Keycloak
+
 - `KEYCLOAK_ADMIN`: Username for Keycloak administrator (**required**)
 - `KEYCLOAK_ADMIN_PASSWORD`: Password for Keycloak administrator (**required**, **change in production!**)
 - `KEYCLOAK_URL`: Base URL of Keycloak server (**required**)
@@ -238,6 +265,7 @@ KEYCLOAK_HTTP_ENABLED=true
 **Recomendación:** Configura SMTP en Keycloak Realm settings (Realm settings → Email) en lugar de usar variables en `.env`. Ver: [docs/EMAIL_VERIFICATION.md](EMAIL_VERIFICATION.md) y [docs/KEYCLOAK_CONFIGURATION.md](KEYCLOAK_CONFIGURATION.md)
 
 **Variables SMTP eliminadas:**
+
 - ~~`SMTP_HOST`~~ - Eliminada (usar Keycloak SMTP config)
 - ~~`SMTP_PORT`~~ - Eliminada (usar Keycloak SMTP config)
 - ~~`SMTP_USER`~~ - Eliminada (usar Keycloak SMTP config)
@@ -248,6 +276,7 @@ KEYCLOAK_HTTP_ENABLED=true
 **Para verificación de email:** Keycloak maneja automáticamente el envío y verificación de emails. No se requiere configuración adicional en la API. Ver: [docs/EMAIL_VERIFICATION.md](EMAIL_VERIFICATION.md)
 
 ### Keycloak Client (API)
+
 - `KEYCLOAK_CLIENT_ID`: Client ID for the API backend (**required**)
   - Default: `carecore-api`
 - `KEYCLOAK_CLIENT_SECRET`: Client Secret for the API backend (**required**, **NEVER commit!**)
@@ -256,12 +285,14 @@ KEYCLOAK_HTTP_ENABLED=true
   - ⚠️ Rotate periodically in production
 
 ### Keycloak Client (Web Frontend)
+
 - `KEYCLOAK_WEB_CLIENT_ID`: Client ID for the web frontend (**optional**, para referencia)
   - Default: `carecore-web`
   - **Nota:** Este cliente es público y no requiere Client Secret
   - **Nota:** El frontend usará este Client ID, no el backend
 
 ⚠️ **Security Notes for Keycloak:**
+
 - Change `KEYCLOAK_ADMIN_PASSWORD` in production immediately
 - Use strong passwords (minimum 16 characters, mix of letters, numbers, symbols)
 - In production, use HTTPS for `KEYCLOAK_URL`
@@ -280,6 +311,7 @@ Environment variables are loaded in this order (the last one overrides the previ
 3. `.env.local` (overrides everything - for local values)
 
 **Example:**
+
 - `.env.development` has `DB_PORT=5432`
 - `.env.local` has `DB_PORT=5433`
 - **Result:** The application will use `DB_PORT=5433`
@@ -287,6 +319,7 @@ Environment variables are loaded in this order (the last one overrides the previ
 ## Security Notes
 
 ⚠️ **IMPORTANT:**
+
 - Never commit `.env.local`, `.env.development`, or `.env.production` files to the repository
 - Only `.example` files should be in the repository
 - Change all default passwords in production

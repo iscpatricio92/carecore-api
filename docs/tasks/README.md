@@ -5,6 +5,7 @@
 ## 📝 Archivos en esta carpeta
 
 Estos archivos son **temporales** y pueden ser eliminados una vez que:
+
 - Las tareas hayan sido agregadas a GitHub Projects
 - Las tareas estén completadas
 - Ya no se necesiten como referencia
@@ -19,6 +20,7 @@ Estos archivos son **temporales** y pueden ser eliminados una vez que:
 ## 📌 Documentación Permanente
 
 Para documentación permanente, ver:
+
 - `AUTH_IMPLEMENTATION_PLAN.md` - Plan completo de implementación
 - `ENV_VARIABLES.md` - Variables de entorno
 - `CONTRIBUTING.md` - Guías de contribución
@@ -26,4 +28,3 @@ Para documentación permanente, ver:
 ---
 
 **Nota:** Los archivos en esta carpeta son de referencia temporal y pueden ser eliminados después de completar las tareas.
-

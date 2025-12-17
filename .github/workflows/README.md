@@ -5,11 +5,14 @@ Este directorio contiene los workflows de GitHub Actions para automatizar CI/CD.
 ## Workflows Disponibles
 
 ### 🔍 CI (`ci.yml`)
+
 Workflow de integración continua que se ejecuta en:
+
 - Push a `main`, `develop`, `feature/**`, `fix/**`
 - Pull requests a `main` y `develop`
 
 **Jobs:**
+
 1. **lint-and-format**: Verifica ESLint y formato de código
 2. **test**: Ejecuta tests con PostgreSQL en Docker
 3. **build**: Compila la aplicación
@@ -18,26 +21,33 @@ Workflow de integración continua que se ejecuta en:
 **Nota:** Los comentarios de coverage se manejan en el workflow separado `coverage-comment.yml` para evitar problemas de permisos.
 
 ### 📊 Coverage Comment (`coverage-comment.yml`)
+
 Workflow dedicado para comentarios automáticos de coverage en PRs:
+
 - Se ejecuta en PRs a `main` y `develop`
 - Solo funciona con PRs del mismo repositorio (no forks)
 - Crea/actualiza comentario con métricas de coverage
 - Requiere permisos `pull-requests: write` e `issues: write`
 
 ### 🚀 CD (`cd.yml`)
+
 Workflow de despliegue continuo que se ejecuta en:
+
 - Push a `main` (producción)
 - Push a `develop` (staging)
 
 **Nota:** Requiere configuración de secrets y lógica de deployment personalizada.
 
 ### 🐳 Docker (`docker.yml`)
+
 Build y push de imágenes Docker a GitHub Container Registry:
+
 - Push a `main` o `develop`
 - Tags de versión (`v*.*.*`)
 - Pull requests (solo build, sin push)
 
 ### 🤖 Dependabot Auto-merge (`dependabot-auto-merge.yml`)
+
 Auto-merge automático de PRs de Dependabot después de que pasen los checks de CI.
 
 ## Configuración Requerida
@@ -73,6 +83,7 @@ Para que los workflows funcionen completamente, necesitas configurar estos secre
 El workflow `cd.yml` tiene un placeholder para deployment. Reemplaza el step "Deploy to server" con tu lógica:
 
 **Ejemplo para Docker:**
+
 ```yaml
 - name: Deploy to server
   run: |
@@ -82,6 +93,7 @@ El workflow `cd.yml` tiene un placeholder para deployment. Reemplaza el step "De
 ```
 
 **Ejemplo para AWS:**
+
 ```yaml
 - name: Deploy to AWS
   uses: aws-actions/configure-aws-credentials@v2
@@ -99,4 +111,3 @@ Puedes agregar badges a tu README.md:
 ![CI](https://github.com/tu-usuario/carecore-api/workflows/CI/badge.svg)
 ![CD](https://github.com/tu-usuario/carecore-api/workflows/CD/badge.svg)
 ```
-

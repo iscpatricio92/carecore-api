@@ -212,14 +212,14 @@ Inicia el flujo de launch desde un EHR.
 
 **Parámetros de Query:**
 
-| Parámetro | Requerido | Descripción | Ejemplo |
-|-----------|-----------|-------------|---------|
-| `iss` | ✅ | URL del servidor FHIR | `https://carecore.example.com` |
-| `launch` | ✅ | Launch token del EHR | `launch-token-123` |
-| `client_id` | ✅ | Client ID de la aplicación | `smart-app-123` |
-| `redirect_uri` | ✅ | URL de callback | `https://app.com/callback` |
-| `scope` | ✅ | Scopes solicitados | `patient:read patient:write` |
-| `state` | ❌ | Token CSRF | `abc123xyz` |
+| Parámetro      | Requerido | Descripción                | Ejemplo                        |
+| -------------- | --------- | -------------------------- | ------------------------------ |
+| `iss`          | ✅        | URL del servidor FHIR      | `https://carecore.example.com` |
+| `launch`       | ✅        | Launch token del EHR       | `launch-token-123`             |
+| `client_id`    | ✅        | Client ID de la aplicación | `smart-app-123`                |
+| `redirect_uri` | ✅        | URL de callback            | `https://app.com/callback`     |
+| `scope`        | ✅        | Scopes solicitados         | `patient:read patient:write`   |
+| `state`        | ❌        | Token CSRF                 | `abc123xyz`                    |
 
 **Ejemplo de Request:**
 
@@ -246,14 +246,14 @@ Endpoint de autorización OAuth2.
 
 **Parámetros de Query:**
 
-| Parámetro | Requerido | Descripción | Ejemplo |
-|-----------|-----------|-------------|---------|
-| `client_id` | ✅ | Client ID de la aplicación | `smart-app-123` |
-| `response_type` | ✅ | Debe ser `code` | `code` |
-| `redirect_uri` | ✅ | URL de callback | `https://app.com/callback` |
-| `scope` | ✅ | Scopes solicitados | `patient:read patient:write` |
-| `state` | ❌ | Token CSRF | `abc123xyz` |
-| `aud` | ❌ | Audience (URL del servidor FHIR) | `https://carecore.example.com` |
+| Parámetro       | Requerido | Descripción                      | Ejemplo                        |
+| --------------- | --------- | -------------------------------- | ------------------------------ |
+| `client_id`     | ✅        | Client ID de la aplicación       | `smart-app-123`                |
+| `response_type` | ✅        | Debe ser `code`                  | `code`                         |
+| `redirect_uri`  | ✅        | URL de callback                  | `https://app.com/callback`     |
+| `scope`         | ✅        | Scopes solicitados               | `patient:read patient:write`   |
+| `state`         | ❌        | Token CSRF                       | `abc123xyz`                    |
+| `aud`           | ❌        | Audience (URL del servidor FHIR) | `https://carecore.example.com` |
 
 **Ejemplo de Request:**
 
@@ -282,17 +282,17 @@ Intercambia código de autorización por tokens.
 
 **Parámetros del Body:**
 
-| Parámetro | Requerido | Descripción | Ejemplo |
-|-----------|-----------|-------------|---------|
-| `grant_type` | ✅ | `authorization_code` o `refresh_token` | `authorization_code` |
-| `code` | ✅* | Código de autorización | `auth-code-123` |
-| `redirect_uri` | ✅* | Debe coincidir con el usado en `/auth` | `https://app.com/callback` |
-| `client_id` | ✅ | Client ID de la aplicación | `smart-app-123` |
-| `client_secret` | ✅ | Client secret (para confidential clients) | `secret-xyz` |
-| `refresh_token` | ✅** | Refresh token (para grant_type=refresh_token) | `refresh-token-xyz` |
+| Parámetro       | Requerido | Descripción                                   | Ejemplo                    |
+| --------------- | --------- | --------------------------------------------- | -------------------------- |
+| `grant_type`    | ✅        | `authorization_code` o `refresh_token`        | `authorization_code`       |
+| `code`          | ✅\*      | Código de autorización                        | `auth-code-123`            |
+| `redirect_uri`  | ✅\*      | Debe coincidir con el usado en `/auth`        | `https://app.com/callback` |
+| `client_id`     | ✅        | Client ID de la aplicación                    | `smart-app-123`            |
+| `client_secret` | ✅        | Client secret (para confidential clients)     | `secret-xyz`               |
+| `refresh_token` | ✅\*\*    | Refresh token (para grant_type=refresh_token) | `refresh-token-xyz`        |
 
 \* Requerido para `grant_type=authorization_code`
-\** Requerido para `grant_type=refresh_token`
+\*\* Requerido para `grant_type=refresh_token`
 
 **Ejemplo de Request:**
 
@@ -328,6 +328,7 @@ grant_type=authorization_code&code=auth-code-123&redirect_uri=https://app.com/ca
 **Errores:**
 
 - **400 Bad Request**: Parámetros inválidos
+
   ```json
   {
     "error": "invalid_request",
@@ -397,10 +398,7 @@ GET /api/fhir/metadata
       "resource": [
         {
           "type": "Patient",
-          "interaction": [
-            { "code": "read" },
-            { "code": "search-type" }
-          ]
+          "interaction": [{ "code": "read" }, { "code": "search-type" }]
         }
       ]
     }
@@ -414,19 +412,19 @@ GET /api/fhir/metadata
 
 ### Scopes Disponibles
 
-| Scope | Recurso | Acción | Descripción |
-|-------|---------|--------|-------------|
-| `patient:read` | Patient | Read | Leer recursos Patient |
-| `patient:write` | Patient | Write | Crear/actualizar recursos Patient |
-| `practitioner:read` | Practitioner | Read | Leer recursos Practitioner |
-| `practitioner:write` | Practitioner | Write | Crear/actualizar recursos Practitioner |
-| `encounter:read` | Encounter | Read | Leer recursos Encounter |
-| `encounter:write` | Encounter | Write | Crear/actualizar recursos Encounter |
-| `document:read` | DocumentReference | Read | Leer recursos DocumentReference |
-| `document:write` | DocumentReference | Write | Crear/actualizar recursos DocumentReference |
-| `consent:read` | Consent | Read | Leer recursos Consent |
-| `consent:write` | Consent | Write | Crear/actualizar recursos Consent |
-| `consent:share` | Consent | Share | Compartir consentimientos |
+| Scope                | Recurso           | Acción | Descripción                                 |
+| -------------------- | ----------------- | ------ | ------------------------------------------- |
+| `patient:read`       | Patient           | Read   | Leer recursos Patient                       |
+| `patient:write`      | Patient           | Write  | Crear/actualizar recursos Patient           |
+| `practitioner:read`  | Practitioner      | Read   | Leer recursos Practitioner                  |
+| `practitioner:write` | Practitioner      | Write  | Crear/actualizar recursos Practitioner      |
+| `encounter:read`     | Encounter         | Read   | Leer recursos Encounter                     |
+| `encounter:write`    | Encounter         | Write  | Crear/actualizar recursos Encounter         |
+| `document:read`      | DocumentReference | Read   | Leer recursos DocumentReference             |
+| `document:write`     | DocumentReference | Write  | Crear/actualizar recursos DocumentReference |
+| `consent:read`       | Consent           | Read   | Leer recursos Consent                       |
+| `consent:write`      | Consent           | Write  | Crear/actualizar recursos Consent           |
+| `consent:share`      | Consent           | Share  | Compartir consentimientos                   |
 
 ### Scopes SMART on FHIR con Contexto
 
@@ -449,6 +447,7 @@ GET /api/fhir/auth?scope=patient:read%20patient:write%20encounter:read
 ### Validación de Scopes
 
 El servidor valida que:
+
 1. Los scopes solicitados estén disponibles
 2. El cliente tenga permisos para esos scopes
 3. El usuario tenga permisos para acceder a los recursos
@@ -736,7 +735,8 @@ const iss = launchParams.get('iss');
 
 if (launchToken && iss) {
   // Iniciar launch sequence
-  const launchUrl = `${iss}/api/fhir/authorize?` +
+  const launchUrl =
+    `${iss}/api/fhir/authorize?` +
     `iss=${encodeURIComponent(iss)}&` +
     `launch=${encodeURIComponent(launchToken)}&` +
     `client_id=smart-app-123&` +
@@ -757,6 +757,7 @@ if (launchToken && iss) {
 **Causa:** El `client_id` no existe o el `client_secret` es incorrecto.
 
 **Solución:**
+
 1. Verificar que el `client_id` sea correcto
 2. Verificar que el `client_secret` sea correcto (si es confidential)
 3. Contactar al administrador para verificar la configuración del cliente
@@ -766,6 +767,7 @@ if (launchToken && iss) {
 **Causa:** El código de autorización es inválido o ha expirado.
 
 **Solución:**
+
 1. Los códigos de autorización expiran rápidamente (típicamente 1-5 minutos)
 2. Intercambiar el código inmediatamente después de recibirlo
 3. No reutilizar códigos (cada código solo se puede usar una vez)
@@ -775,6 +777,7 @@ if (launchToken && iss) {
 **Causa:** El `redirect_uri` usado en `/token` no coincide con el usado en `/auth`.
 
 **Solución:**
+
 1. Asegurar que el `redirect_uri` sea exactamente el mismo en ambos requests
 2. Verificar que el `redirect_uri` esté registrado en Keycloak para el cliente
 
@@ -783,6 +786,7 @@ if (launchToken && iss) {
 **Causa:** El token no tiene los scopes requeridos para el recurso.
 
 **Solución:**
+
 1. Verificar que los scopes solicitados estén disponibles
 2. Solicitar los scopes necesarios en el request de autorización
 3. Verificar que el cliente tenga permisos para esos scopes
@@ -792,6 +796,7 @@ if (launchToken && iss) {
 **Causa:** Uno o más scopes solicitados no son válidos.
 
 **Solución:**
+
 1. Verificar la lista de scopes disponibles
 2. Asegurar que los scopes sigan el formato `resource:action`
 3. Verificar que no haya espacios o caracteres inválidos
@@ -801,6 +806,7 @@ if (launchToken && iss) {
 **Síntoma:** Error 401 al usar el token.
 
 **Solución:**
+
 ```typescript
 // Refrescar el token
 const response = await fetch(`${fhirBaseUrl}/token`, {
@@ -822,6 +828,7 @@ const newTokens = await response.json();
 **Causa:** La aplicación no se lanzó desde un EHR o el launch token no contenía contexto de paciente.
 
 **Solución:**
+
 1. Verificar que el launch token sea válido
 2. Para standalone launch, el patient context no está disponible automáticamente
 3. El usuario puede seleccionar el paciente manualmente si es necesario
@@ -890,4 +897,3 @@ const newTokens = await response.json();
 ---
 
 **Última actualización:** 2025-12-12
-

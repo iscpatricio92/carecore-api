@@ -80,4 +80,3 @@ Si no puedes usar Keycloak real para tests, puedes intentar mejorar los mocks, p
 - Cobertura real del flujo completo
 
 Los tests unitarios pueden mantenerse para casos simples (validación, manejo de errores básicos), pero las operaciones complejas deben probarse con Keycloak real.
-

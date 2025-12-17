@@ -16,6 +16,7 @@ Este documento describe cómo verificar que se cumplan todos los criterios de ac
 Antes de verificar, asegúrate de tener:
 
 1. **Variables de entorno configuradas:**
+
    ```bash
    # Mínimo requerido en .env.development o .env.local
    DB_USER=
@@ -60,6 +61,7 @@ docker ps
 ```
 
 Deberías ver:
+
 - `carecore-postgres` - Estado: `Up` (healthy)
 - `carecore-keycloak` - Estado: `Up` (healthy o starting)
 
@@ -74,6 +76,7 @@ docker-compose logs -f keycloak
 ```
 
 **Busca estos mensajes que indican que Keycloak está listo:**
+
 ```
 Keycloak 25.0.4 on JVM
 Listening on: http://0.0.0.0:8080
@@ -125,6 +128,7 @@ open http://localhost:8080/admin  # macOS
 ```
 
 **✅ Éxito si:**
+
 - La página carga sin errores
 - Puedes ver el formulario de login
 - URL: http://localhost:8080/admin
@@ -151,17 +155,21 @@ docker exec carecore-postgres psql -U ${DB_USER:-carecore} -c "\l" | grep keyclo
 ### Problema: Keycloak no inicia
 
 **Síntomas:**
+
 - Contenedor se reinicia constantemente
 - Logs muestran errores de conexión a base de datos
 
 **Solución:**
+
 1. Verifica que PostgreSQL esté corriendo y saludable:
+
    ```bash
    docker ps | grep postgres
    docker logs carecore-postgres
    ```
 
 2. Verifica las variables de entorno:
+
    ```bash
    docker exec carecore-keycloak env | grep -E "KEYCLOAK|KC_DB"
    ```
@@ -174,16 +182,20 @@ docker exec carecore-postgres psql -U ${DB_USER:-carecore} -c "\l" | grep keyclo
 ### Problema: No puedo acceder a http://localhost:8080
 
 **Síntomas:**
+
 - `curl: (7) Failed to connect to localhost port 8080`
 - Puerto no responde
 
 **Solución:**
+
 1. Verifica que el puerto esté mapeado correctamente:
+
    ```bash
    docker port carecore-keycloak
    ```
 
 2. Verifica que no haya otro servicio usando el puerto 8080:
+
    ```bash
    lsof -i :8080  # macOS/Linux
    ```
@@ -196,13 +208,16 @@ docker exec carecore-postgres psql -U ${DB_USER:-carecore} -c "\l" | grep keyclo
 ### Problema: Base de datos keycloak_db no se crea
 
 **Síntomas:**
+
 - Base de datos no aparece después de varios minutos
 
 **Solución:**
+
 1. Verifica que Keycloak tenga permisos para crear bases de datos:
    - El usuario de PostgreSQL debe tener el rol `CREATEDB` o ser superusuario
 
 2. Crea la base de datos manualmente (si es necesario):
+
    ```bash
    docker exec carecore-postgres psql -U ${DB_USER} -c "CREATE DATABASE keycloak_db;"
    ```
@@ -215,12 +230,15 @@ docker exec carecore-postgres psql -U ${DB_USER:-carecore} -c "\l" | grep keyclo
 ### Problema: Admin console no carga
 
 **Síntomas:**
+
 - Página en blanco o error 404/500
 
 **Solución:**
+
 1. Espera más tiempo (Keycloak puede tardar 2-3 minutos en iniciar completamente)
 
 2. Verifica los logs:
+
    ```bash
    npm run docker:keycloak:logs | grep -i error
    ```
@@ -269,4 +287,3 @@ Después de completar todos los pasos, deberías poder:
 4. ✅ Ver la base de datos `keycloak_db` en PostgreSQL
 
 **¡Todos los criterios de aceptación cumplidos!** 🎉
-

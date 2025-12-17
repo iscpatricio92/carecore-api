@@ -77,6 +77,7 @@ export class ProfileController {
 ```
 
 **Características:**
+
 - ✅ Requiere token JWT válido
 - ✅ Extrae información del usuario del token
 - ✅ No valida roles ni scopes específicos
@@ -105,6 +106,7 @@ export class AdminController {
 ```
 
 **Características:**
+
 - ✅ Requiere token JWT válido
 - ✅ Valida que el usuario tenga al menos uno de los roles especificados
 - ✅ Lanza `ForbiddenException` si no tiene el rol
@@ -144,6 +146,7 @@ export class FhirController {
 ```
 
 **Características:**
+
 - ✅ Requiere token JWT válido
 - ✅ Valida que el token tenga todos los scopes especificados
 - ✅ Lanza `ForbiddenException` si faltan scopes
@@ -203,6 +206,7 @@ async getSensitiveData() {
 ```
 
 **Características:**
+
 - ✅ Valida que el usuario tenga MFA configurado
 - ✅ Lanza `ForbiddenException` si MFA no está configurado
 - ✅ Típicamente usado con roles críticos (admin, practitioner)
@@ -245,9 +249,7 @@ export class ResourceService {
 ### Validación con Múltiples Roles
 
 ```typescript
-const hasAccess = [ROLES.ADMIN, ROLES.PRACTITIONER].some(
-  (role) => user.roles.includes(role),
-);
+const hasAccess = [ROLES.ADMIN, ROLES.PRACTITIONER].some((role) => user.roles.includes(role));
 
 if (!hasAccess) {
   throw new ForbiddenException('Insufficient permissions');
@@ -284,9 +286,7 @@ import { ScopePermissionService } from '../auth/services/scope-permission.servic
 
 @Injectable()
 export class ResourceService {
-  constructor(
-    private scopePermissionService: ScopePermissionService,
-  ) {}
+  constructor(private scopePermissionService: ScopePermissionService) {}
 
   async findAll(user: User) {
     // Validar permisos usando el servicio
@@ -336,14 +336,14 @@ El objeto `User` contiene:
 
 ```typescript
 interface User {
-  id: string;                    // Keycloak user ID
-  email: string;                 // Email del usuario
-  username: string;              // Username
-  roles: string[];                // Roles del usuario
-  scopes: string[];              // Scopes del token
-  patient?: string;               // Patient context (SMART on FHIR)
-  fhirUser?: string;             // FHIR user context
-  mfaEnabled?: boolean;           // MFA habilitado
+  id: string; // Keycloak user ID
+  email: string; // Email del usuario
+  username: string; // Username
+  roles: string[]; // Roles del usuario
+  scopes: string[]; // Scopes del token
+  patient?: string; // Patient context (SMART on FHIR)
+  fhirUser?: string; // FHIR user context
+  mfaEnabled?: boolean; // MFA habilitado
 }
 ```
 
@@ -516,12 +516,14 @@ async getFilteredData(@CurrentUser() user: User) {
 ### 1. Usar Constantes en Lugar de Strings
 
 ✅ **Correcto:**
+
 ```typescript
 @Roles(ROLES.ADMIN)
 @Scopes(FHIR_SCOPES.PATIENT_READ)
 ```
 
 ❌ **Incorrecto:**
+
 ```typescript
 @Roles('admin')
 @Scopes('patient:read')
@@ -530,11 +532,13 @@ async getFilteredData(@CurrentUser() user: User) {
 ### 2. Orden Correcto de Guards
 
 ✅ **Correcto:**
+
 ```typescript
 @UseGuards(JwtAuthGuard, RolesGuard, ScopesGuard)
 ```
 
 ❌ **Incorrecto:**
+
 ```typescript
 @UseGuards(RolesGuard, JwtAuthGuard) // user no estará disponible
 ```
@@ -542,12 +546,14 @@ async getFilteredData(@CurrentUser() user: User) {
 ### 3. Validar en el Nivel Correcto
 
 ✅ **Correcto:** Validar en el guard cuando es simple
+
 ```typescript
 @Roles(ROLES.ADMIN)
 @UseGuards(JwtAuthGuard, RolesGuard)
 ```
 
 ✅ **Correcto:** Validar en el servicio cuando es complejo
+
 ```typescript
 @UseGuards(JwtAuthGuard)
 async complexOperation(@CurrentUser() user: User) {
@@ -575,6 +581,7 @@ async getPatient(@Param('id') id: string) {
 ### 5. Manejar Errores Apropiadamente
 
 ✅ **Correcto:**
+
 ```typescript
 if (!user.roles.includes(ROLES.ADMIN)) {
   throw new ForbiddenException('Admin access required');
@@ -582,6 +589,7 @@ if (!user.roles.includes(ROLES.ADMIN)) {
 ```
 
 ❌ **Incorrecto:**
+
 ```typescript
 if (!user.roles.includes(ROLES.ADMIN)) {
   throw new UnauthorizedException('Admin access required'); // Error incorrecto
@@ -591,25 +599,27 @@ if (!user.roles.includes(ROLES.ADMIN)) {
 ### 6. No Exponer Información Sensible en Errores
 
 ✅ **Correcto:**
+
 ```typescript
 throw new ForbiddenException('Insufficient permissions');
 ```
 
 ❌ **Incorrecto:**
+
 ```typescript
-throw new ForbiddenException(
-  `User ${user.id} with roles ${user.roles} cannot access this`,
-);
+throw new ForbiddenException(`User ${user.id} with roles ${user.roles} cannot access this`);
 ```
 
 ### 7. Usar TypeScript para Type Safety
 
 ✅ **Correcto:**
+
 ```typescript
 @CurrentUser() user: User
 ```
 
 ❌ **Incorrecto:**
+
 ```typescript
 @CurrentUser() user: any
 ```
@@ -759,10 +769,7 @@ export class FhirController {
   @Roles(ROLES.ADMIN)
   @Scopes(FHIR_SCOPES.PATIENT_WRITE)
   @UseGuards(JwtAuthGuard, RolesGuard, ScopesGuard)
-  async createPatient(
-    @Body() dto: CreatePatientDto,
-    @CurrentUser() user: User,
-  ) {
+  async createPatient(@Body() dto: CreatePatientDto, @CurrentUser() user: User) {
     return this.fhirService.createPatient(dto, user);
   }
 }
@@ -781,10 +788,7 @@ import { User } from '../auth/interfaces/user.interface';
 export class EncounterController {
   @Get(':id')
   @UseGuards(JwtAuthGuard)
-  async getEncounter(
-    @Param('id') id: string,
-    @CurrentUser() user: User,
-  ) {
+  async getEncounter(@Param('id') id: string, @CurrentUser() user: User) {
     // Validación compleja en el servicio
     const encounter = await this.encounterService.getEncounter(id, user);
 
@@ -813,10 +817,7 @@ export class EncounterService {
 
     // Patient solo puede ver sus propios encounters
     if (user.roles.includes(ROLES.PATIENT)) {
-      const patientId = encounter.fhirResource.subject?.reference?.replace(
-        /^Patient\//,
-        '',
-      );
+      const patientId = encounter.fhirResource.subject?.reference?.replace(/^Patient\//, '');
       if (patientId && this.isUserPatient(user, patientId)) {
         return encounter;
       }
@@ -854,10 +855,7 @@ export class FhirController {
   @Get('Patient')
   @Scopes(FHIR_SCOPES.PATIENT_READ)
   @UseGuards(JwtAuthGuard, ScopesGuard)
-  async searchPatients(
-    @Query() query: SearchPatientsDto,
-    @CurrentUser() user: User,
-  ) {
+  async searchPatients(@Query() query: SearchPatientsDto, @CurrentUser() user: User) {
     // El servicio aplica filtros automáticamente según el usuario
     return this.fhirService.searchPatients(query, user);
   }
@@ -892,10 +890,7 @@ export class FhirService {
     // Practitioner puede ver pacientes asignados
     if (user.roles.includes(ROLES.PRACTITIONER)) {
       // Lógica para pacientes asignados
-      return this.patientRepository.findAssignedToPractitioner(
-        user.practitionerId,
-        query,
-      );
+      return this.patientRepository.findAssignedToPractitioner(user.practitionerId, query);
     }
 
     throw new ForbiddenException('Insufficient permissions');
@@ -952,4 +947,3 @@ export class AdminController {
 ---
 
 **Última actualización:** 2025-12-12
-

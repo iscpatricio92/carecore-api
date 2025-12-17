@@ -83,6 +83,7 @@ Content-Type: application/json
 **Descripción:** Reenvía el email de verificación al usuario autenticado.
 
 **Respuesta:**
+
 ```json
 {
   "message": "Verification email sent successfully"
@@ -99,6 +100,7 @@ Authorization: Bearer <token>
 **Descripción:** Verifica el estado de verificación de email del usuario autenticado.
 
 **Respuesta:**
+
 ```json
 {
   "message": "Email is verified",
@@ -107,6 +109,7 @@ Authorization: Bearer <token>
 ```
 
 O si no está verificado:
+
 ```json
 {
   "message": "Email is not verified. Please check your email and click the verification link.",
@@ -169,4 +172,3 @@ Si necesitas verificar manualmente el estado de verificación de un usuario:
 - [Keycloak Email Configuration](https://www.keycloak.org/docs/latest/server_admin/#_email)
 - [Keycloak User Management](https://www.keycloak.org/docs/latest/server_admin/#_users)
 - Ver también: `docs/KEYCLOAK_CONFIGURATION.md`
-
