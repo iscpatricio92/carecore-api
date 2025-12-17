@@ -6,25 +6,52 @@ import { View, ScrollView, StyleSheet } from 'react-native';
 import { AppHeader } from '../../components/ui/AppHeader';
 import { ConsentStatusCard } from '../../components/cards/ConsentStatusCard';
 import { ClinicalRecordCard } from '../../components/cards/ClinicalRecordCard';
-import { DocumentReference, Encounter, FhirResourceType } from '@carecore/shared';
+import { ErrorMessage } from '../../components/ui/ErrorMessage';
+import { SkeletonList } from '../../components/ui/SkeletonLoader';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { DocumentReference, Encounter, FhirResourceType, ErrorType } from '@carecore/shared';
 import { useFHIRData } from '../../hooks/useFHIRData';
 import { router } from 'expo-router';
 
 export default function DashboardScreen() {
   // Obtener últimos 5 Encounters
-  const { data: encounters } = useFHIRData<Encounter>('Encounter', {
+  const {
+    data: encounters,
+    isLoading: isLoadingEncounters,
+    error: errorEncounters,
+    refetch: refetchEncounters,
+  } = useFHIRData<Encounter>('Encounter', {
     _count: '5',
     _sort: '-date',
   });
 
   // Obtener últimos 5 DocumentReferences
-  const { data: documents } = useFHIRData<DocumentReference>('DocumentReference', {
+  const {
+    data: documents,
+    isLoading: isLoadingDocuments,
+    error: errorDocuments,
+    refetch: refetchDocuments,
+  } = useFHIRData<DocumentReference>('DocumentReference', {
     _count: '5',
     _sort: '-date',
   });
 
   // Obtener consentimientos activos
-  const { data: consents } = useFHIRData('Consent', { status: 'active' });
+  const {
+    data: consents,
+    isLoading: isLoadingConsents,
+    error: errorConsents,
+    refetch: refetchConsents,
+  } = useFHIRData('Consent', { status: 'active' });
+
+  const isLoading = isLoadingEncounters || isLoadingDocuments || isLoadingConsents;
+  const error = errorEncounters || errorDocuments || errorConsents;
+
+  const handleRefresh = () => {
+    refetchEncounters();
+    refetchDocuments();
+    refetchConsents();
+  };
 
   // Combinar y ordenar registros recientes
   const recentRecords = useMemo(() => {
@@ -51,67 +78,75 @@ export default function DashboardScreen() {
       .slice(0, 5); // Limitar a 5 más recientes
   }, [encounters, documents]);
 
-  // Si no hay registros, mostrar estado vacío
-  if (!recentRecords || recentRecords.length === 0) {
-    return (
-      <View style={styles.container}>
-        <AppHeader title="CareCore Records" />
+  return (
+    <View style={styles.container}>
+      <AppHeader title="CareCore Records" />
+
+      {isLoading && !recentRecords ? (
         <ScrollView contentContainerStyle={styles.scrollContent}>
+          <SkeletonList count={3} itemHeight={80} spacing={12} />
+        </ScrollView>
+      ) : error ? (
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <ErrorMessage
+            message={error}
+            type={ErrorType.NETWORK}
+            onRetry={handleRefresh}
+            showRetry={true}
+            style={styles.errorMessage}
+          />
+        </ScrollView>
+      ) : (
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          {/* TARJETA DE ACCIÓN PRINCIPAL */}
           <ConsentStatusCard
             activeConsentsCount={consents?.length || 0}
             onManagePress={() => {
               router.push('/consents');
             }}
           />
+
+          {/* LISTA DE REGISTROS CLÍNICOS */}
+          {recentRecords && recentRecords.length > 0 ? (
+            <View style={styles.recordsList}>
+              {recentRecords.map((record, index) => {
+                const title =
+                  record.resourceType === 'Encounter'
+                    ? record.type?.[0]?.coding?.[0]?.display ||
+                      record.subject?.display ||
+                      'Encounter'
+                    : record.type?.coding?.[0]?.display || record.description || 'Document';
+                const subtitle = record.subject?.display || 'Subject not available';
+                const date =
+                  record.resourceType === 'Encounter'
+                    ? record.period?.start || 'Date not available'
+                    : record.date || 'Date not available';
+
+                return (
+                  <ClinicalRecordCard
+                    key={record.id || index}
+                    resourceType={record.resourceType as FhirResourceType}
+                    title={title}
+                    subtitle={subtitle}
+                    date={date}
+                    onPress={() => {
+                      if (record.id) {
+                        router.push(`/record/${record.id}`);
+                      }
+                    }}
+                  />
+                );
+              })}
+            </View>
+          ) : (
+            <EmptyState
+              title="No hay registros recientes"
+              message="Aún no tienes registros clínicos en tu historial"
+              iconName="document-outline"
+            />
+          )}
         </ScrollView>
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.container}>
-      {/* 2. HEADER: Se integra aquí en cada pantalla si no usas Stack.Screen options */}
-      <AppHeader title="CareCore Records" />
-
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* 3. TARJETA DE ACCIÓN PRINCIPAL */}
-        <ConsentStatusCard
-          activeConsentsCount={consents?.length || 0}
-          onManagePress={() => {
-            router.push('/consents');
-          }}
-        />
-
-        {/* 4. LISTA DE REGISTROS CLÍNICOS */}
-        <View style={styles.recordsList}>
-          {recentRecords?.map((record, index) => {
-            const title =
-              record.resourceType === 'Encounter'
-                ? record.type?.[0]?.coding?.[0]?.display || record.subject?.display || 'Encounter'
-                : record.type?.coding?.[0]?.display || record.description || 'Document';
-            const subtitle = record.subject?.display || 'Subject not available';
-            const date =
-              record.resourceType === 'Encounter'
-                ? record.period?.start || 'Date not available'
-                : record.date || 'Date not available';
-
-            return (
-              <ClinicalRecordCard
-                key={record.id || index}
-                resourceType={record.resourceType as FhirResourceType}
-                title={title}
-                subtitle={subtitle}
-                date={date}
-                onPress={() => {
-                  if (record.id) {
-                    router.push(`/record/${record.id}`);
-                  }
-                }}
-              />
-            );
-          })}
-        </View>
-      </ScrollView>
+      )}
     </View>
   );
 }
@@ -127,34 +162,7 @@ const styles = StyleSheet.create({
   recordsList: {
     marginTop: 20,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#D32F2F',
-    textAlign: 'center',
-  },
-  emptyContainer: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+  errorMessage: {
+    margin: 16,
   },
 });

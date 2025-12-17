@@ -50,18 +50,37 @@ function getEnv(key: string, defaultValue?: string): string {
 }
 
 /**
- * Get API base URL
+ * Get API base URL (without /api suffix)
  * For mobile devices, localhost doesn't work - use local IP or configured URL
  *
  * IMPORTANT: For physical devices, set MOBILE_API_URL to your machine's local IP
  * Example: http://192.168.1.100:3000
+ *
+ * Note: This function ensures the base URL does NOT include /api
+ * The /api prefix is added when constructing authUrl and fhirUrl
  */
 function getApiBaseUrl(): string {
-  const envUrl =
+  let envUrl =
     getEnv('MOBILE_API_URL') ||
     getEnv('EXPO_PUBLIC_API_URL') ||
     getEnv('API_URL') ||
     DEFAULTS.API_URL;
+
+  // Remove trailing slashes
+  envUrl = envUrl.replace(/\/+$/, '');
+
+  // Remove /api suffix if present (to avoid duplication)
+  // This handles cases where MOBILE_API_URL might be set to http://localhost:3000/api
+  if (envUrl.endsWith('/api')) {
+    envUrl = envUrl.slice(0, -4);
+    if (__DEV__) {
+      console.warn(
+        '⚠️  MOBILE_API_URL includes /api suffix. Removed to avoid duplication.\n' +
+          `   Original: ${getEnv('MOBILE_API_URL') || getEnv('API_URL')}\n` +
+          `   Using base: ${envUrl}`,
+      );
+    }
+  }
 
   // In development, warn if using localhost (won't work on physical devices)
   if (envUrl.includes('localhost') && __DEV__ && Platform.OS !== 'web') {

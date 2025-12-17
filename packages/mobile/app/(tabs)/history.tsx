@@ -15,6 +15,9 @@ import { AppHeader } from '../../components/ui/AppHeader';
 import { ClinicalRecordCard } from '../../components/cards/ClinicalRecordCard';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { ErrorMessage } from '../../components/ui/ErrorMessage';
+import { SkeletonList } from '../../components/ui/SkeletonLoader';
+import { ErrorType } from '@carecore/shared';
 import {
   DocumentReference,
   Encounter,
@@ -255,14 +258,15 @@ export default function HistoryScreen() {
 
       {/* Lista de registros */}
       {isLoading && allRecords.length === 0 ? (
-        <LoadingSpinner message="Cargando historial clínico..." />
+        <SkeletonList count={5} itemHeight={80} spacing={12} />
       ) : error ? (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={handleRefresh}>
-            <Text style={styles.retryButtonText}>Reintentar</Text>
-          </TouchableOpacity>
-        </View>
+        <ErrorMessage
+          message={error}
+          type={ErrorType.NETWORK}
+          onRetry={handleRefresh}
+          showRetry={true}
+          style={styles.errorMessage}
+        />
       ) : allRecords.length === 0 ? (
         <EmptyState
           title="No hay registros"
@@ -384,27 +388,8 @@ const styles = StyleSheet.create({
   listContent: {
     padding: 15,
   },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#D32F2F',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  retryButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: '#00796B',
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#FFF',
-    fontWeight: '600',
+  errorMessage: {
+    margin: 16,
   },
   footerLoader: {
     paddingVertical: 20,
