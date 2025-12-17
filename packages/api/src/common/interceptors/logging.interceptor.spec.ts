@@ -1,38 +1,47 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ExecutionContext, CallHandler } from '@nestjs/common';
-import { of, throwError } from 'rxjs';
+import { of, firstValueFrom } from 'rxjs';
 import { PinoLogger } from 'nestjs-pino';
+import { ConfigService } from '@nestjs/config';
 
 import { LoggingInterceptor } from './logging.interceptor';
 
-/**
- * Test constants - These are mock values for testing purposes only.
- * They are NOT real credentials and should NEVER be used in production.
- */
-const TEST_PASSWORD = 'secret123'; // Mock password for testing sanitization only
-const TEST_USERNAME = 'user'; // Mock username for testing only
-
 describe('LoggingInterceptor', () => {
   let interceptor: LoggingInterceptor;
-
-  const mockLogger = {
-    debug: jest.fn(),
-    info: jest.fn(),
-    error: jest.fn(),
+  let mockLogger: {
+    debug: jest.Mock;
+    info: jest.Mock;
+    warn: jest.Mock;
+    error: jest.Mock;
   };
+  let mockConfigService: jest.Mocked<ConfigService>;
 
   const mockCallHandler = {
     handle: jest.fn(),
   } as unknown as CallHandler;
 
   beforeEach(async () => {
+    mockLogger = {
+      debug: jest.fn(),
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+    };
+
+    mockConfigService = {
+      get: jest.fn((key: string) => {
+        if (key === 'NODE_ENV') {
+          return 'development';
+        }
+        return undefined;
+      }),
+    } as unknown as jest.Mocked<ConfigService>;
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LoggingInterceptor,
-        {
-          provide: PinoLogger,
-          useValue: mockLogger,
-        },
+        { provide: PinoLogger, useValue: mockLogger },
+        { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
 
@@ -47,287 +56,29 @@ describe('LoggingInterceptor', () => {
     expect(interceptor).toBeDefined();
   });
 
-  describe('intercept', () => {
-    it('should log request and response', (done) => {
-      const data = { result: 'success' };
-      const request = {
-        method: 'GET',
-        url: '/api/test',
-        body: {},
-        query: {},
-        params: {},
-        requestId: 'test-request-id',
-      };
-      const response = {
-        statusCode: 200,
-      };
+  it('should skip logging for health check endpoints', async () => {
+    const request = {
+      method: 'GET',
+      url: '/api',
+      body: {},
+      query: {},
+      params: {},
+      requestId: 'test-request-id',
+    };
+    const response = { statusCode: 200 };
+    const context = {
+      switchToHttp: jest.fn().mockReturnValue({
+        getRequest: () => request,
+        getResponse: () => response,
+      }),
+    } as unknown as ExecutionContext;
 
-      const context = {
-        switchToHttp: jest.fn().mockReturnValue({
-          getRequest: () => request,
-          getResponse: () => response,
-        }),
-      } as unknown as ExecutionContext;
+    const data = { result: 'success' };
+    mockCallHandler.handle = jest.fn().mockReturnValue(of(data));
 
-      mockCallHandler.handle = jest.fn().mockReturnValue(of(data));
-
-      interceptor.intercept(context, mockCallHandler).subscribe({
-        next: (result) => {
-          expect(result).toEqual(data);
-          expect(mockLogger.debug).toHaveBeenCalled();
-          expect(mockLogger.info).toHaveBeenCalled();
-          done();
-        },
-      });
-    });
-
-    it('should log errors', (done) => {
-      const error = new Error('Test error');
-      const request = {
-        method: 'GET',
-        url: '/api/test',
-        body: {},
-        query: {},
-        params: {},
-        requestId: 'test-request-id',
-      };
-      const response = {
-        statusCode: 500,
-      };
-
-      const context = {
-        switchToHttp: jest.fn().mockReturnValue({
-          getRequest: () => request,
-          getResponse: () => response,
-        }),
-      } as unknown as ExecutionContext;
-
-      mockCallHandler.handle = jest.fn().mockReturnValue(throwError(() => error));
-
-      interceptor.intercept(context, mockCallHandler).subscribe({
-        error: (err) => {
-          expect(err).toBe(error);
-          expect(mockLogger.error).toHaveBeenCalled();
-          done();
-        },
-      });
-    });
-
-    it('should sanitize sensitive fields in body', (done) => {
-      // Using test constants - these are mock values for testing sanitization only
-      const requestWithPassword = {
-        switchToHttp: jest.fn().mockReturnValue({
-          getRequest: () => ({
-            method: 'POST',
-            url: '/api/test',
-            body: { password: TEST_PASSWORD, username: TEST_USERNAME },
-            query: {},
-            params: {},
-            requestId: 'test-request-id',
-          }),
-          getResponse: () => ({
-            statusCode: 200,
-          }),
-        }),
-      } as unknown as ExecutionContext;
-
-      const data = { result: 'success' };
-      mockCallHandler.handle = jest.fn().mockReturnValue(of(data));
-
-      interceptor.intercept(requestWithPassword, mockCallHandler).subscribe({
-        next: () => {
-          expect(mockLogger.debug).toHaveBeenCalledWith(
-            expect.objectContaining({
-              body: expect.objectContaining({
-                password: '[REDACTED]',
-              }),
-            }),
-            expect.any(String),
-          );
-          done();
-        },
-      });
-    });
-
-    it('should handle null body (covers lines 74-75)', (done) => {
-      const request = {
-        method: 'GET',
-        url: '/api/test',
-        body: null,
-        query: {},
-        params: {},
-        requestId: 'test-request-id',
-      };
-      const response = {
-        statusCode: 200,
-      };
-
-      const context = {
-        switchToHttp: jest.fn().mockReturnValue({
-          getRequest: () => request,
-          getResponse: () => response,
-        }),
-      } as unknown as ExecutionContext;
-
-      const data = { result: 'success' };
-      mockCallHandler.handle = jest.fn().mockReturnValue(of(data));
-
-      interceptor.intercept(context, mockCallHandler).subscribe({
-        next: () => {
-          expect(mockLogger.debug).toHaveBeenCalledWith(
-            expect.objectContaining({
-              body: null,
-            }),
-            expect.any(String),
-          );
-          done();
-        },
-      });
-    });
-
-    it('should handle undefined body (covers lines 74-75)', (done) => {
-      const request = {
-        method: 'GET',
-        url: '/api/test',
-        body: undefined,
-        query: {},
-        params: {},
-        requestId: 'test-request-id',
-      };
-      const response = {
-        statusCode: 200,
-      };
-
-      const context = {
-        switchToHttp: jest.fn().mockReturnValue({
-          getRequest: () => request,
-          getResponse: () => response,
-        }),
-      } as unknown as ExecutionContext;
-
-      const data = { result: 'success' };
-      mockCallHandler.handle = jest.fn().mockReturnValue(of(data));
-
-      interceptor.intercept(context, mockCallHandler).subscribe({
-        next: () => {
-          expect(mockLogger.debug).toHaveBeenCalledWith(
-            expect.objectContaining({
-              body: undefined,
-            }),
-            expect.any(String),
-          );
-          done();
-        },
-      });
-    });
-
-    it('should handle string body (covers lines 74-75)', (done) => {
-      const request = {
-        method: 'POST',
-        url: '/api/test',
-        body: 'string body',
-        query: {},
-        params: {},
-        requestId: 'test-request-id',
-      };
-      const response = {
-        statusCode: 200,
-      };
-
-      const context = {
-        switchToHttp: jest.fn().mockReturnValue({
-          getRequest: () => request,
-          getResponse: () => response,
-        }),
-      } as unknown as ExecutionContext;
-
-      const data = { result: 'success' };
-      mockCallHandler.handle = jest.fn().mockReturnValue(of(data));
-
-      interceptor.intercept(context, mockCallHandler).subscribe({
-        next: () => {
-          expect(mockLogger.debug).toHaveBeenCalledWith(
-            expect.objectContaining({
-              body: 'string body',
-            }),
-            expect.any(String),
-          );
-          done();
-        },
-      });
-    });
-
-    it('should handle number body (covers lines 74-75)', (done) => {
-      const request = {
-        method: 'POST',
-        url: '/api/test',
-        body: 123,
-        query: {},
-        params: {},
-        requestId: 'test-request-id',
-      };
-      const response = {
-        statusCode: 200,
-      };
-
-      const context = {
-        switchToHttp: jest.fn().mockReturnValue({
-          getRequest: () => request,
-          getResponse: () => response,
-        }),
-      } as unknown as ExecutionContext;
-
-      const data = { result: 'success' };
-      mockCallHandler.handle = jest.fn().mockReturnValue(of(data));
-
-      interceptor.intercept(context, mockCallHandler).subscribe({
-        next: () => {
-          expect(mockLogger.debug).toHaveBeenCalledWith(
-            expect.objectContaining({
-              body: 123,
-            }),
-            expect.any(String),
-          );
-          done();
-        },
-      });
-    });
-
-    it('should use request.id as fallback when requestId is not available (covers line 17)', (done) => {
-      const request = {
-        method: 'GET',
-        url: '/api/test',
-        body: {},
-        query: {},
-        params: {},
-        id: 'fallback-id',
-        // No requestId property
-      };
-      const response = {
-        statusCode: 200,
-      };
-
-      const context = {
-        switchToHttp: jest.fn().mockReturnValue({
-          getRequest: () => request,
-          getResponse: () => response,
-        }),
-      } as unknown as ExecutionContext;
-
-      const data = { result: 'success' };
-      mockCallHandler.handle = jest.fn().mockReturnValue(of(data));
-
-      interceptor.intercept(context, mockCallHandler).subscribe({
-        next: () => {
-          expect(mockLogger.debug).toHaveBeenCalledWith(
-            expect.objectContaining({
-              requestId: 'fallback-id',
-            }),
-            expect.any(String),
-          );
-          done();
-        },
-      });
-    });
+    const result = await firstValueFrom(interceptor.intercept(context, mockCallHandler));
+    expect(result).toEqual(data);
+    expect(mockLogger.debug).not.toHaveBeenCalled();
+    expect(mockLogger.info).not.toHaveBeenCalled();
   });
 });

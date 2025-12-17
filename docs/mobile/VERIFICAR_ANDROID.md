@@ -18,16 +18,19 @@ export PATH=$PATH:$ANDROID_HOME/tools/bin
 **IMPORTANTE**: Para que las variables tomen efecto, necesitas recargar tu terminal:
 
 ### Opción 1: Recargar en la terminal actual (RECOMENDADO)
+
 ```bash
 source ~/.zshrc
 ```
 
 Luego verifica:
+
 ```bash
 emulator -list-avds
 ```
 
 ### Opción 2: Exportar manualmente en la sesión actual
+
 Si `source ~/.zshrc` no funciona, exporta las variables manualmente:
 
 ```bash
@@ -39,12 +42,14 @@ export PATH=$PATH:$ANDROID_HOME/tools/bin
 ```
 
 ### Opción 3: Usar el script de ayuda
+
 ```bash
 cd packages/mobile
 ./recargar_android.sh
 ```
 
 ### Opción 4: Cerrar y abrir una nueva terminal
+
 - Cierra la terminal actual completamente
 - Abre una nueva terminal
 - Las variables estarán disponibles automáticamente
@@ -103,16 +108,19 @@ npm run android
 Si después de recargar la terminal las variables aún no funcionan:
 
 1. **Verifica que el archivo esté correcto**:
+
    ```bash
    tail -10 ~/.zshrc
    ```
 
 2. **Verifica que el SDK esté instalado**:
+
    ```bash
    ls -la ~/Library/Android/sdk
    ```
 
 3. **Exporta manualmente en la sesión actual**:
+
    ```bash
    export ANDROID_HOME=$HOME/Library/Android/sdk
    export PATH=$PATH:$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools
