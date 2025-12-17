@@ -3,16 +3,17 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { FHIR_RESOURCE_TYPES } from '@carecore/shared';
-
-type FHIRType = (typeof FHIR_RESOURCE_TYPES)[keyof typeof FHIR_RESOURCE_TYPES];
+import { FhirResourceType, FHIR_RESOURCE_TYPES } from '@carecore/shared';
 
 interface FHIRResourceIconProps {
-  type: FHIRType;
+  type: FhirResourceType;
 }
 
 // Mapeo simple de tipo FHIR a un ícono visual
-const IconMap: Record<FHIRType, { iconName: keyof typeof Ionicons.glyphMap; color: string }> = {
+const IconMap: Record<
+  FhirResourceType,
+  { iconName: keyof typeof Ionicons.glyphMap; color: string }
+> = {
   Encounter: { iconName: 'pulse', color: '#FF7043' }, // Naranja (actividad médica)
   DocumentReference: { iconName: 'document-text', color: '#4CAF50' }, // Verde (documentación)
   Observation: { iconName: 'stats-chart', color: '#90CAF9' }, // Azul claro (datos/gráficos)
@@ -25,7 +26,7 @@ const IconMap: Record<FHIRType, { iconName: keyof typeof Ionicons.glyphMap; colo
 };
 
 export const FHIRResourceIcon: React.FC<FHIRResourceIconProps> = ({ type }) => {
-  const { iconName, color } = IconMap[type] || IconMap.Patient;
+  const { iconName, color } = IconMap[type] || IconMap[FHIR_RESOURCE_TYPES.PATIENT];
 
   return (
     <View style={[styles.iconContainer, { backgroundColor: color + '20' }]}>

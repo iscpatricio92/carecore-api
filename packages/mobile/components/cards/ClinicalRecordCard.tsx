@@ -2,14 +2,11 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { FHIRResourceIcon } from '../common/FHIRResourceIcon'; // Usaremos el siguiente componente
-import { FHIR_RESOURCE_TYPES } from '@carecore/shared';
-
-// Tipos básicos, idealmente importados de una librería FHIR o de tu API
-type FHIRType = (typeof FHIR_RESOURCE_TYPES)[keyof typeof FHIR_RESOURCE_TYPES];
+import { FHIRResourceIcon } from '../common/FHIRResourceIcon';
+import { FhirResourceType } from '@carecore/shared';
 
 interface ClinicalRecordCardProps {
-  resourceType: FHIRType;
+  resourceType: FhirResourceType;
   title: string;
   subtitle: string; // Ej: Nombre del médico, Tipo de examen
   date: string;

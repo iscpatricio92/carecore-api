@@ -60,7 +60,7 @@ export default function DashboardScreen() {
           <ConsentStatusCard
             activeConsentsCount={consents?.length || 0}
             onManagePress={() => {
-              /* Navegar a la pantalla de consentimientos */
+              router.push('/consents');
             }}
           />
         </ScrollView>
@@ -78,8 +78,7 @@ export default function DashboardScreen() {
         <ConsentStatusCard
           activeConsentsCount={consents?.length || 0}
           onManagePress={() => {
-            /* Navegar a la pantalla de consentimientos */
-            // TODO: Implementar navegación cuando se cree la pantalla de consentimientos
+            router.push('/consents');
           }}
         />
 
