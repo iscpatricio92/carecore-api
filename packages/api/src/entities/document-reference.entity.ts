@@ -55,7 +55,7 @@ export class DocumentReferenceEntity {
    * Contains all DocumentReference data according to FHIR R4 specification
    * @see https://www.hl7.org/fhir/documentreference.html
    */
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: 'jsonb', nullable: true, name: 'fhirResource' })
   fhirResource!: DocumentReference;
 
   /**

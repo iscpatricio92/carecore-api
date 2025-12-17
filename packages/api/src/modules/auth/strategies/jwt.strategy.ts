@@ -19,7 +19,7 @@ import { User } from '@carecore/shared';
  */
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
-  private readonly issuer: string;
+  private readonly validIssuers: string[]; // Lista de issuers válidos (para soportar tokens de clientes externos)
   private jwksClientInstance: ReturnType<typeof jwksClient>;
 
   constructor(
@@ -28,6 +28,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   ) {
     // Get Keycloak configuration from environment
     const keycloakUrl = configService.get<string>('KEYCLOAK_URL') || '';
+    const keycloakPublicUrl = configService.get<string>('KEYCLOAK_PUBLIC_URL');
     const keycloakRealm = configService.get<string>('KEYCLOAK_REALM') || 'carecore';
 
     if (!keycloakUrl) {
@@ -39,6 +40,19 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     // Construct JWKS URI and issuer
     const jwksUri = `${keycloakUrl}/realms/${keycloakRealm}/protocol/openid-connect/certs`;
     const issuer = `${keycloakUrl}/realms/${keycloakRealm}`;
+
+    // Build list of valid issuers
+    // If KEYCLOAK_PUBLIC_URL is configured, accept tokens from both issuers
+    // (internal for web clients, public for mobile clients)
+    const validIssuers = [issuer];
+    if (keycloakPublicUrl) {
+      const publicIssuer = `${keycloakPublicUrl}/realms/${keycloakRealm}`;
+      validIssuers.push(publicIssuer);
+      logger.debug(
+        { internalIssuer: issuer, publicIssuer },
+        'JWT validation will accept tokens from both issuers',
+      );
+    }
 
     // Initialize JWKS client
     // jwks-rsa exports a function as default export
@@ -63,12 +77,19 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
         // Use arrow function to access instance methods
         this.getKey(rawJwtToken, done);
       },
-      issuer,
+      // Don't validate issuer here - we'll do it manually in validate() to support multiple issuers
+      // Setting issuer to undefined disables issuer validation in passport-jwt
+      // We'll validate it manually in validate() to support both internal and public issuers
+      issuer: undefined, // Disable issuer validation in passport-jwt, validate manually in validate()
       algorithms: ['RS256'],
+      // Clock tolerance: permite un margen de 6 horas (21600 segundos) para diferencias de zona horaria
+      // entre el dispositivo cliente y el servidor
+      // Esto es necesario cuando hay diferencias de zona horaria significativas
+      clockTolerance: 1600, // 6 horas de tolerancia para diferencias de zona horaria
     });
 
     // Set instance properties after super()
-    this.issuer = issuer;
+    this.validIssuers = validIssuers;
     this.jwksClientInstance = jwksClientInstance;
   }
 
@@ -81,22 +102,28 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       // Decode the token to get the kid (key ID)
       const decoded = jwt.decode(token, { complete: true });
       if (!decoded || typeof decoded === 'string' || !decoded.header.kid) {
+        this.logger.warn('Invalid token format: missing kid or invalid structure');
         return done(new UnauthorizedException('Invalid token format'));
       }
 
       const kid = decoded.header.kid;
+      const payload = decoded.payload as jwt.JwtPayload;
 
       // Get the signing key from JWKS
       this.jwksClientInstance.getSigningKey(
         kid,
         (err: Error | null, key?: { getPublicKey(): string }) => {
           if (err) {
-            this.logger.error({ err, kid }, 'Failed to get signing key from JWKS');
+            this.logger.error(
+              { err, kid, issuer: payload.iss },
+              'Failed to get signing key from JWKS',
+            );
             return done(new UnauthorizedException('Failed to verify token signature'));
           }
 
           const signingKey = key?.getPublicKey();
           if (!signingKey) {
+            this.logger.warn({ kid, issuer: payload.iss }, 'Signing key not found');
             return done(new UnauthorizedException('Signing key not found'));
           }
 
@@ -114,9 +141,12 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
    * This method is called after the token is successfully verified
    */
   async validate(payload: jwt.JwtPayload): Promise<User> {
-    // Verify issuer
-    if (payload.iss !== this.issuer) {
-      this.logger.warn({ expected: this.issuer, received: payload.iss }, 'Token issuer mismatch');
+    // Verify issuer - accept any valid issuer (internal or public)
+    if (!payload.iss || !this.validIssuers.includes(payload.iss)) {
+      this.logger.warn(
+        { expected: this.validIssuers, received: payload.iss },
+        'Token issuer mismatch',
+      );
       throw new UnauthorizedException('Invalid token issuer');
     }
 
@@ -168,11 +198,12 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
     // Validate required fields
     if (!user.id || !user.username) {
-      this.logger.warn({ payload }, 'Token missing required user information');
+      this.logger.warn(
+        { payload: { sub: payload.sub, preferred_username: payload.preferred_username } },
+        'Token missing required user information',
+      );
       throw new UnauthorizedException('Token missing required user information');
     }
-
-    this.logger.debug({ userId: user.id, username: user.username }, 'User validated from token');
 
     return user;
   }

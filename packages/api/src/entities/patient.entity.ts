@@ -45,7 +45,12 @@ export class PatientEntity {
    * Always 'Patient' for this entity
    * Used for filtering and type checking
    */
-  @Column({ type: 'varchar', length: 50, default: FHIR_RESOURCE_TYPES.PATIENT })
+  @Column({
+    type: 'varchar',
+    length: 50,
+    default: FHIR_RESOURCE_TYPES.PATIENT,
+    name: 'resourceType',
+  })
   resourceType!: string;
 
   /**
@@ -53,7 +58,7 @@ export class PatientEntity {
    * Contains all Patient data according to FHIR R4 specification
    * @see https://www.hl7.org/fhir/patient.html
    */
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: 'jsonb', nullable: true, name: 'fhirResource' })
   fhirResource!: Patient;
 
   /**
@@ -69,7 +74,7 @@ export class PatientEntity {
    * Used for indexing and quick lookups
    * Maps to the FHIR resource ID (not the database UUID)
    */
-  @Column({ type: 'varchar', length: 255, nullable: true })
+  @Column({ type: 'varchar', length: 255, nullable: true, name: 'patientId' })
   patientId!: string;
 
   /**

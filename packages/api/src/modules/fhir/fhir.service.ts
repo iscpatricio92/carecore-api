@@ -70,7 +70,7 @@ export class FhirService {
       const existingPatients = await this.patientRepository
         .createQueryBuilder('patient')
         .where('patient.deletedAt IS NULL')
-        .andWhere(`patient.fhirResource->'identifier' @> :identifier`, {
+        .andWhere(`patient."fhirResource"->'identifier' @> :identifier`, {
           identifier: JSON.stringify([{ system: identifier.system, value: identifier.value }]),
         })
         .getCount();
@@ -543,14 +543,14 @@ export class FhirService {
     if (name) {
       const searchName = name.toLowerCase();
       queryBuilder.andWhere(
-        `LOWER(patient.fhirResource->'name'->0->>'family') LIKE :name OR LOWER(patient.fhirResource->'name'->0->>'given'->>0) LIKE :name`,
+        `LOWER(patient."fhirResource"->'name'->0->>'family') LIKE :name OR LOWER(patient."fhirResource"->'name'->0->>'given'->>0) LIKE :name`,
         { name: `%${searchName}%` },
       );
     }
 
     // Filter by identifier (search in JSONB)
     if (identifier) {
-      queryBuilder.andWhere(`patient.fhirResource->'identifier' @> :identifier`, {
+      queryBuilder.andWhere(`patient."fhirResource"->'identifier' @> :identifier`, {
         identifier: JSON.stringify([{ value: identifier }]),
       });
     }
@@ -754,14 +754,14 @@ export class FhirService {
     if (name) {
       const searchName = name.toLowerCase();
       queryBuilder.andWhere(
-        `LOWER(practitioner.fhirResource->'name'->0->>'family') LIKE :name OR LOWER(practitioner.fhirResource->'name'->0->>'given'->>0) LIKE :name`,
+        `LOWER(practitioner."fhirResource"->'name'->0->>'family') LIKE :name OR LOWER(practitioner."fhirResource"->'name'->0->>'given'->>0) LIKE :name`,
         { name: `%${searchName}%` },
       );
     }
 
     // Filter by identifier (search in JSONB)
     if (identifier) {
-      queryBuilder.andWhere(`practitioner.fhirResource->'identifier' @> :identifier`, {
+      queryBuilder.andWhere(`practitioner."fhirResource"->'identifier' @> :identifier`, {
         identifier: JSON.stringify([{ value: identifier }]),
       });
     }
@@ -1026,7 +1026,7 @@ export class FhirService {
     // Filter by date (search in JSONB)
     if (date) {
       const searchDateStr = date.split('T')[0]; // Get YYYY-MM-DD part
-      queryBuilder.andWhere(`DATE(encounter.fhirResource->'period'->>'start') = :date`, {
+      queryBuilder.andWhere(`DATE(encounter."fhirResource"->'period'->>'start') = :date`, {
         date: searchDateStr,
       });
     }

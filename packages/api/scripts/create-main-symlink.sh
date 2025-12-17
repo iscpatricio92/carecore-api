@@ -4,7 +4,15 @@
 
 set -e
 
-cd /app/packages/api/dist
+# Detectar si estamos en Docker o localmente
+if [ -d "/app/packages/api/dist" ]; then
+  # Docker
+  cd /app/packages/api/dist
+else
+  # Local - usar ruta relativa desde donde se ejecuta el script
+  SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+  cd "$SCRIPT_DIR/../dist" || exit 1
+fi
 
 # Buscar el archivo main.js en diferentes ubicaciones posibles
 MAIN_FILE=""
@@ -37,6 +45,9 @@ ls -la main* 2>&1 || true
 # Verificar que los symlinks funcionan
 test -f main.js && echo "✅ main.js es accesible" || echo "❌ main.js no es accesible"
 test -f main && echo "✅ main es accesible" || echo "❌ main no es accesible"
-# Verificar que Node.js puede leer el archivo
-node main.js --version >/dev/null 2>&1 && echo "✅ Node.js puede ejecutar main.js" || echo "⚠️  Node.js no puede ejecutar main.js"
-
+# Verificar que el archivo es válido JavaScript (no intentar ejecutarlo ya que requiere variables de entorno)
+if head -1 main.js | grep -q "use strict\|__importDefault\|Object.defineProperty"; then
+  echo "✅ main.js es un archivo JavaScript válido"
+else
+  echo "⚠️  main.js no parece ser un archivo JavaScript válido"
+fi

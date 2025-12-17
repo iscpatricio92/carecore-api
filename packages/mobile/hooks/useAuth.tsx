@@ -14,7 +14,7 @@ import React, {
   useCallback,
   useRef,
 } from 'react';
-import { useAuthRequest, ResponseType, useAutoDiscovery } from 'expo-auth-session';
+import { useAuthRequest, ResponseType, useAutoDiscovery, Prompt } from 'expo-auth-session';
 import { router } from 'expo-router';
 import { authService } from '../services/AuthService';
 import { appConfig } from '../config/AppConfig';
@@ -68,6 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       scopes: appConfig.keycloak.scopes,
       redirectUri: appConfig.keycloak.redirectUri,
       usePKCE: true, // PKCE es obligatorio para aplicaciones móviles
+      prompt: Prompt.Login, // Forzar que Keycloak muestre el formulario de login
     }),
     [],
   );
@@ -231,14 +232,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // 8. FUNCIÓN AUXILIAR PARA OBTENER INFORMACIÓN DEL USUARIO
   // ====================================================================
 
-  const fetchUserInfo = async (_accessToken: string): Promise<User> => {
+  const fetchUserInfo = async (accessToken: string): Promise<User> => {
     try {
       // Usar HttpClient para obtener información del usuario
-      // HttpClient maneja automáticamente el token y refresh
-      // Nota: accessToken se recibe pero no se usa directamente porque httpClient
-      // obtiene el token automáticamente desde authService
+      // Pasamos el token directamente para evitar problemas de timing
+      // cuando el token acaba de ser guardado en SecureStore
       const { httpClient } = await import('../services/HttpClient');
-      const userData = await httpClient.get<User>(`${appConfig.api.authUrl}/user`);
+      const userData = await httpClient.get<User>(`${appConfig.api.authUrl}/user`, {
+        token: accessToken, // Pasar el token directamente para evitar problemas de timing
+      });
       return userData;
     } catch (error) {
       ErrorService.handleNetworkError(error, { operation: 'fetchUserInfo' });

@@ -17,6 +17,7 @@ interface RequestConfig extends RequestInit {
   timeout?: number;
   retries?: number;
   skipAuth?: boolean; // Para requests que no requieren autenticación
+  token?: string; // Token opcional para usar en lugar de obtenerlo de authService
 }
 
 interface RetryConfig {
@@ -40,7 +41,7 @@ export class HttpClient {
    */
   async request<T>(url: string, config: RequestConfig = {}): Promise<T> {
     const {
-      timeout = DEFAULT_TIMEOUT,
+      timeout: _timeout = DEFAULT_TIMEOUT, // Timeout no se usa actualmente, pero se mantiene para futuras implementaciones
       retries = DEFAULT_RETRIES,
       skipAuth = false,
       ...fetchConfig
@@ -55,13 +56,24 @@ export class HttpClient {
     // Agregar token de autenticación si no se omite
     if (!skipAuth) {
       try {
-        const token = await authService.getAccessToken();
+        // Si se proporciona un token explícito, usarlo directamente
+        // Esto es útil cuando el token acaba de ser obtenido y puede no estar disponible en SecureStore aún
+        const token = config.token || (await authService.getAccessToken());
         if (token) {
           headers.set('Authorization', `Bearer ${token}`);
+        } else if (!config.token) {
+          // Solo lanzar error si no se proporcionó un token explícito
+          // Si se proporcionó un token pero es null/undefined, no lanzar error aquí
+          ErrorService.handleAuthError(new Error('No se encontró token de acceso'), {
+            operation: 'request',
+          });
+          router.replace('/login');
+          throw new Error('No se encontró token de acceso');
         }
-      } catch (error) {
+      } catch {
         // Si no hay token y no es skipAuth, redirigir a login
-        if (!skipAuth) {
+        // Solo lanzar error si no se proporcionó un token explícito
+        if (!skipAuth && !config.token) {
           ErrorService.handleAuthError(new Error('No se encontró token de acceso'), {
             operation: 'request',
           });

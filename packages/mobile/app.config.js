@@ -82,8 +82,10 @@ module.exports = {
       KEYCLOAK_URL: process.env.KEYCLOAK_URL,
       KEYCLOAK_REALM: process.env.KEYCLOAK_REALM,
       MOBILE_KEYCLOAK_CLIENT_ID:
-        process.env.MOBILE_KEYCLOAK_CLIENT_ID || process.env.KEYCLOAK_CLIENT_ID,
-      MOBILE_REDIRECT_URI: process.env.MOBILE_REDIRECT_URI,
+        process.env.MOBILE_KEYCLOAK_CLIENT_ID ||
+        process.env.KEYCLOAK_CLIENT_ID ||
+        'carecore-mobile',
+      MOBILE_REDIRECT_URI: process.env.MOBILE_REDIRECT_URI || 'carecore://auth',
 
       // App Configuration
       APP_NAME: process.env.APP_NAME || 'CareCore',

@@ -54,6 +54,8 @@ function getEnvFilePaths(): string[] {
                   singleLine: false,
                   translateTime: 'SYS:standard',
                   ignore: 'pid,hostname',
+                  // Enable colorization even in Docker if TTY is available
+                  colorizeObjects: true,
                 },
               }
             : undefined,

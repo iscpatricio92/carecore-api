@@ -188,7 +188,7 @@ describe('AuthService', () => {
       const url = new URL(authUrl);
       expect(url.searchParams.get('client_id')).toBe(mockClientId);
       expect(url.searchParams.get('response_type')).toBe('code');
-      expect(url.searchParams.get('scope')).toBe('openid profile email');
+      expect(url.searchParams.get('scope')).toBe('openid profile email fhirUser');
       expect(url.searchParams.get('redirect_uri')).toBe(mockRedirectUri);
       expect(url.searchParams.get('state')).toBe(mockStateToken);
     });
@@ -913,11 +913,13 @@ describe('AuthService', () => {
       expect(mockLogger.error).toHaveBeenCalledWith('KEYCLOAK_CLIENT_ID is not configured');
     });
 
-    it('should throw BadRequestException if KEYCLOAK_CLIENT_SECRET is not configured', async () => {
+    it('should throw BadRequestException if KEYCLOAK_CLIENT_SECRET is not configured (confidential client)', async () => {
+      // When no clientId is provided, it uses confidential client which requires client_secret
       mockConfigService.get.mockImplementation((key: string) => {
         const config: Record<string, string> = {
           KEYCLOAK_URL: mockKeycloakUrl,
           KEYCLOAK_CLIENT_ID: mockClientId,
+          // KEYCLOAK_CLIENT_SECRET is missing
         };
         return config[key] || null;
       });
@@ -926,12 +928,67 @@ describe('AuthService', () => {
       expect(mockLogger.error).toHaveBeenCalledWith('KEYCLOAK_CLIENT_SECRET is not configured');
     });
 
+    it('should not require KEYCLOAK_CLIENT_SECRET for public client (with clientId)', async () => {
+      // When clientId is provided (public client), client_secret is not required
+      const publicClientId = 'carecore-mobile';
+      const mockKeycloakPublicUrl = 'http://localhost:8080';
+      const mockTokenResponse = {
+        access_token: 'new-access-token',
+        refresh_token: 'new-refresh-token',
+        expires_in: 3600,
+        token_type: 'Bearer',
+      };
+
+      mockConfigService.get.mockImplementation((key: string) => {
+        const config: Record<string, string> = {
+          KEYCLOAK_URL: mockKeycloakUrl,
+          KEYCLOAK_PUBLIC_URL: mockKeycloakPublicUrl,
+          KEYCLOAK_REALM: mockKeycloakRealm,
+          // KEYCLOAK_CLIENT_SECRET is not needed for public clients
+        };
+        return config[key] || null;
+      });
+
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: async () => mockTokenResponse,
+      });
+
+      const result = await service.refreshToken(mockRefreshToken, publicClientId);
+
+      expect(result).toEqual({
+        accessToken: 'new-access-token',
+        refreshToken: 'new-refresh-token',
+        expiresIn: 3600,
+        tokenType: 'Bearer',
+      });
+
+      // Verify that the request uses KEYCLOAK_URL for HTTP requests (not KEYCLOAK_PUBLIC_URL)
+      // KEYCLOAK_PUBLIC_URL is only used for issuer validation, not for HTTP requests
+      const fetchCall = (global.fetch as jest.Mock).mock.calls[0];
+      const tokenUrl = fetchCall[0];
+      expect(tokenUrl).toContain(mockKeycloakUrl); // Should use KEYCLOAK_URL, not KEYCLOAK_PUBLIC_URL
+
+      // Verify that the request body does NOT include client_secret
+      const bodyString = fetchCall[1].body.toString();
+      expect(bodyString).toContain(`client_id=${publicClientId}`);
+      expect(bodyString).not.toContain('client_secret');
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        expect.objectContaining({
+          clientId: publicClientId,
+          isPublicClient: true,
+          publicUrlConfigured: true, // KEYCLOAK_PUBLIC_URL is configured but not used for HTTP
+        }),
+        'Refreshing access token',
+      );
+    });
+
     it('should throw BadRequestException if refresh token is empty', async () => {
       await expect(service.refreshToken('')).rejects.toThrow(BadRequestException);
       expect(mockLogger.error).toHaveBeenCalledWith('Refresh token is required');
     });
 
-    it('should successfully refresh token', async () => {
+    it('should successfully refresh token (confidential client)', async () => {
       const mockTokenResponse = {
         access_token: 'new-access-token',
         refresh_token: 'new-refresh-token',
@@ -952,7 +1009,20 @@ describe('AuthService', () => {
         expiresIn: 3600,
         tokenType: 'Bearer',
       });
-      expect(mockLogger.debug).toHaveBeenCalled();
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        expect.objectContaining({
+          clientId: mockClientId,
+          isPublicClient: false,
+        }),
+        'Refreshing access token',
+      );
+
+      // Verify that the request body includes client_secret for confidential client
+      const fetchCall = (global.fetch as jest.Mock).mock.calls[0];
+      const bodyString = fetchCall[1].body.toString();
+      expect(bodyString).toContain(`client_id=${mockClientId}`);
+      expect(bodyString).toContain(`client_secret=${mockClientSecret}`);
+
       expect(global.fetch).toHaveBeenCalledWith(
         expect.stringContaining('/protocol/openid-connect/token'),
         expect.objectContaining({
@@ -1030,7 +1100,10 @@ describe('AuthService', () => {
       await expect(service.refreshToken(mockRefreshToken)).rejects.toThrow(UnauthorizedException);
       expect(mockLogger.error).toHaveBeenCalled();
       expect(mockLogger.error).toHaveBeenCalledWith(
-        { status: 500, error: 'Internal server error' },
+        expect.objectContaining({
+          status: 500,
+          error: 'Internal server error',
+        }),
         'Failed to refresh token',
       );
     });
@@ -1903,12 +1976,12 @@ describe('AuthService', () => {
   describe('registerPatient', () => {
     const mockRegisterDto = {
       username: 'newpatient',
-      email: 'newpatient@example.com',
+      email: 'lucero@example.com',
       password: 'SecurePassword123!',
       name: [
         {
-          given: ['John'],
-          family: 'Doe',
+          given: ['Lucero'],
+          family: 'Garcia',
         },
       ],
       identifier: [
@@ -1965,14 +2038,14 @@ describe('AuthService', () => {
       expect(result).toHaveProperty('userId', 'keycloak-user-id-123');
       expect(result).toHaveProperty('patientId', 'patient-id-123');
       expect(result).toHaveProperty('username', 'newpatient');
-      expect(result).toHaveProperty('email', 'newpatient@example.com');
+      expect(result).toHaveProperty('email', 'lucero@example.com');
       expect(result.message).toBe(
         'Patient registered successfully. Please check your email to verify your account.',
       );
 
       expect(mockKeycloakAdminService.checkUserExists).toHaveBeenCalledWith(
         'newpatient',
-        'newpatient@example.com',
+        'lucero@example.com',
       );
       expect(mockFhirService.validatePatientIdentifierUniqueness).toHaveBeenCalledWith(
         mockRegisterDto.identifier,

@@ -56,11 +56,37 @@ export class KeycloakAdminService {
    * This method must be called before any admin operations
    */
   private async authenticate(): Promise<void> {
+    // Validate configuration before attempting authentication
+    if (!this.keycloakUrl) {
+      const error = 'KEYCLOAK_URL is not configured';
+      this.logger.error(error);
+      throw new BadRequestException(
+        'Keycloak Admin API is not configured. Please set KEYCLOAK_URL environment variable.',
+      );
+    }
+
+    if (!this.adminClientId || !this.adminClientSecret) {
+      const error = 'KEYCLOAK_ADMIN_CLIENT_ID or KEYCLOAK_ADMIN_CLIENT_SECRET is not configured';
+      this.logger.error(error);
+      throw new BadRequestException(
+        'Keycloak Admin API credentials are not configured. Please set KEYCLOAK_ADMIN_CLIENT_ID and KEYCLOAK_ADMIN_CLIENT_SECRET environment variables.',
+      );
+    }
+
     try {
       // Check if we have a valid token
       if (this.accessToken && Date.now() < this.tokenExpiry) {
         return; // Token is still valid
       }
+
+      this.logger.debug(
+        {
+          keycloakUrl: this.keycloakUrl,
+          realm: this.keycloakRealm,
+          clientId: this.adminClientId,
+        },
+        'Authenticating with Keycloak Admin API',
+      );
 
       await this.kcAdminClient.auth({
         grantType: 'client_credentials',
@@ -80,12 +106,45 @@ export class KeycloakAdminService {
         // Set expiry to 5 minutes before actual expiry for safety
         const expiresIn = (tokenSet.expires_in || 60) - 5;
         this.tokenExpiry = Date.now() + expiresIn * 1000;
+      } else {
+        this.logger.warn('Authentication succeeded but no access token found in response');
       }
 
       this.logger.debug('Authenticated with Keycloak Admin API');
     } catch (error) {
-      this.logger.error({ error }, 'Failed to authenticate with Keycloak Admin API');
-      throw new BadRequestException('Failed to authenticate with Keycloak Admin API');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorDetails = {
+        error: errorMessage,
+        keycloakUrl: this.keycloakUrl,
+        realm: this.keycloakRealm,
+        clientId: this.adminClientId,
+        hasClientSecret: !!this.adminClientSecret,
+      };
+
+      this.logger.error(errorDetails, 'Failed to authenticate with Keycloak Admin API');
+
+      // Provide more specific error messages based on common issues
+      if (errorMessage.includes('ECONNREFUSED') || errorMessage.includes('ENOTFOUND')) {
+        throw new BadRequestException(
+          `Cannot connect to Keycloak at ${this.keycloakUrl}. Please verify KEYCLOAK_URL is correct and Keycloak is running.`,
+        );
+      }
+
+      if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+        throw new BadRequestException(
+          'Invalid Keycloak Admin API credentials. Please verify KEYCLOAK_ADMIN_CLIENT_ID and KEYCLOAK_ADMIN_CLIENT_SECRET are correct.',
+        );
+      }
+
+      if (errorMessage.includes('404') || errorMessage.includes('Not Found')) {
+        throw new BadRequestException(
+          `Keycloak realm "${this.keycloakRealm}" not found. Please verify KEYCLOAK_REALM is correct.`,
+        );
+      }
+
+      throw new BadRequestException(
+        `Failed to authenticate with Keycloak Admin API: ${errorMessage}. Please verify Keycloak configuration.`,
+      );
     }
   }
 
@@ -621,6 +680,9 @@ export class KeycloakAdminService {
     try {
       await this.authenticate();
 
+      // Create user WITHOUT credentials first
+      // Keycloak Admin Client v26.4.7 does NOT accept credentials in create() method
+      // We must create the user first, then set the password separately
       const newUser = {
         username: userData.username,
         email: userData.email,
@@ -628,66 +690,96 @@ export class KeycloakAdminService {
         enabled: userData.enabled ?? true,
         firstName: userData.firstName,
         lastName: userData.lastName,
-        credentials: [
-          {
-            type: 'password',
-            value: userData.password,
-            temporary: false, // User must change password on first login if true
-          },
-        ],
       };
+      this.logger.debug({ newUser }, 'Creating user in Keycloak (without password)');
 
-      const createdUser = await this.kcAdminClient.users.create(newUser);
+      // Create the user - returns { id: string }
+      const result = await this.kcAdminClient.users.create(newUser);
+      const userId = result?.id;
 
-      // Keycloak Admin Client returns the created user with an id field
-      // The id is typically in the response headers (Location header) or in the response body
-      // We need to extract it from the response
-      if (createdUser && typeof createdUser === 'string') {
-        // If it returns a string (user ID), use it directly
-        this.logger.info(
-          { userId: createdUser, username: userData.username },
-          'User created in Keycloak',
+      if (!userId) {
+        // Fallback: find user by username if ID not in result
+        this.logger.warn(
+          { username: userData.username },
+          'User ID not in create response, searching by username',
         );
-        return createdUser;
-      }
-
-      // If it returns an object with id property
-      if (createdUser && typeof createdUser === 'object' && 'id' in createdUser && createdUser.id) {
-        this.logger.info(
-          { userId: createdUser.id, username: userData.username },
-          'User created in Keycloak',
-        );
-        return createdUser.id as string;
-      }
-
-      // If we can't get the ID, try to find the user by username
-      try {
         const users = await this.kcAdminClient.users.find({
           username: userData.username,
           exact: true,
         });
-        if (users && users.length > 0 && users[0].id) {
-          this.logger.info(
-            { userId: users[0].id, username: userData.username },
-            'User created in Keycloak (found by username)',
-          );
-          return users[0].id;
+
+        if (!users || users.length === 0 || !users[0].id) {
+          this.logger.error({ username: userData.username }, 'User created but ID not found');
+          return null;
         }
-      } catch (findError) {
-        this.logger.warn(
-          { error: findError, username: userData.username },
-          'Failed to find created user',
+
+        const foundUserId = users[0].id;
+        this.logger.debug({ userId: foundUserId }, 'Found user ID, setting password');
+        await this.kcAdminClient.users.resetPassword({
+          id: foundUserId,
+          credential: {
+            type: 'password',
+            value: userData.password,
+            temporary: false,
+          },
+        });
+
+        this.logger.info(
+          { userId: foundUserId, username: userData.username },
+          'User created in Keycloak with password',
         );
+        return foundUserId;
       }
 
-      this.logger.error({ username: userData.username }, 'User created but ID not found');
-      return null;
+      // Set the password using resetPassword
+      this.logger.debug({ userId }, 'Setting password for user');
+      await this.kcAdminClient.users.resetPassword({
+        id: userId,
+        credential: {
+          type: 'password',
+          value: userData.password,
+          temporary: false,
+        },
+      });
+
+      this.logger.info(
+        { userId, username: userData.username },
+        'User created in Keycloak with password',
+      );
+      return userId;
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+
+      // If it's a BadRequestException from authenticate(), re-throw it as-is
+      // This preserves the detailed error message about configuration issues
+      if (error instanceof BadRequestException) {
+        this.logger.error(
+          { error, username: userData.username, email: userData.email },
+          'Failed to create user in Keycloak (authentication or configuration error)',
+        );
+        throw error;
+      }
+
+      // Log full error details for debugging
       this.logger.error(
-        { error, username: userData.username, email: userData.email },
+        {
+          error: errorMessage,
+          stack: errorStack,
+          username: userData.username,
+          email: userData.email,
+          errorObject: error,
+        },
         'Failed to create user in Keycloak',
       );
+
+      // Check for specific HTTP errors
+      if (errorMessage.includes('403') || errorMessage.includes('Forbidden')) {
+        throw new BadRequestException(
+          'Permission denied: The Keycloak Admin API client does not have permission to create users. ' +
+            'Please verify that the service account for "keycloak-admin-api" has the "manage-users" role assigned in realm-management.',
+        );
+      }
 
       // Check if user already exists (409 Conflict)
       if (

@@ -13,7 +13,7 @@
   "private": true,
   "license": "MIT",
   "scripts": {
-    "build": "nest build",
+    "build": "nest build && sh scripts/create-main-symlink.sh",
     "format": "prettier --write \"src/**/*.ts\" \"src/**/*.spec.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"src/**/*.spec.ts\"",
     "start": "nest start",

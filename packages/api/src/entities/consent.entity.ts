@@ -55,7 +55,7 @@ export class ConsentEntity {
    * Contains all Consent data according to FHIR R4 specification
    * @see https://www.hl7.org/fhir/consent.html
    */
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: 'jsonb', nullable: true, name: 'fhirResource' })
   fhirResource!: Consent;
 
   /**

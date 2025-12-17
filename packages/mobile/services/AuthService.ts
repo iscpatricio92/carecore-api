@@ -155,10 +155,11 @@ export class AuthService {
 
   /**
    * Usa el refresh_token para obtener un nuevo access_token sin reautenticar.
+   * Llama al endpoint del API que maneja el refresh para clientes públicos (mobile).
    */
   async refreshAccessToken(): Promise<boolean> {
     try {
-      // 1. Obtener el refresh_token del SecureStore...
+      // 1. Obtener el refresh_token del SecureStore
       const tokensJson = await SecureStore.getItemAsync(AUTH_TOKEN_STORAGE_KEY);
       if (!tokensJson) return false;
 
@@ -167,46 +168,65 @@ export class AuthService {
 
       if (!refreshToken) return false;
 
-      // 2. Llamar al endpoint de tu NestJS API para refrescar el token
+      // 2. Llamar al endpoint del API para refrescar el token
+      // Pasamos el clientId del móvil para que el API use el cliente público (sin client_secret)
       const url = `${appConfig.api.authUrl}/refresh`;
 
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken }),
+        body: JSON.stringify({
+          refreshToken,
+          clientId: appConfig.keycloak.clientId, // Cliente público (mobile)
+        }),
       });
 
-      if (response.ok) {
-        const tokenData = await response.json();
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = `Fallo al refrescar el token. Estado: ${response.status}`;
 
-        // El API devuelve tokens en formato { accessToken, refreshToken, expiresIn, tokenType }
-        // Normalizar al formato TokensResponse
-        const newTokens: TokensResponse = {
-          access_token: tokenData.accessToken || tokenData.access_token || '',
-          refresh_token: tokenData.refreshToken || tokenData.refresh_token || '',
-          expires_in: tokenData.expiresIn || tokenData.expires_in || 3600,
-          token_type: tokenData.tokenType || tokenData.token_type || 'Bearer',
-          user_info: {
-            sub: '', // Se llenará después al obtener información del usuario
-            roles: [],
-          },
-        };
-
-        if (!newTokens.access_token) {
-          throw new Error('Invalid token response: missing access_token');
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch {
+          errorMessage = errorText || errorMessage;
         }
 
-        await this.saveTokens(newTokens);
-        return true; // Éxito
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        ErrorService.handleAuthError(
-          new Error(errorData.message || 'Fallo al refrescar el token'),
-          { status: response.status },
-        );
+        ErrorService.handleAuthError(new Error(errorMessage), {
+          operation: 'refreshAccessToken',
+          status: response.status,
+        });
+
         await this.removeTokens(); // Borrar tokens si falla el refresh
-        return false; // Fallo
+        return false;
       }
+
+      const tokenData = (await response.json()) as {
+        accessToken?: string;
+        refreshToken?: string;
+        expiresIn?: number;
+        tokenType?: string;
+      };
+
+      if (!tokenData.accessToken) {
+        throw new Error('Invalid token response: missing accessToken');
+      }
+
+      // El API devuelve tokens en formato { accessToken, refreshToken, expiresIn, tokenType }
+      // Normalizar al formato TokensResponse
+      const newTokens: TokensResponse = {
+        access_token: tokenData.accessToken,
+        refresh_token: tokenData.refreshToken || refreshToken, // usa el nuevo si viene
+        expires_in: tokenData.expiresIn || 3600,
+        token_type: tokenData.tokenType || 'Bearer',
+        user_info: {
+          sub: '', // se poblará luego al obtener user info
+          roles: [],
+        },
+      };
+
+      await this.saveTokens(newTokens);
+      return true;
     } catch (error) {
       ErrorService.handleNetworkError(error, { operation: 'refreshAccessToken' });
       await this.removeTokens();
