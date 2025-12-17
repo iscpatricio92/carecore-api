@@ -8,7 +8,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build --workspace=@carecore/api",
+    "build": "npm run build:shared && npm run build --workspace=@carecore/api",
     "build:shared": "npm run build --workspace=@carecore/shared",
     "test": "echo 'select specific package to test: api, web, mobile. use npm run test:<package>'",
     "test:api": "npm run test --workspace=@carecore/api",
