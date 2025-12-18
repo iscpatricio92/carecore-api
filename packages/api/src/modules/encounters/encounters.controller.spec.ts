@@ -1,16 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EncountersController } from './encounters.controller';
 import { EncountersService } from './encounters.service';
-import { Encounter, FHIR_RESOURCE_TYPES } from '@carecore/shared';
+import { EncounterDetailDto } from '../../common/dto/encounter.dto';
+import { User } from '@carecore/shared';
+import { ROLES } from '../../common/constants/roles';
 
 describe('EncountersController', () => {
   let controller: EncountersController;
   let service: EncountersService;
 
   const mockEncountersService = {
-    create: jest.fn(),
     findAll: jest.fn(),
     findOne: jest.fn(),
+    findByEncounterId: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -33,78 +35,148 @@ describe('EncountersController', () => {
     expect(controller).toBeDefined();
   });
 
-  describe('create', () => {
-    it('should create a new encounter', () => {
-      const encounterData: Encounter = {
-        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
-        status: 'finished',
-        class: {
-          code: 'AMB',
-          display: 'ambulatory',
-        },
-        subject: {
-          reference: 'Patient/test-patient-id',
-        },
-      };
-
-      const expectedResult: Encounter = {
-        ...encounterData,
-        id: 'test-encounter-id',
-        meta: {
-          versionId: '1',
-          lastUpdated: new Date().toISOString(),
-        },
-      };
-
-      mockEncountersService.create.mockReturnValue(expectedResult);
-
-      const result = controller.create(encounterData);
-
-      expect(result).toEqual(expectedResult);
-      expect(service.create).toHaveBeenCalledWith(encounterData);
-    });
-  });
-
   describe('findAll', () => {
-    it('should return all encounters', () => {
+    it('should return all encounters', async () => {
       const expectedResult = {
-        resourceType: 'Bundle',
-        type: 'searchset',
+        data: [],
         total: 0,
-        entry: [],
       };
 
-      mockEncountersService.findAll.mockReturnValue(expectedResult);
+      mockEncountersService.findAll.mockResolvedValue(expectedResult);
 
-      const result = controller.findAll();
+      const result = await controller.findAll();
 
       expect(result).toEqual(expectedResult);
-      expect(service.findAll).toHaveBeenCalled();
+      expect(service.findAll).toHaveBeenCalledWith(undefined);
+    });
+
+    it('should pass user to service when provided', async () => {
+      const user: User = {
+        id: 'patient-user',
+        keycloakUserId: 'patient-user',
+        username: 'patient',
+        email: 'patient@example.com',
+        roles: [ROLES.PATIENT],
+        patient: 'Patient/123',
+      };
+
+      const expectedResult = {
+        data: [
+          {
+            id: 'db-uuid',
+            encounterId: 'encounter-1',
+            status: 'finished',
+            subjectReference: 'Patient/123',
+            createdAt: new Date(),
+          },
+        ],
+        total: 1,
+      };
+
+      mockEncountersService.findAll.mockResolvedValue(expectedResult);
+
+      const result = await controller.findAll(undefined, undefined, user);
+
+      expect(result).toEqual(expectedResult);
+      expect(service.findAll).toHaveBeenCalledWith(user);
     });
   });
 
   describe('findOne', () => {
-    it('should return an encounter by id', () => {
+    it('should return an encounter by id', async () => {
       const encounterId = 'test-encounter-id';
-      const expectedResult: Encounter = {
-        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
-        id: encounterId,
+      const expectedResult = {
+        id: 'db-uuid',
+        encounterId: 'test-encounter-id',
         status: 'finished',
-        class: {
-          code: 'AMB',
-          display: 'ambulatory',
-        },
-        subject: {
-          reference: 'Patient/test-patient-id',
-        },
-      };
+        subjectReference: 'Patient/test-patient-id',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        fhirResource: undefined,
+      } as EncounterDetailDto;
 
-      mockEncountersService.findOne.mockReturnValue(expectedResult);
+      mockEncountersService.findOne.mockResolvedValue(expectedResult);
 
-      const result = controller.findOne(encounterId);
+      const result = await controller.findOne(encounterId);
 
       expect(result).toEqual(expectedResult);
-      expect(service.findOne).toHaveBeenCalledWith(encounterId);
+      expect(service.findOne).toHaveBeenCalledWith(encounterId, undefined);
+    });
+
+    it('should pass user to service when provided', async () => {
+      const user: User = {
+        id: 'patient-user',
+        keycloakUserId: 'patient-user',
+        username: 'patient',
+        email: 'patient@example.com',
+        roles: [ROLES.PATIENT],
+        patient: 'Patient/123',
+      };
+
+      const encounterId = 'test-encounter-id';
+      const expectedResult = {
+        id: 'db-uuid',
+        encounterId: 'test-encounter-id',
+        status: 'finished',
+        subjectReference: 'Patient/123',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        fhirResource: undefined,
+      } as EncounterDetailDto;
+
+      mockEncountersService.findOne.mockResolvedValue(expectedResult);
+
+      const result = await controller.findOne(encounterId, user);
+
+      expect(result).toEqual(expectedResult);
+      expect(service.findOne).toHaveBeenCalledWith(encounterId, user);
+    });
+
+    it('should try findByEncounterId when findOne throws NotFoundException', async () => {
+      const encounterId = 'test-encounter-id';
+      const expectedResult = {
+        id: 'db-uuid',
+        encounterId: 'test-encounter-id',
+        status: 'finished',
+        subjectReference: 'Patient/test-patient-id',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        fhirResource: undefined,
+      } as EncounterDetailDto;
+
+      const { NotFoundException } = await import('@nestjs/common');
+      mockEncountersService.findOne.mockRejectedValue(
+        new NotFoundException('Encounter with ID test-encounter-id not found'),
+      );
+      mockEncountersService.findByEncounterId.mockResolvedValue(expectedResult);
+
+      const result = await controller.findOne(encounterId);
+
+      expect(result).toEqual(expectedResult);
+      expect(service.findOne).toHaveBeenCalledWith(encounterId, undefined);
+      expect(service.findByEncounterId).toHaveBeenCalledWith(encounterId, undefined);
+    });
+
+    it('should re-throw ForbiddenException when patient tries to access another patient encounter', async () => {
+      const user: User = {
+        id: 'patient-user',
+        keycloakUserId: 'patient-user',
+        username: 'patient',
+        email: 'patient@example.com',
+        roles: [ROLES.PATIENT],
+        patient: 'Patient/123',
+      };
+
+      const encounterId = 'test-encounter-id';
+      const { ForbiddenException } = await import('@nestjs/common');
+      const forbiddenError = new ForbiddenException(
+        'You do not have permission to access this encounter. Patients can only access their own encounters.',
+      );
+
+      mockEncountersService.findOne.mockRejectedValue(forbiddenError);
+
+      await expect(controller.findOne(encounterId, user)).rejects.toThrow(ForbiddenException);
+      expect(service.findByEncounterId).not.toHaveBeenCalled();
     });
   });
 });

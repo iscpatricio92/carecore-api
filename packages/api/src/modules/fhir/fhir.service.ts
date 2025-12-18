@@ -987,10 +987,11 @@ export class FhirService {
       subject?: string; // Patient reference
       status?: string;
       date?: string;
+      sort?: string; // FHIR sort parameter (e.g., "-date" for descending by date)
     },
     user?: User,
   ): Promise<{ total: number; entries: Encounter[] }> {
-    const { page = 1, limit = 10, subject, status, date } = params;
+    const { page = 1, limit = 10, subject, status, date, sort } = params;
     const queryBuilder = this.encounterRepository
       .createQueryBuilder('encounter')
       .where('encounter.deletedAt IS NULL');
@@ -1029,6 +1030,30 @@ export class FhirService {
       queryBuilder.andWhere(`DATE(encounter."fhirResource"->'period'->>'start') = :date`, {
         date: searchDateStr,
       });
+    }
+
+    // Apply sorting if provided
+    if (sort) {
+      // Parse FHIR sort parameter (e.g., "-date" means descending by date)
+      const isDescending = sort.startsWith('-');
+      const sortField = isDescending ? sort.substring(1) : sort;
+
+      // Map FHIR field names to database fields
+      if (sortField === 'date') {
+        // Sort by period.start in JSONB
+        queryBuilder.orderBy(
+          `encounter."fhirResource"->'period'->>'start'`,
+          isDescending ? 'DESC' : 'ASC',
+        );
+      } else if (sortField === 'status') {
+        queryBuilder.orderBy('encounter.status', isDescending ? 'DESC' : 'ASC');
+      } else {
+        // Default sort by createdAt if field not recognized
+        queryBuilder.orderBy('encounter.createdAt', isDescending ? 'DESC' : 'ASC');
+      }
+    } else {
+      // Default sort by createdAt descending
+      queryBuilder.orderBy('encounter.createdAt', 'DESC');
     }
 
     // Get total count

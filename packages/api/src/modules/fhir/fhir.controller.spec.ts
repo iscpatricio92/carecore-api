@@ -24,6 +24,8 @@ import { PinoLogger } from 'nestjs-pino';
 import { FhirController } from './fhir.controller';
 import { FhirService } from './fhir.service';
 import { SmartFhirService } from './services/smart-fhir.service';
+import { ConsentsService } from '../consents/consents.service';
+import { DocumentsService } from '../documents/documents.service';
 import { CreatePatientDto, UpdatePatientDto } from '../../common/dto/fhir-patient.dto';
 import {
   CreatePractitionerDto,
@@ -48,6 +50,7 @@ describe('FhirController', () => {
     username: 'testuser',
     email: 'test@example.com',
     roles: ['patient'],
+    scopes: ['encounter:read', 'patient:read'],
   };
 
   const mockFhirService = {
@@ -99,6 +102,23 @@ describe('FhirController', () => {
     findClientById: jest.fn(),
   };
 
+  const mockConsentsService = {
+    create: jest.fn(),
+    findAll: jest.fn(),
+    findOne: jest.fn(),
+    update: jest.fn(),
+    remove: jest.fn(),
+    shareWithPractitioner: jest.fn(),
+  };
+
+  const mockDocumentsService = {
+    create: jest.fn(),
+    findAll: jest.fn(),
+    findOne: jest.fn(),
+    update: jest.fn(),
+    remove: jest.fn(),
+  };
+
   const mockAuditService = {
     logAccess: jest.fn().mockResolvedValue(undefined),
     logCreate: jest.fn().mockResolvedValue(undefined),
@@ -145,6 +165,14 @@ describe('FhirController', () => {
         {
           provide: SmartFhirService,
           useValue: mockSmartFhirService,
+        },
+        {
+          provide: ConsentsService,
+          useValue: mockConsentsService,
+        },
+        {
+          provide: DocumentsService,
+          useValue: mockDocumentsService,
         },
         {
           provide: KeycloakAdminService,
@@ -487,7 +515,15 @@ describe('FhirController', () => {
 
       mockFhirService.searchEncounters.mockResolvedValue(expectedResult);
 
-      const result = await controller.searchEncounters(pagination, subject, status, date, mockUser);
+      const result = await controller.searchEncounters(
+        pagination,
+        subject,
+        status,
+        date,
+        undefined, // _count
+        undefined, // _sort
+        mockUser,
+      );
 
       expect(result).toEqual(expectedResult);
       expect(service.searchEncounters).toHaveBeenCalledWith(
@@ -496,6 +532,7 @@ describe('FhirController', () => {
           subject,
           status,
           date,
+          sort: undefined,
         },
         mockUser,
       );

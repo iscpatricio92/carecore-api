@@ -24,6 +24,10 @@ import {
 @Controller('documents')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT-auth')
+/**
+ * @deprecated Use /api/fhir/DocumentReference instead. This endpoint is maintained for backward compatibility and tests.
+ * The FHIR standard endpoint (/api/fhir/DocumentReference) should be used for all new integrations.
+ */
 export class DocumentsController {
   constructor(private readonly documentsService: DocumentsService) {}
 

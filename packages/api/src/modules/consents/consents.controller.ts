@@ -29,6 +29,10 @@ import { ROLES } from '../../common/constants/roles';
 @Controller('consents')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT-auth')
+/**
+ * @deprecated Use /api/fhir/Consent instead. This endpoint is maintained for backward compatibility and tests.
+ * The FHIR standard endpoint (/api/fhir/Consent) should be used for all new integrations.
+ */
 export class ConsentsController {
   constructor(private readonly consentsService: ConsentsService) {}
 

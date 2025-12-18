@@ -9,20 +9,26 @@ import { ClinicalRecordCard } from '../../components/cards/ClinicalRecordCard';
 import { ErrorMessage } from '../../components/ui/ErrorMessage';
 import { SkeletonList } from '../../components/ui/SkeletonLoader';
 import { EmptyState } from '../../components/ui/EmptyState';
-import { DocumentReference, Encounter, FhirResourceType, ErrorType } from '@carecore/shared';
+import {
+  DocumentReference,
+  FhirResourceType,
+  ErrorType,
+  EncounterListItemDto,
+} from '@carecore/shared';
 import { useFHIRData } from '../../hooks/useFHIRData';
+import { useEncounters } from '../../hooks/useEncounters';
 import { router } from 'expo-router';
 
 export default function DashboardScreen() {
-  // Obtener últimos 5 Encounters
+  // Obtener últimos 5 Encounters (usando endpoint optimizado)
   const {
     data: encounters,
     isLoading: isLoadingEncounters,
     error: errorEncounters,
     refetch: refetchEncounters,
-  } = useFHIRData<Encounter>('Encounter', {
-    _count: '5',
-    _sort: '-date',
+  } = useEncounters({
+    enablePagination: false,
+    pageSize: 5,
   });
 
   // Obtener últimos 5 DocumentReferences
@@ -55,23 +61,32 @@ export default function DashboardScreen() {
 
   // Combinar y ordenar registros recientes
   const recentRecords = useMemo(() => {
-    const allRecords: Array<Encounter | DocumentReference> = [];
+    const allRecords: Array<
+      | { type: 'encounter'; data: EncounterListItemDto }
+      | { type: 'document'; data: DocumentReference }
+    > = [];
 
-    // Agregar Encounters
+    // Agregar Encounters (convertir a formato compatible)
     if (encounters) {
-      allRecords.push(...encounters);
+      encounters.forEach((encounter) => {
+        allRecords.push({ type: 'encounter', data: encounter });
+      });
     }
 
     // Agregar DocumentReferences
     if (documents) {
-      allRecords.push(...documents);
+      documents.forEach((doc) => {
+        allRecords.push({ type: 'document', data: doc });
+      });
     }
 
     // Ordenar por fecha (más reciente primero)
     return allRecords
       .sort((a, b) => {
-        const dateA = a.resourceType === 'Encounter' ? a.period?.start : a.date;
-        const dateB = b.resourceType === 'Encounter' ? b.period?.start : b.date;
+        const dateA =
+          a.type === 'encounter' ? new Date(a.data.createdAt).toISOString() : a.data.date || '';
+        const dateB =
+          b.type === 'encounter' ? new Date(b.data.createdAt).toISOString() : b.data.date || '';
         if (!dateA || !dateB) return 0;
         return new Date(dateB).getTime() - new Date(dateA).getTime();
       })
@@ -110,32 +125,39 @@ export default function DashboardScreen() {
           {recentRecords && recentRecords.length > 0 ? (
             <View style={styles.recordsList}>
               {recentRecords.map((record, index) => {
-                const title =
-                  record.resourceType === 'Encounter'
-                    ? record.type?.[0]?.coding?.[0]?.display ||
-                      record.subject?.display ||
-                      'Encounter'
-                    : record.type?.coding?.[0]?.display || record.description || 'Document';
-                const subtitle = record.subject?.display || 'Subject not available';
-                const date =
-                  record.resourceType === 'Encounter'
-                    ? record.period?.start || 'Date not available'
-                    : record.date || 'Date not available';
-
-                return (
-                  <ClinicalRecordCard
-                    key={record.id || index}
-                    resourceType={record.resourceType as FhirResourceType}
-                    title={title}
-                    subtitle={subtitle}
-                    date={date}
-                    onPress={() => {
-                      if (record.id) {
-                        router.push(`/record/${record.id}`);
-                      }
-                    }}
-                  />
-                );
+                if (record.type === 'encounter') {
+                  const encounter = record.data;
+                  return (
+                    <ClinicalRecordCard
+                      key={encounter.id || index}
+                      resourceType={'Encounter' as FhirResourceType}
+                      title={`Encounter - ${encounter.status}`}
+                      subtitle={encounter.subjectReference || 'Subject not available'}
+                      date={new Date(encounter.createdAt).toISOString()}
+                      onPress={() => {
+                        if (encounter.encounterId) {
+                          router.push(`/record/${encounter.encounterId}`);
+                        }
+                      }}
+                    />
+                  );
+                } else {
+                  const doc = record.data;
+                  return (
+                    <ClinicalRecordCard
+                      key={doc.id || index}
+                      resourceType={doc.resourceType as FhirResourceType}
+                      title={doc.type?.coding?.[0]?.display || doc.description || 'Document'}
+                      subtitle={doc.subject?.display || 'Subject not available'}
+                      date={doc.date || 'Date not available'}
+                      onPress={() => {
+                        if (doc.id) {
+                          router.push(`/record/${doc.id}`);
+                        }
+                      }}
+                    />
+                  );
+                }
               })}
             </View>
           ) : (

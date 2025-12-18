@@ -28,6 +28,8 @@ import * as jwt from 'jsonwebtoken';
 
 import { FhirService } from './fhir.service';
 import { SmartFhirService } from './services/smart-fhir.service';
+import { ConsentsService } from '../consents/consents.service';
+import { DocumentsService } from '../documents/documents.service';
 import { Public } from '../auth/decorators/public.decorator';
 import { PinoLogger } from 'nestjs-pino';
 import { AuditService } from '../audit/audit.service';
@@ -39,7 +41,16 @@ import { MFARequiredGuard } from '../auth/guards/mfa-required.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Scopes } from '../auth/decorators/scopes.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { User, Patient, Practitioner, Encounter, FHIR_SCOPES } from '@carecore/shared';
+import { InsufficientScopesException } from '../auth/exceptions/insufficient-scopes.exception';
+import {
+  User,
+  Patient,
+  Practitioner,
+  Encounter,
+  Consent,
+  DocumentReference,
+  FHIR_SCOPES,
+} from '@carecore/shared';
 import { ROLES } from '../../common/constants/roles';
 import { CreatePatientDto, UpdatePatientDto } from '../../common/dto/fhir-patient.dto';
 import {
@@ -47,6 +58,15 @@ import {
   UpdatePractitionerDto,
 } from '../../common/dto/fhir-practitioner.dto';
 import { CreateEncounterDto, UpdateEncounterDto } from '../../common/dto/fhir-encounter.dto';
+import {
+  CreateConsentDto,
+  UpdateConsentDto,
+  ShareConsentWithPractitionerDto,
+} from '../../common/dto/fhir-consent.dto';
+import {
+  CreateDocumentReferenceDto,
+  UpdateDocumentReferenceDto,
+} from '../../common/dto/fhir-document-reference.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { SmartFhirAuthDto } from '../../common/dto/smart-fhir-auth.dto';
 import { SmartFhirTokenDto } from '../../common/dto/smart-fhir-token.dto';
@@ -60,6 +80,8 @@ export class FhirController {
   constructor(
     private readonly fhirService: FhirService,
     private readonly smartFhirService: SmartFhirService,
+    private readonly consentsService: ConsentsService,
+    private readonly documentsService: DocumentsService,
     private readonly logger: PinoLogger,
     private readonly auditService: AuditService,
     private readonly keycloakAdminService: KeycloakAdminService,
@@ -867,8 +889,6 @@ export class FhirController {
   }
 
   @Get('Encounter/:id')
-  @UseGuards(ScopesGuard)
-  @Scopes(FHIR_SCOPES.ENCOUNTER_READ)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get an Encounter by ID' })
   @ApiParam({ name: 'id', description: 'Encounter ID' })
@@ -876,16 +896,25 @@ export class FhirController {
   @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden - Insufficient scopes (encounter:read required)',
+    description: 'Forbidden - Insufficient scopes (encounter:read or patient:read required)',
   })
   @ApiResponse({ status: 404, description: 'Encounter not found' })
   getEncounter(@Param('id') id: string, @CurrentUser() user: User): Promise<Encounter> {
+    // Validate that user has at least one of the allowed scopes
+    // Patients can access their own encounters with patient:read (semantically correct)
+    // Practitioners and admins can access with encounter:read
+    const allowedScopes = [FHIR_SCOPES.ENCOUNTER_READ, FHIR_SCOPES.PATIENT_READ];
+    const userScopes = user?.scopes || [];
+    const hasAllowedScope = allowedScopes.some((scope) => userScopes.includes(scope));
+
+    if (!hasAllowedScope) {
+      throw new InsufficientScopesException(allowedScopes, userScopes);
+    }
+
     return this.fhirService.getEncounter(id, user);
   }
 
   @Get('Encounter')
-  @UseGuards(ScopesGuard)
-  @Scopes(FHIR_SCOPES.ENCOUNTER_READ)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Search Encounters' })
   @ApiQuery({
@@ -903,25 +932,54 @@ export class FhirController {
     required: false,
     description: 'Filter by date (YYYY-MM-DD)',
   })
+  @ApiQuery({
+    name: '_count',
+    required: false,
+    description: 'Number of results per page (FHIR standard parameter)',
+  })
+  @ApiQuery({
+    name: '_sort',
+    required: false,
+    description: 'Sort order (FHIR standard parameter, e.g., -date for descending by date)',
+  })
   @ApiResponse({ status: 200, description: 'List of Encounters' })
   @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden - Insufficient scopes (encounter:read required)',
+    description: 'Forbidden - Insufficient scopes (encounter:read or patient:read required)',
   })
   searchEncounters(
     @Query() pagination: PaginationDto,
     @Query('subject') subject?: string,
     @Query('status') status?: string,
     @Query('date') date?: string,
+    @Query('_count') _count?: string,
+    @Query('_sort') _sort?: string,
     @CurrentUser() user?: User,
   ): Promise<{ total: number; entries: Encounter[] }> {
+    // Validate that user has at least one of the allowed scopes
+    // Patients can access their own encounters with patient:read (semantically correct)
+    // Practitioners and admins can access with encounter:read
+    const allowedScopes = [FHIR_SCOPES.ENCOUNTER_READ, FHIR_SCOPES.PATIENT_READ];
+    const userScopes = user?.scopes || [];
+    const hasAllowedScope = allowedScopes.some((scope) => userScopes.includes(scope));
+
+    if (!hasAllowedScope) {
+      throw new InsufficientScopesException(allowedScopes, userScopes);
+    }
+
+    // Convert FHIR standard parameters to internal format
+    const limit = _count ? parseInt(_count, 10) : pagination.limit;
+    const page = pagination.page || 1;
+
     return this.fhirService.searchEncounters(
       {
-        ...pagination,
+        page,
+        limit,
         subject,
         status,
         date,
+        sort: _sort, // Pass sort parameter to service
       },
       user,
     );
@@ -960,5 +1018,253 @@ export class FhirController {
   @ApiResponse({ status: 404, description: 'Encounter not found' })
   deleteEncounter(@Param('id') id: string): Promise<void> {
     return this.fhirService.deleteEncounter(id);
+  }
+
+  // Consent endpoints
+  @Get('Consent')
+  @UseGuards(ScopesGuard)
+  @Scopes(FHIR_SCOPES.CONSENT_READ)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Search Consents' })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    description: 'Filter by status (active, inactive, etc.)',
+  })
+  @ApiQuery({
+    name: '_count',
+    required: false,
+    description: 'Number of results per page (FHIR standard parameter)',
+  })
+  @ApiQuery({
+    name: '_sort',
+    required: false,
+    description: 'Sort order (FHIR standard parameter)',
+  })
+  @ApiResponse({ status: 200, description: 'List of Consents' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient scopes (consent:read required)',
+  })
+  searchConsents(
+    @Query('status') _status?: string,
+    @Query('_count') _count?: string,
+    @Query('_sort') _sort?: string,
+    @CurrentUser() user?: User,
+  ): Promise<{ total: number; entries: Consent[] }> {
+    // TODO: Add status filtering to consentsService.findAll
+    return this.consentsService.findAll(user);
+  }
+
+  @Get('Consent/:id')
+  @UseGuards(ScopesGuard)
+  @Scopes(FHIR_SCOPES.CONSENT_READ)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get a Consent by ID' })
+  @ApiParam({ name: 'id', description: 'Consent ID' })
+  @ApiResponse({ status: 200, description: 'Consent found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient scopes (consent:read required)',
+  })
+  @ApiResponse({ status: 404, description: 'Consent not found' })
+  getConsent(@Param('id') id: string, @CurrentUser() user?: User): Promise<Consent> {
+    return this.consentsService.findOne(id, user);
+  }
+
+  @Post('Consent')
+  @HttpCode(HttpStatus.CREATED)
+  @UseGuards(ScopesGuard)
+  @Scopes(FHIR_SCOPES.CONSENT_WRITE)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Create a new Consent' })
+  @ApiResponse({ status: 201, description: 'Consent created successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient scopes (consent:write required)',
+  })
+  createConsent(
+    @Body() createConsentDto: CreateConsentDto,
+    @CurrentUser() user?: User,
+  ): Promise<Consent> {
+    return this.consentsService.create(createConsentDto, user);
+  }
+
+  @Put('Consent/:id')
+  @UseGuards(ScopesGuard)
+  @Scopes(FHIR_SCOPES.CONSENT_WRITE)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Update a Consent' })
+  @ApiParam({ name: 'id', description: 'Consent ID' })
+  @ApiResponse({ status: 200, description: 'Consent updated successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient scopes (consent:write required)',
+  })
+  @ApiResponse({ status: 404, description: 'Consent not found' })
+  updateConsent(
+    @Param('id') id: string,
+    @Body() updateConsentDto: UpdateConsentDto,
+    @CurrentUser() user?: User,
+  ): Promise<Consent> {
+    return this.consentsService.update(id, updateConsentDto, user);
+  }
+
+  @Delete('Consent/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(ScopesGuard)
+  @Scopes(FHIR_SCOPES.CONSENT_WRITE)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Delete a Consent' })
+  @ApiParam({ name: 'id', description: 'Consent ID' })
+  @ApiResponse({ status: 204, description: 'Consent deleted successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient scopes (consent:write required)',
+  })
+  @ApiResponse({ status: 404, description: 'Consent not found' })
+  deleteConsent(@Param('id') id: string, @CurrentUser() user?: User): Promise<void> {
+    return this.consentsService.remove(id, user);
+  }
+
+  @Post('Consent/:id/share')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(ScopesGuard)
+  @Scopes(FHIR_SCOPES.CONSENT_WRITE)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Share consent with a practitioner',
+    description:
+      'Shares a consent with a practitioner for a specific number of days. Creates a provision that expires after the specified number of days.',
+  })
+  @ApiParam({ name: 'id', description: 'Consent ID' })
+  @ApiResponse({ status: 200, description: 'Consent shared successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient scopes (consent:write required)',
+  })
+  @ApiResponse({ status: 404, description: 'Consent not found' })
+  shareConsent(
+    @Param('id') id: string,
+    @Body() shareDto: ShareConsentWithPractitionerDto,
+    @CurrentUser() user?: User,
+  ): Promise<Consent> {
+    return this.consentsService.shareWithPractitioner(id, shareDto, user);
+  }
+
+  // DocumentReference endpoints
+  @Get('DocumentReference')
+  @UseGuards(ScopesGuard)
+  @Scopes(FHIR_SCOPES.DOCUMENT_READ)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Search DocumentReferences' })
+  @ApiQuery({
+    name: '_count',
+    required: false,
+    description: 'Number of results per page (FHIR standard parameter)',
+  })
+  @ApiQuery({
+    name: '_sort',
+    required: false,
+    description: 'Sort order (FHIR standard parameter, e.g., -date for descending by date)',
+  })
+  @ApiResponse({ status: 200, description: 'List of DocumentReferences' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient scopes (document:read required)',
+  })
+  searchDocumentReferences(
+    @Query('_count') _count?: string,
+    @Query('_sort') _sort?: string,
+  ): Promise<{
+    resourceType: string;
+    type: string;
+    total: number;
+    entry: { fullUrl: string; resource: DocumentReference }[];
+  }> {
+    return this.documentsService.findAll();
+  }
+
+  @Get('DocumentReference/:id')
+  @UseGuards(ScopesGuard)
+  @Scopes(FHIR_SCOPES.DOCUMENT_READ)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get a DocumentReference by ID' })
+  @ApiParam({ name: 'id', description: 'DocumentReference ID' })
+  @ApiResponse({ status: 200, description: 'DocumentReference found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient scopes (document:read required)',
+  })
+  @ApiResponse({ status: 404, description: 'DocumentReference not found' })
+  getDocumentReference(@Param('id') id: string): Promise<DocumentReference> {
+    return this.documentsService.findOne(id);
+  }
+
+  @Post('DocumentReference')
+  @HttpCode(HttpStatus.CREATED)
+  @UseGuards(ScopesGuard)
+  @Scopes(FHIR_SCOPES.DOCUMENT_WRITE)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Create a new DocumentReference' })
+  @ApiResponse({ status: 201, description: 'DocumentReference created successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient scopes (document:write required)',
+  })
+  createDocumentReference(
+    @Body() createDocumentDto: CreateDocumentReferenceDto,
+  ): Promise<DocumentReference> {
+    return this.documentsService.create(createDocumentDto);
+  }
+
+  @Put('DocumentReference/:id')
+  @UseGuards(ScopesGuard)
+  @Scopes(FHIR_SCOPES.DOCUMENT_WRITE)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Update a DocumentReference' })
+  @ApiParam({ name: 'id', description: 'DocumentReference ID' })
+  @ApiResponse({ status: 200, description: 'DocumentReference updated successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient scopes (document:write required)',
+  })
+  @ApiResponse({ status: 404, description: 'DocumentReference not found' })
+  updateDocumentReference(
+    @Param('id') id: string,
+    @Body() updateDocumentDto: UpdateDocumentReferenceDto,
+  ): Promise<DocumentReference> {
+    return this.documentsService.update(id, updateDocumentDto);
+  }
+
+  @Delete('DocumentReference/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(ScopesGuard)
+  @Scopes(FHIR_SCOPES.DOCUMENT_WRITE)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Delete a DocumentReference' })
+  @ApiParam({ name: 'id', description: 'DocumentReference ID' })
+  @ApiResponse({ status: 204, description: 'DocumentReference deleted successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient scopes (document:write required)',
+  })
+  @ApiResponse({ status: 404, description: 'DocumentReference not found' })
+  deleteDocumentReference(@Param('id') id: string): Promise<void> {
+    return this.documentsService.remove(id);
   }
 }
