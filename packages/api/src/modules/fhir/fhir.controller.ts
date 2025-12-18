@@ -1048,13 +1048,19 @@ export class FhirController {
     description: 'Forbidden - Insufficient scopes (consent:read required)',
   })
   searchConsents(
-    @Query('status') _status?: string,
+    @Query('status') status?: string,
     @Query('_count') _count?: string,
     @Query('_sort') _sort?: string,
     @CurrentUser() user?: User,
   ): Promise<{ total: number; entries: Consent[] }> {
-    // TODO: Add status filtering to consentsService.findAll
-    return this.consentsService.findAll(user);
+    return this.consentsService.searchConsents(
+      {
+        _count,
+        _sort,
+        status,
+      },
+      user,
+    );
   }
 
   @Get('Consent/:id')
@@ -1185,13 +1191,24 @@ export class FhirController {
   searchDocumentReferences(
     @Query('_count') _count?: string,
     @Query('_sort') _sort?: string,
+    @Query('subject') subject?: string,
+    @Query('status') status?: string,
+    @CurrentUser() user?: User,
   ): Promise<{
     resourceType: string;
     type: string;
     total: number;
     entry: { fullUrl: string; resource: DocumentReference }[];
   }> {
-    return this.documentsService.findAll();
+    return this.documentsService.searchDocuments(
+      {
+        _count,
+        _sort,
+        subject,
+        status,
+      },
+      user,
+    );
   }
 
   @Get('DocumentReference/:id')
@@ -1207,8 +1224,11 @@ export class FhirController {
     description: 'Forbidden - Insufficient scopes (document:read required)',
   })
   @ApiResponse({ status: 404, description: 'DocumentReference not found' })
-  getDocumentReference(@Param('id') id: string): Promise<DocumentReference> {
-    return this.documentsService.findOne(id);
+  getDocumentReference(
+    @Param('id') id: string,
+    @CurrentUser() user?: User,
+  ): Promise<DocumentReference> {
+    return this.documentsService.findOne(id, user);
   }
 
   @Post('DocumentReference')
@@ -1226,8 +1246,9 @@ export class FhirController {
   })
   createDocumentReference(
     @Body() createDocumentDto: CreateDocumentReferenceDto,
+    @CurrentUser() user?: User,
   ): Promise<DocumentReference> {
-    return this.documentsService.create(createDocumentDto);
+    return this.documentsService.create(createDocumentDto, user);
   }
 
   @Put('DocumentReference/:id')
@@ -1246,8 +1267,9 @@ export class FhirController {
   updateDocumentReference(
     @Param('id') id: string,
     @Body() updateDocumentDto: UpdateDocumentReferenceDto,
+    @CurrentUser() user?: User,
   ): Promise<DocumentReference> {
-    return this.documentsService.update(id, updateDocumentDto);
+    return this.documentsService.update(id, updateDocumentDto, user);
   }
 
   @Delete('DocumentReference/:id')
@@ -1264,7 +1286,7 @@ export class FhirController {
     description: 'Forbidden - Insufficient scopes (document:write required)',
   })
   @ApiResponse({ status: 404, description: 'DocumentReference not found' })
-  deleteDocumentReference(@Param('id') id: string): Promise<void> {
-    return this.documentsService.remove(id);
+  deleteDocumentReference(@Param('id') id: string, @CurrentUser() user?: User): Promise<void> {
+    return this.documentsService.remove(id, user);
   }
 }

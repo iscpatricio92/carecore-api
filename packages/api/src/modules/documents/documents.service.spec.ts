@@ -1,61 +1,70 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { IsNull } from 'typeorm';
-import * as fs from 'node:fs';
-import * as path from 'path';
+import { PinoLogger } from 'nestjs-pino';
 
 import { DocumentsService } from './documents.service';
+import { DocumentsCoreService } from './documents-core.service';
 import { DocumentReferenceEntity } from '../../entities/document-reference.entity';
 import {
   CreateDocumentReferenceDto,
   UpdateDocumentReferenceDto,
 } from '../../common/dto/fhir-document-reference.dto';
-import { FHIR_RESOURCE_TYPES } from '@carecore/shared';
+import { DocumentReference, FHIR_RESOURCE_TYPES } from '@carecore/shared';
 
-// Mock fs module
-jest.mock('node:fs', () => ({
-  promises: {
-    mkdir: jest.fn(),
-    writeFile: jest.fn(),
-  },
-}));
+const mockLogger: Record<string, jest.Mock> = {
+  setContext: jest.fn(),
+  debug: jest.fn(),
+  info: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn(),
+};
 
 describe('DocumentsService', () => {
   let service: DocumentsService;
-  let repo: {
-    create: jest.Mock;
-    save: jest.Mock;
-    find: jest.Mock;
-    findOne: jest.Mock;
-    update: jest.Mock;
-  };
+  let mockDocumentsCoreService: jest.Mocked<DocumentsCoreService>;
 
-  const mockMkdir = fs.promises.mkdir as jest.Mock;
-  const mockWriteFile = fs.promises.writeFile as jest.Mock;
+  const documentEntityFactory = (
+    overrides: Partial<DocumentReferenceEntity> = {},
+  ): DocumentReferenceEntity =>
+    ({
+      id: 'db-uuid',
+      documentReferenceId: 'doc-1',
+      resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
+      status: 'current',
+      subjectReference: 'Patient/123',
+      fhirResource: {
+        resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
+        id: 'doc-1',
+        status: 'current',
+        content: [],
+        subject: { reference: 'Patient/123' },
+        meta: { versionId: '1', lastUpdated: new Date().toISOString() },
+      } as DocumentReference,
+      deletedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      ...overrides,
+    }) as DocumentReferenceEntity;
 
   beforeEach(async () => {
-    repo = {
-      create: jest.fn((data) => data),
-      save: jest.fn(async (data) => ({ ...data, id: 'db-uuid', createdAt: new Date() })),
-      find: jest.fn(async () => []),
-      findOne: jest.fn(async () => null),
-      update: jest.fn(async () => ({ affected: 1 })),
-    };
-
-    mockMkdir.mockResolvedValue(undefined);
-    mockWriteFile.mockResolvedValue(undefined);
-
-    // Set test storage path
-    process.env.DOCUMENTS_STORAGE_PATH = path.join(__dirname, '../../../../test-storage');
+    mockDocumentsCoreService = {
+      create: jest.fn(),
+      findAll: jest.fn(),
+      findDocumentsByQuery: jest.fn(),
+      findDocumentById: jest.fn(),
+      findDocumentByDocumentReferenceId: jest.fn(),
+      update: jest.fn(),
+      remove: jest.fn(),
+    } as unknown as jest.Mocked<DocumentsCoreService>;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DocumentsService,
         {
-          provide: getRepositoryToken(DocumentReferenceEntity),
-          useValue: repo,
+          provide: DocumentsCoreService,
+          useValue: mockDocumentsCoreService,
         },
+        { provide: PinoLogger, useValue: mockLogger },
       ],
     }).compile();
 
@@ -64,7 +73,6 @@ describe('DocumentsService', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
-    delete process.env.DOCUMENTS_STORAGE_PATH;
   });
 
   it('should be defined', () => {
@@ -87,32 +95,25 @@ describe('DocumentsService', () => {
         type: { coding: [{ system: 'http://loinc.org', code: '34133-9' }] },
       };
 
-      const savedEntity = {
-        id: 'db-uuid',
-        resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
+      const entity = documentEntityFactory({
         fhirResource: {
           ...documentData,
           id: 'generated-id',
           resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
-          meta: { versionId: '1', lastUpdated: expect.any(String) },
-        },
-        status: 'current',
+          meta: { versionId: '1', lastUpdated: new Date().toISOString() },
+        } as DocumentReference,
         documentReferenceId: 'generated-id',
-        subjectReference: 'Patient/123',
-        createdAt: new Date(),
-      };
+      });
 
-      repo.save.mockResolvedValue(savedEntity);
+      mockDocumentsCoreService.create.mockResolvedValue(entity);
 
       const result = await service.create(documentData);
 
-      expect(repo.create).toHaveBeenCalled();
-      expect(repo.save).toHaveBeenCalled();
       expect(result.resourceType).toBe(FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE);
       expect(result.id).toBeDefined();
       expect(result.status).toBe('current');
       expect(result.meta?.versionId).toBe('1');
-      expect(result.meta?.lastUpdated).toBeDefined();
+      expect(mockDocumentsCoreService.create).toHaveBeenCalledWith(documentData, undefined);
     });
 
     it('should store base64 attachment to disk', async () => {
@@ -131,42 +132,36 @@ describe('DocumentsService', () => {
         type: { coding: [{ system: 'http://loinc.org', code: '34133-9' }] },
       };
 
-      const savedEntity = {
-        id: 'db-uuid',
-        resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
+      const entity = documentEntityFactory({
         fhirResource: {
           ...documentData,
           id: 'generated-id',
           resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
-          meta: { versionId: '1', lastUpdated: expect.any(String) },
+          meta: { versionId: '1', lastUpdated: new Date().toISOString() },
           content: [
             {
               attachment: {
                 contentType: 'application/pdf',
-                url: expect.stringContaining('file://'),
-                size: expect.any(Number),
-                hash: expect.stringContaining('sha256:'),
+                url: 'file:///path/to/file.pdf',
+                size: 12,
+                hash: 'sha256:abc123',
                 data: undefined,
               },
             },
           ],
-        },
-        status: 'current',
+        } as DocumentReference,
         documentReferenceId: 'generated-id',
-        subjectReference: 'Patient/123',
-        createdAt: new Date(),
-      };
+      });
 
-      repo.save.mockResolvedValue(savedEntity);
+      mockDocumentsCoreService.create.mockResolvedValue(entity);
 
       const result = await service.create(documentData);
 
-      expect(mockMkdir).toHaveBeenCalled();
-      expect(mockWriteFile).toHaveBeenCalled();
       expect(result.content?.[0].attachment?.data).toBeUndefined();
       expect(result.content?.[0].attachment?.url).toBeDefined();
       expect(result.content?.[0].attachment?.size).toBeDefined();
       expect(result.content?.[0].attachment?.hash).toBeDefined();
+      expect(mockDocumentsCoreService.create).toHaveBeenCalledWith(documentData, undefined);
     });
 
     it('should handle document with empty content array', async () => {
@@ -177,22 +172,17 @@ describe('DocumentsService', () => {
         type: { coding: [{ system: 'http://loinc.org', code: '34133-9' }] },
       };
 
-      const savedEntity = {
-        id: 'db-uuid',
-        resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
+      const entity = documentEntityFactory({
         fhirResource: {
           ...documentData,
           id: 'generated-id',
           resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
-          meta: { versionId: '1', lastUpdated: expect.any(String) },
-        },
-        status: 'current',
+          meta: { versionId: '1', lastUpdated: new Date().toISOString() },
+        } as DocumentReference,
         documentReferenceId: 'generated-id',
-        subjectReference: 'Patient/123',
-        createdAt: new Date(),
-      };
+      });
 
-      repo.save.mockResolvedValue(savedEntity);
+      mockDocumentsCoreService.create.mockResolvedValue(entity);
 
       const result = await service.create(documentData);
 
@@ -203,7 +193,7 @@ describe('DocumentsService', () => {
 
   describe('findAll', () => {
     it('should return an empty bundle', async () => {
-      repo.find.mockResolvedValueOnce([]);
+      mockDocumentsCoreService.findAll.mockResolvedValue({ entities: [], total: 0 });
 
       const result = await service.findAll();
 
@@ -211,20 +201,12 @@ describe('DocumentsService', () => {
       expect(result.type).toBe('searchset');
       expect(result.total).toBe(0);
       expect(result.entry).toEqual([]);
+      expect(mockDocumentsCoreService.findAll).toHaveBeenCalledWith(undefined);
     });
 
     it('should return bundle with documents', async () => {
-      repo.find.mockResolvedValueOnce([
-        {
-          fhirResource: {
-            resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
-            id: 'doc-1',
-            status: 'current',
-            content: [],
-          },
-          documentReferenceId: 'doc-1',
-        },
-      ]);
+      const entity = documentEntityFactory();
+      mockDocumentsCoreService.findAll.mockResolvedValue({ entities: [entity], total: 1 });
 
       const result = await service.findAll();
 
@@ -236,88 +218,58 @@ describe('DocumentsService', () => {
 
   describe('findOne', () => {
     it('should return a document by id', async () => {
-      repo.findOne.mockResolvedValueOnce({
-        fhirResource: {
-          resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
-          id: 'doc-1',
-          status: 'current',
-          content: [],
-        },
-        documentReferenceId: 'doc-1',
-      });
+      const entity = documentEntityFactory();
+      mockDocumentsCoreService.findDocumentByDocumentReferenceId.mockResolvedValue(entity);
 
       const result = await service.findOne('doc-1');
 
-      expect(repo.findOne).toHaveBeenCalledWith({
-        where: { documentReferenceId: 'doc-1', deletedAt: IsNull() },
-      });
       expect(result.id).toBe('doc-1');
       expect(result.status).toBe('current');
+      expect(mockDocumentsCoreService.findDocumentByDocumentReferenceId).toHaveBeenCalledWith(
+        'doc-1',
+        undefined,
+      );
     });
 
     it('should throw NotFoundException when not found', async () => {
-      repo.findOne.mockResolvedValueOnce(null);
+      mockDocumentsCoreService.findDocumentByDocumentReferenceId.mockRejectedValue(
+        new NotFoundException('DocumentReference with documentReferenceId missing not found'),
+      );
 
       await expect(service.findOne('missing')).rejects.toThrow(NotFoundException);
-      await expect(service.findOne('missing')).rejects.toThrow(
-        'DocumentReference with ID missing not found',
-      );
     });
   });
 
   describe('update', () => {
     it('should update an existing document', async () => {
-      const existingEntity = {
-        id: 'db-uuid',
-        resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
+      const existingEntity = documentEntityFactory();
+      const updatedEntity = documentEntityFactory({
+        status: 'superseded',
         fhirResource: {
-          resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
-          id: 'doc-1',
-          status: 'current',
-          meta: { versionId: '1', lastUpdated: '2024-01-01T00:00:00Z' },
-          content: [],
-        },
-        documentReferenceId: 'doc-1',
-        status: 'current',
-        subjectReference: 'Patient/123',
-      };
+          ...existingEntity.fhirResource,
+          status: 'superseded',
+          meta: { versionId: '2', lastUpdated: new Date().toISOString() },
+        } as DocumentReference,
+      });
+
+      mockDocumentsCoreService.findDocumentByDocumentReferenceId.mockResolvedValue(existingEntity);
+      mockDocumentsCoreService.update.mockResolvedValue(updatedEntity);
 
       const updateDto: UpdateDocumentReferenceDto = {
         status: 'superseded',
       };
 
-      repo.findOne.mockResolvedValueOnce(existingEntity).mockResolvedValueOnce({
-        ...existingEntity,
-        fhirResource: {
-          ...existingEntity.fhirResource,
-          status: 'superseded',
-          meta: { versionId: '2', lastUpdated: expect.any(String) },
-        },
-        status: 'superseded',
-      });
-
-      repo.save.mockResolvedValue({
-        ...existingEntity,
-        fhirResource: {
-          ...existingEntity.fhirResource,
-          status: 'superseded',
-          meta: { versionId: '2', lastUpdated: expect.any(String) },
-        },
-        status: 'superseded',
-      });
-
       const result = await service.update('doc-1', updateDto);
 
-      expect(repo.findOne).toHaveBeenCalledWith({
-        where: { documentReferenceId: 'doc-1', deletedAt: IsNull() },
-      });
-      expect(repo.save).toHaveBeenCalled();
       expect(result.status).toBe('superseded');
       expect(result.meta?.versionId).toBe('2');
+      expect(mockDocumentsCoreService.update).toHaveBeenCalledWith('doc-1', updateDto, undefined);
     });
 
     it('should throw NotFoundException when document does not exist', async () => {
-      repo.findOne.mockResolvedValueOnce(null);
+      mockDocumentsCoreService.update.mockRejectedValue(
+        new NotFoundException('DocumentReference not found'),
+      );
 
       const updateDto: UpdateDocumentReferenceDto = {
         status: 'superseded',
@@ -327,28 +279,21 @@ describe('DocumentsService', () => {
     });
 
     it('should increment versionId on update', async () => {
-      const existingEntity = {
-        id: 'db-uuid',
-        resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
+      const existingEntity = documentEntityFactory({
         fhirResource: {
-          resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
-          id: 'doc-1',
-          status: 'current',
+          ...documentEntityFactory().fhirResource,
           meta: { versionId: '5', lastUpdated: '2024-01-01T00:00:00Z' },
-          content: [],
-        },
-        documentReferenceId: 'doc-1',
-        status: 'current',
-      };
-
-      repo.findOne.mockResolvedValueOnce(existingEntity);
-      repo.save.mockResolvedValue({
-        ...existingEntity,
+        } as DocumentReference,
+      });
+      const updatedEntity = documentEntityFactory({
         fhirResource: {
           ...existingEntity.fhirResource,
-          meta: { versionId: '6', lastUpdated: expect.any(String) },
-        },
+          meta: { versionId: '6', lastUpdated: new Date().toISOString() },
+        } as DocumentReference,
       });
+
+      mockDocumentsCoreService.findDocumentByDocumentReferenceId.mockResolvedValue(existingEntity);
+      mockDocumentsCoreService.update.mockResolvedValue(updatedEntity);
 
       const result = await service.update('doc-1', { status: 'superseded' });
 
@@ -358,40 +303,51 @@ describe('DocumentsService', () => {
 
   describe('remove', () => {
     it('should soft delete a document', async () => {
-      const existingEntity = {
-        id: 'db-uuid',
-        resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
-        fhirResource: {
-          resourceType: FHIR_RESOURCE_TYPES.DOCUMENT_REFERENCE,
-          id: 'doc-1',
-          status: 'current',
-          content: [],
-        },
-        documentReferenceId: 'doc-1',
-        status: 'current',
-        deletedAt: null,
-      };
-
-      repo.findOne.mockResolvedValueOnce(existingEntity);
-      repo.update.mockResolvedValueOnce({ affected: 1 });
+      mockDocumentsCoreService.remove.mockResolvedValue(undefined);
 
       await service.remove('doc-1');
 
-      expect(repo.findOne).toHaveBeenCalledWith({
-        where: { documentReferenceId: 'doc-1', deletedAt: IsNull() },
-      });
-      expect(repo.update).toHaveBeenCalledWith(
-        { documentReferenceId: 'doc-1' },
-        { deletedAt: expect.any(Date) },
-      );
+      expect(mockDocumentsCoreService.remove).toHaveBeenCalledWith('doc-1', undefined);
     });
 
     it('should throw NotFoundException when document does not exist', async () => {
-      repo.findOne.mockResolvedValueOnce(null);
+      mockDocumentsCoreService.remove.mockRejectedValue(
+        new NotFoundException('DocumentReference with documentReferenceId missing not found'),
+      );
 
       await expect(service.remove('missing')).rejects.toThrow(NotFoundException);
-      await expect(service.remove('missing')).rejects.toThrow(
-        'DocumentReference with ID missing not found',
+    });
+  });
+
+  describe('searchDocuments', () => {
+    it('should search documents with parameters', async () => {
+      const entity = documentEntityFactory();
+      mockDocumentsCoreService.findDocumentsByQuery.mockResolvedValue({
+        entities: [entity],
+        total: 1,
+      });
+
+      const result = await service.searchDocuments(
+        {
+          _count: '10',
+          _sort: '-date',
+          subject: 'Patient/123',
+          status: 'current',
+        },
+        undefined,
+      );
+
+      expect(result.total).toBe(1);
+      expect(result.entry).toHaveLength(1);
+      expect(mockDocumentsCoreService.findDocumentsByQuery).toHaveBeenCalledWith(
+        {
+          page: 1,
+          limit: 10,
+          subject: 'Patient/123',
+          status: 'current',
+          sort: '-date',
+        },
+        undefined,
       );
     });
   });

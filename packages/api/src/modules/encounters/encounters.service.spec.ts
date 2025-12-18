@@ -1,59 +1,35 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
-import { Repository } from 'typeorm';
 
 import { EncountersService } from './encounters.service';
+import { EncountersCoreService } from './encounters-core.service';
 import { EncounterEntity } from '../../entities/encounter.entity';
 import { User } from '@carecore/shared';
 import { ROLES } from '../../common/constants/roles';
-import { PatientContextService } from '../../common/services/patient-context.service';
 
 describe('EncountersService', () => {
   let service: EncountersService;
-  let repository: jest.Mocked<Repository<EncounterEntity>>;
+  let coreService: jest.Mocked<EncountersCoreService>;
 
-  const mockPatientContextService = {
-    getPatientFilterCriteria: jest.fn(),
-    getPatientReference: jest.fn(),
-    shouldBypassFiltering: jest.fn(),
-    getKeycloakUserId: jest.fn(),
-    getPatientId: jest.fn(),
+  const mockCoreService = {
+    findAll: jest.fn(),
+    findEncounterById: jest.fn(),
+    findEncounterByEncounterId: jest.fn(),
   };
 
   beforeEach(async () => {
-    repository = {
-      save: jest.fn(),
-      find: jest.fn(),
-      findOne: jest.fn(),
-      createQueryBuilder: jest.fn(),
-    } as unknown as jest.Mocked<Repository<EncounterEntity>>;
-
-    // Reset mocks
-    mockPatientContextService.getPatientFilterCriteria.mockReturnValue(null);
-    mockPatientContextService.getPatientReference.mockReturnValue(undefined);
-    mockPatientContextService.shouldBypassFiltering.mockReturnValue(false);
-    mockPatientContextService.getKeycloakUserId.mockReturnValue(undefined);
-    mockPatientContextService.getPatientId.mockReturnValue(undefined);
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         EncountersService,
         {
-          provide: getRepositoryToken(EncounterEntity),
-          useValue: repository,
-        },
-        {
-          provide: PatientContextService,
-          useValue: mockPatientContextService,
+          provide: EncountersCoreService,
+          useValue: mockCoreService,
         },
       ],
     }).compile();
 
     service = module.get<EncountersService>(EncountersService);
-  });
-
-  afterEach(() => {
+    coreService = module.get(EncountersCoreService);
     jest.clearAllMocks();
   });
 
@@ -62,33 +38,15 @@ describe('EncountersService', () => {
   });
 
   describe('findAll', () => {
-    let mockQueryBuilder: {
-      where: jest.Mock;
-      andWhere: jest.Mock;
-      orderBy: jest.Mock;
-      getMany: jest.Mock;
-    };
-
-    beforeEach(() => {
-      mockQueryBuilder = {
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        getMany: jest.fn(),
-      };
-      repository.createQueryBuilder.mockReturnValue(mockQueryBuilder as never);
-    });
-
     it('should return an empty list when no encounters exist', async () => {
-      mockQueryBuilder.getMany.mockResolvedValue([]);
+      mockCoreService.findAll.mockResolvedValue({ entities: [], total: 0 });
 
       const result = await service.findAll();
 
       expect(result).toBeDefined();
       expect(result.data).toEqual([]);
       expect(result.total).toBe(0);
-      expect(repository.createQueryBuilder).toHaveBeenCalled();
-      expect(mockQueryBuilder.where).toHaveBeenCalledWith('encounter.deletedAt IS NULL');
+      expect(coreService.findAll).toHaveBeenCalledWith(undefined);
     });
 
     it('should return list with encounters', async () => {
@@ -108,7 +66,7 @@ describe('EncountersService', () => {
       entity2.createdAt = new Date('2024-01-02');
       entity2.updatedAt = new Date('2024-01-02');
 
-      mockQueryBuilder.getMany.mockResolvedValue([entity1, entity2]);
+      mockCoreService.findAll.mockResolvedValue({ entities: [entity1, entity2], total: 2 });
 
       const result = await service.findAll();
 
@@ -116,9 +74,10 @@ describe('EncountersService', () => {
       expect(result.data.length).toBe(2);
       expect(result.data[0].encounterId).toBe('encounter-1');
       expect(result.data[1].encounterId).toBe('encounter-2');
+      expect(coreService.findAll).toHaveBeenCalledWith(undefined);
     });
 
-    it('should filter by patient context when user is a patient', async () => {
+    it('should pass user to core service', async () => {
       const user: User = {
         id: 'patient-user',
         keycloakUserId: 'patient-user',
@@ -128,8 +87,6 @@ describe('EncountersService', () => {
         patient: 'Patient/123',
       };
 
-      mockPatientContextService.getPatientReference.mockReturnValue('Patient/123');
-
       const entity = new EncounterEntity();
       entity.id = 'db-uuid';
       entity.encounterId = 'encounter-1';
@@ -138,82 +95,13 @@ describe('EncountersService', () => {
       entity.createdAt = new Date();
       entity.updatedAt = new Date();
 
-      mockQueryBuilder.getMany.mockResolvedValue([entity]);
+      mockCoreService.findAll.mockResolvedValue({ entities: [entity], total: 1 });
 
       const result = await service.findAll(user);
 
       expect(result.total).toBe(1);
       expect(result.data[0].subjectReference).toBe('Patient/123');
-      expect(mockPatientContextService.getPatientReference).toHaveBeenCalledWith(user);
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'encounter.subjectReference = :tokenPatientRef',
-        { tokenPatientRef: 'Patient/123' },
-      );
-    });
-
-    it('should not filter by patient context when user is admin', async () => {
-      const user: User = {
-        id: 'admin-user',
-        keycloakUserId: 'admin-user',
-        username: 'admin',
-        email: 'admin@example.com',
-        roles: [ROLES.ADMIN],
-      };
-
-      mockPatientContextService.getPatientReference.mockReturnValue(undefined);
-      mockPatientContextService.shouldBypassFiltering.mockReturnValue(true);
-
-      const entity1 = new EncounterEntity();
-      entity1.id = 'db-uuid-1';
-      entity1.encounterId = 'encounter-1';
-      entity1.subjectReference = 'Patient/123';
-      entity1.createdAt = new Date();
-      entity1.updatedAt = new Date();
-
-      const entity2 = new EncounterEntity();
-      entity2.id = 'db-uuid-2';
-      entity2.encounterId = 'encounter-2';
-      entity2.subjectReference = 'Patient/456';
-      entity2.createdAt = new Date();
-      entity2.updatedAt = new Date();
-
-      mockQueryBuilder.getMany.mockResolvedValue([entity1, entity2]);
-
-      const result = await service.findAll(user);
-
-      expect(result.total).toBe(2);
-      // Admin should not have patient filter applied
-      expect(mockQueryBuilder.andWhere).not.toHaveBeenCalled();
-    });
-
-    it('should extract patient ID from fhirUser context', async () => {
-      const user: User = {
-        id: 'patient-user',
-        keycloakUserId: 'patient-user',
-        username: 'patient',
-        email: 'patient@example.com',
-        roles: [ROLES.PATIENT],
-        fhirUser: 'Patient/789',
-      };
-
-      mockPatientContextService.getPatientReference.mockReturnValue('Patient/789');
-
-      const entity = new EncounterEntity();
-      entity.id = 'db-uuid';
-      entity.encounterId = 'encounter-1';
-      entity.subjectReference = 'Patient/789';
-      entity.createdAt = new Date();
-      entity.updatedAt = new Date();
-
-      mockQueryBuilder.getMany.mockResolvedValue([entity]);
-
-      await service.findAll(user);
-
-      expect(mockPatientContextService.getPatientReference).toHaveBeenCalledWith(user);
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'encounter.subjectReference = :tokenPatientRef',
-        { tokenPatientRef: 'Patient/789' },
-      );
+      expect(coreService.findAll).toHaveBeenCalledWith(user);
     });
   });
 
@@ -227,7 +115,7 @@ describe('EncountersService', () => {
       entity.createdAt = new Date();
       entity.updatedAt = new Date();
 
-      repository.findOne.mockResolvedValue(entity);
+      mockCoreService.findEncounterById.mockResolvedValue(entity);
 
       const result = await service.findOne('db-uuid');
 
@@ -236,19 +124,19 @@ describe('EncountersService', () => {
       expect(result.encounterId).toBe('test-encounter-id');
       expect(result.status).toBe('finished');
       expect(result.subjectReference).toBe('Patient/test-patient-id');
-      expect(repository.findOne).toHaveBeenCalled();
+      expect(coreService.findEncounterById).toHaveBeenCalledWith('db-uuid', undefined);
     });
 
     it('should throw NotFoundException when encounter does not exist', async () => {
-      repository.findOne.mockResolvedValue(null);
+      mockCoreService.findEncounterById.mockRejectedValue(
+        new NotFoundException('Encounter with ID non-existent-id not found'),
+      );
 
       await expect(service.findOne('non-existent-id')).rejects.toThrow(NotFoundException);
-      await expect(service.findOne('non-existent-id')).rejects.toThrow(
-        'Encounter with ID non-existent-id not found',
-      );
+      expect(coreService.findEncounterById).toHaveBeenCalledWith('non-existent-id', undefined);
     });
 
-    it('should allow admin to access any encounter', async () => {
+    it('should pass user to core service', async () => {
       const user: User = {
         id: 'admin-user',
         keycloakUserId: 'admin-user',
@@ -257,10 +145,6 @@ describe('EncountersService', () => {
         roles: [ROLES.ADMIN],
       };
 
-      mockPatientContextService.shouldBypassFiltering.mockReturnValue(true);
-      mockPatientContextService.getPatientId.mockReturnValue(undefined);
-      mockPatientContextService.getKeycloakUserId.mockReturnValue(undefined);
-
       const entity = new EncounterEntity();
       entity.id = 'db-uuid';
       entity.encounterId = 'encounter-1';
@@ -268,41 +152,13 @@ describe('EncountersService', () => {
       entity.createdAt = new Date();
       entity.updatedAt = new Date();
 
-      repository.findOne.mockResolvedValue(entity);
+      mockCoreService.findEncounterById.mockResolvedValue(entity);
 
       const result = await service.findOne('db-uuid', user);
 
       expect(result).toBeDefined();
       expect(result.id).toBe('db-uuid');
-    });
-
-    it('should allow patient to access their own encounter', async () => {
-      const user: User = {
-        id: 'patient-user',
-        keycloakUserId: 'patient-user',
-        username: 'patient',
-        email: 'patient@example.com',
-        roles: [ROLES.PATIENT],
-        patient: 'Patient/123',
-      };
-
-      mockPatientContextService.shouldBypassFiltering.mockReturnValue(false);
-      mockPatientContextService.getPatientId.mockReturnValue('123');
-      mockPatientContextService.getKeycloakUserId.mockReturnValue(undefined);
-
-      const entity = new EncounterEntity();
-      entity.id = 'db-uuid';
-      entity.encounterId = 'encounter-1';
-      entity.subjectReference = 'Patient/123';
-      entity.createdAt = new Date();
-      entity.updatedAt = new Date();
-
-      repository.findOne.mockResolvedValue(entity);
-
-      const result = await service.findOne('db-uuid', user);
-
-      expect(result).toBeDefined();
-      expect(result.id).toBe('db-uuid');
+      expect(coreService.findEncounterById).toHaveBeenCalledWith('db-uuid', user);
     });
 
     it('should throw ForbiddenException when patient tries to access another patient encounter', async () => {
@@ -315,23 +171,14 @@ describe('EncountersService', () => {
         patient: 'Patient/123',
       };
 
-      mockPatientContextService.shouldBypassFiltering.mockReturnValue(false);
-      mockPatientContextService.getPatientId.mockReturnValue('123');
-      mockPatientContextService.getKeycloakUserId.mockReturnValue(undefined);
-
-      const entity = new EncounterEntity();
-      entity.id = 'db-uuid';
-      entity.encounterId = 'encounter-1';
-      entity.subjectReference = 'Patient/456'; // Different patient
-      entity.createdAt = new Date();
-      entity.updatedAt = new Date();
-
-      repository.findOne.mockResolvedValue(entity);
+      mockCoreService.findEncounterById.mockRejectedValue(
+        new ForbiddenException(
+          'You do not have permission to access this encounter. Patients can only access their own encounters.',
+        ),
+      );
 
       await expect(service.findOne('db-uuid', user)).rejects.toThrow(ForbiddenException);
-      await expect(service.findOne('db-uuid', user)).rejects.toThrow(
-        'You do not have permission to access this encounter. Patients can only access their own encounters.',
-      );
+      expect(coreService.findEncounterById).toHaveBeenCalledWith('db-uuid', user);
     });
   });
 
@@ -345,7 +192,7 @@ describe('EncountersService', () => {
       entity.createdAt = new Date();
       entity.updatedAt = new Date();
 
-      repository.findOne.mockResolvedValue(entity);
+      mockCoreService.findEncounterByEncounterId.mockResolvedValue(entity);
 
       const result = await service.findByEncounterId('test-encounter-id');
 
@@ -353,15 +200,21 @@ describe('EncountersService', () => {
       expect(result.id).toBe('db-uuid');
       expect(result.encounterId).toBe('test-encounter-id');
       expect(result.status).toBe('finished');
-      expect(repository.findOne).toHaveBeenCalled();
+      expect(coreService.findEncounterByEncounterId).toHaveBeenCalledWith(
+        'test-encounter-id',
+        undefined,
+      );
     });
 
     it('should throw NotFoundException when encounter does not exist', async () => {
-      repository.findOne.mockResolvedValue(null);
+      mockCoreService.findEncounterByEncounterId.mockRejectedValue(
+        new NotFoundException('Encounter with encounterId non-existent-id not found'),
+      );
 
       await expect(service.findByEncounterId('non-existent-id')).rejects.toThrow(NotFoundException);
-      await expect(service.findByEncounterId('non-existent-id')).rejects.toThrow(
-        'Encounter with encounterId non-existent-id not found',
+      expect(coreService.findEncounterByEncounterId).toHaveBeenCalledWith(
+        'non-existent-id',
+        undefined,
       );
     });
 
@@ -375,22 +228,16 @@ describe('EncountersService', () => {
         patient: 'Patient/123',
       };
 
-      mockPatientContextService.shouldBypassFiltering.mockReturnValue(false);
-      mockPatientContextService.getPatientId.mockReturnValue('123');
-      mockPatientContextService.getKeycloakUserId.mockReturnValue(undefined);
-
-      const entity = new EncounterEntity();
-      entity.id = 'db-uuid';
-      entity.encounterId = 'encounter-1';
-      entity.subjectReference = 'Patient/456'; // Different patient
-      entity.createdAt = new Date();
-      entity.updatedAt = new Date();
-
-      repository.findOne.mockResolvedValue(entity);
+      mockCoreService.findEncounterByEncounterId.mockRejectedValue(
+        new ForbiddenException(
+          'You do not have permission to access this encounter. Patients can only access their own encounters.',
+        ),
+      );
 
       await expect(service.findByEncounterId('encounter-1', user)).rejects.toThrow(
         ForbiddenException,
       );
+      expect(coreService.findEncounterByEncounterId).toHaveBeenCalledWith('encounter-1', user);
     });
   });
 });

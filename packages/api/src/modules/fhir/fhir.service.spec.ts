@@ -19,6 +19,8 @@ import { ROLES } from '../../common/constants/roles';
 import { PatientContextService } from '../../common/services/patient-context.service';
 import { AuditService } from '../audit/audit.service';
 import { ScopePermissionService } from '../auth/services/scope-permission.service';
+import { EncountersCoreService } from '../encounters/encounters-core.service';
+import { EncounterToFhirMapper } from '../encounters/mappers/encounter-to-fhir.mapper';
 
 describe('FhirService', () => {
   let service: FhirService;
@@ -76,6 +78,11 @@ describe('FhirService', () => {
     createQueryBuilder: jest.fn(),
   };
 
+  const mockEncountersCoreService = {
+    findEncounterByEncounterId: jest.fn(),
+    findEncountersByQuery: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -111,6 +118,14 @@ describe('FhirService', () => {
         {
           provide: PatientContextService,
           useValue: mockPatientContextService,
+        },
+        {
+          provide: EncountersCoreService,
+          useValue: mockEncountersCoreService,
+        },
+        {
+          provide: EncounterToFhirMapper,
+          useValue: EncounterToFhirMapper,
         },
       ],
     }).compile();
@@ -1767,17 +1782,23 @@ describe('FhirService', () => {
       mockEntity.fhirResource = mockEncounter;
       mockEntity.encounterId = 'test-encounter-id';
 
-      mockEncounterRepository.findOne.mockResolvedValue(mockEntity);
+      mockEncountersCoreService.findEncounterByEncounterId.mockResolvedValue(mockEntity);
 
       const result = await service.getEncounter('test-encounter-id');
 
       expect(result).toBeDefined();
       expect(result.id).toBe('test-encounter-id');
       expect(result.status).toBe('finished');
+      expect(mockEncountersCoreService.findEncounterByEncounterId).toHaveBeenCalledWith(
+        'test-encounter-id',
+        undefined,
+      );
     });
 
     it('should throw NotFoundException when encounter does not exist', async () => {
-      mockEncounterRepository.findOne.mockResolvedValue(null);
+      mockEncountersCoreService.findEncounterByEncounterId.mockRejectedValue(
+        new NotFoundException('Encounter not found'),
+      );
 
       await expect(service.getEncounter('non-existent-id')).rejects.toThrow(NotFoundException);
     });
@@ -1787,7 +1808,7 @@ describe('FhirService', () => {
       mockEntity.fhirResource = null as unknown as Encounter;
       mockEntity.encounterId = 'test-encounter-id';
 
-      mockEncounterRepository.findOne.mockResolvedValue(mockEntity);
+      mockEncountersCoreService.findEncounterByEncounterId.mockResolvedValue(mockEntity);
 
       await expect(service.getEncounter('test-encounter-id')).rejects.toThrow();
     });
@@ -1802,10 +1823,6 @@ describe('FhirService', () => {
         patient: 'Patient/test-patient-id', // SMART on FHIR patient context
       };
 
-      mockPatientContextService.shouldBypassFiltering.mockReturnValue(false);
-      mockPatientContextService.getPatientId.mockReturnValue('test-patient-id');
-      mockPatientContextService.getKeycloakUserId.mockReturnValue(undefined);
-
       const mockEntity = new EncounterEntity();
       mockEntity.fhirResource = {
         resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
@@ -1818,7 +1835,7 @@ describe('FhirService', () => {
       mockEntity.encounterId = 'test-encounter-id';
       mockEntity.subjectReference = 'Patient/test-patient-id';
 
-      mockEncounterRepository.findOne.mockResolvedValue(mockEntity);
+      mockEncountersCoreService.findEncounterByEncounterId.mockResolvedValue(mockEntity);
 
       const result = await service.getEncounter('test-encounter-id', user);
       expect(result).toBeDefined();
@@ -1835,24 +1852,13 @@ describe('FhirService', () => {
         patient: 'Patient/different-patient-id', // Different patient context
       };
 
-      const mockEntity = new EncounterEntity();
-      mockEntity.fhirResource = {
-        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
-        id: 'test-encounter-id',
-        status: 'finished',
-        subject: {
-          reference: 'Patient/test-patient-id',
-        },
-      } as Encounter;
-      mockEntity.encounterId = 'test-encounter-id';
-      mockEntity.subjectReference = 'Patient/test-patient-id';
-
-      mockEncounterRepository.findOne.mockResolvedValue(mockEntity);
+      mockEncountersCoreService.findEncounterByEncounterId.mockRejectedValue(
+        new ForbiddenException('You do not have permission to access this encounter'),
+      );
 
       await expect(service.getEncounter('test-encounter-id', user)).rejects.toThrow(
         ForbiddenException,
       );
-      expect(logger.warn).toHaveBeenCalled();
     });
 
     it('should allow admin access to encounters even with patient context', async () => {
@@ -1865,10 +1871,6 @@ describe('FhirService', () => {
         patient: 'Patient/different-patient-id', // Patient context
       };
 
-      mockPatientContextService.shouldBypassFiltering.mockReturnValue(true);
-      mockPatientContextService.getPatientId.mockReturnValue(undefined);
-      mockPatientContextService.getKeycloakUserId.mockReturnValue(undefined);
-
       const mockEntity = new EncounterEntity();
       mockEntity.fhirResource = {
         resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
@@ -1881,7 +1883,7 @@ describe('FhirService', () => {
       mockEntity.encounterId = 'test-encounter-id';
       mockEntity.subjectReference = 'Patient/test-patient-id';
 
-      mockEncounterRepository.findOne.mockResolvedValue(mockEntity);
+      mockEncountersCoreService.findEncounterByEncounterId.mockResolvedValue(mockEntity);
 
       // Admin should bypass patient context filtering
       const result = await service.getEncounter('test-encounter-id', user);
@@ -1891,34 +1893,28 @@ describe('FhirService', () => {
 
   describe('searchEncounters', () => {
     it('should return all encounters when no filters', async () => {
-      const mockQueryBuilder = {
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        getCount: jest.fn().mockResolvedValue(2),
-        skip: jest.fn().mockReturnThis(),
-        take: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue([
-          {
-            fhirResource: {
-              resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
-              id: '1',
-              status: 'finished',
-              subject: { reference: 'Patient/1' },
-            },
-          },
-          {
-            fhirResource: {
-              resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
-              id: '2',
-              status: 'planned',
-              subject: { reference: 'Patient/1' },
-            },
-          },
-        ]),
-      };
+      const entity1 = new EncounterEntity();
+      entity1.fhirResource = {
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
+        id: '1',
+        status: 'finished',
+        subject: { reference: 'Patient/1' },
+      } as Encounter;
+      entity1.encounterId = '1';
 
-      mockEncounterRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+      const entity2 = new EncounterEntity();
+      entity2.fhirResource = {
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
+        id: '2',
+        status: 'planned',
+        subject: { reference: 'Patient/1' },
+      } as Encounter;
+      entity2.encounterId = '2';
+
+      mockEncountersCoreService.findEncountersByQuery.mockResolvedValue({
+        entities: [entity1, entity2],
+        total: 2,
+      });
 
       const result = await service.searchEncounters({});
 
@@ -1926,29 +1922,33 @@ describe('FhirService', () => {
       expect(result.total).toBe(2);
       expect(result.entries).toBeDefined();
       expect(result.entries.length).toBe(2);
+      expect(mockEncountersCoreService.findEncountersByQuery).toHaveBeenCalledWith(
+        {
+          page: 1,
+          limit: 10,
+          subject: undefined,
+          status: undefined,
+          date: undefined,
+          sort: undefined,
+        },
+        undefined,
+      );
     });
 
     it('should filter encounters by subject (patient)', async () => {
-      const mockQueryBuilder = {
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        getCount: jest.fn().mockResolvedValue(1),
-        skip: jest.fn().mockReturnThis(),
-        take: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue([
-          {
-            fhirResource: {
-              resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
-              id: '1',
-              status: 'finished',
-              subject: { reference: 'Patient/test-patient-id' },
-            },
-          },
-        ]),
-      };
+      const entity = new EncounterEntity();
+      entity.fhirResource = {
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
+        id: '1',
+        status: 'finished',
+        subject: { reference: 'Patient/test-patient-id' },
+      } as Encounter;
+      entity.encounterId = '1';
 
-      mockEncounterRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+      mockEncountersCoreService.findEncountersByQuery.mockResolvedValue({
+        entities: [entity],
+        total: 1,
+      });
 
       const result = await service.searchEncounters({
         subject: 'Patient/test-patient-id',
@@ -1956,29 +1956,33 @@ describe('FhirService', () => {
 
       expect(result.entries.length).toBe(1);
       expect(result.entries[0].subject?.reference).toContain('test-patient-id');
+      expect(mockEncountersCoreService.findEncountersByQuery).toHaveBeenCalledWith(
+        {
+          page: 1,
+          limit: 10,
+          subject: 'Patient/test-patient-id',
+          status: undefined,
+          date: undefined,
+          sort: undefined,
+        },
+        undefined,
+      );
     });
 
     it('should filter encounters by status', async () => {
-      const mockQueryBuilder = {
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        getCount: jest.fn().mockResolvedValue(1),
-        skip: jest.fn().mockReturnThis(),
-        take: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue([
-          {
-            fhirResource: {
-              resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
-              id: '1',
-              status: 'finished',
-              subject: { reference: 'Patient/1' },
-            },
-          },
-        ]),
-      };
+      const entity = new EncounterEntity();
+      entity.fhirResource = {
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
+        id: '1',
+        status: 'finished',
+        subject: { reference: 'Patient/1' },
+      } as Encounter;
+      entity.encounterId = '1';
 
-      mockEncounterRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+      mockEncountersCoreService.findEncountersByQuery.mockResolvedValue({
+        entities: [entity],
+        total: 1,
+      });
 
       const result = await service.searchEncounters({ status: 'finished' });
 
@@ -1987,26 +1991,19 @@ describe('FhirService', () => {
     });
 
     it('should filter encounters by date', async () => {
-      const mockQueryBuilder = {
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        getCount: jest.fn().mockResolvedValue(1),
-        skip: jest.fn().mockReturnThis(),
-        take: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue([
-          {
-            fhirResource: {
-              resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
-              id: '1',
-              status: 'finished',
-              period: { start: '2024-01-15T10:00:00Z' },
-            },
-          },
-        ]),
-      };
+      const entity = new EncounterEntity();
+      entity.fhirResource = {
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
+        id: '1',
+        status: 'finished',
+        period: { start: '2024-01-15T10:00:00Z' },
+      } as Encounter;
+      entity.encounterId = '1';
 
-      mockEncounterRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+      mockEncountersCoreService.findEncountersByQuery.mockResolvedValue({
+        entities: [entity],
+        total: 1,
+      });
 
       const result = await service.searchEncounters({ date: '2024-01-15' });
 
@@ -2017,25 +2014,18 @@ describe('FhirService', () => {
     });
 
     it('should paginate results', async () => {
-      const mockQueryBuilder = {
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        getCount: jest.fn().mockResolvedValue(5),
-        skip: jest.fn().mockReturnThis(),
-        take: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue([
-          {
-            fhirResource: {
-              resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
-              id: '1',
-              status: 'finished',
-            },
-          },
-        ]),
-      };
+      const entity = new EncounterEntity();
+      entity.fhirResource = {
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
+        id: '1',
+        status: 'finished',
+      } as Encounter;
+      entity.encounterId = '1';
 
-      mockEncounterRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+      mockEncountersCoreService.findEncountersByQuery.mockResolvedValue({
+        entities: [entity],
+        total: 5,
+      });
 
       const result = await service.searchEncounters({ page: 1, limit: 1 });
 
@@ -2053,40 +2043,32 @@ describe('FhirService', () => {
         patient: 'Patient/123', // SMART on FHIR patient context
       };
 
-      // Configure PatientContextService mock
-      mockPatientContextService.getPatientReference.mockReturnValue('Patient/123');
-      mockPatientContextService.getKeycloakUserId.mockReturnValue(undefined);
+      const entity = new EncounterEntity();
+      entity.fhirResource = {
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
+        id: '1',
+        subject: { reference: 'Patient/123' },
+      } as Encounter;
+      entity.encounterId = '1';
 
-      const mockQueryBuilder = {
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        getCount: jest.fn().mockResolvedValue(1),
-        skip: jest.fn().mockReturnThis(),
-        take: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue([
-          {
-            fhirResource: {
-              resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
-              id: '1',
-              subject: { reference: 'Patient/123' },
-            },
-          },
-        ]),
-      };
-      mockEncounterRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+      mockEncountersCoreService.findEncountersByQuery.mockResolvedValue({
+        entities: [entity],
+        total: 1,
+      });
 
       await service.searchEncounters({}, user);
 
-      // Should filter by patient context
-      expect(mockPatientContextService.getPatientReference).toHaveBeenCalledWith(user);
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'encounter.subjectReference = :tokenPatientRef',
-        { tokenPatientRef: 'Patient/123' },
-      );
-      expect(logger.debug).toHaveBeenCalledWith(
-        { patientReference: 'Patient/123' },
-        'Filtering encounters by patient context',
+      // Should filter by patient context (handled by EncountersCoreService)
+      expect(mockEncountersCoreService.findEncountersByQuery).toHaveBeenCalledWith(
+        {
+          page: 1,
+          limit: 10,
+          subject: undefined,
+          status: undefined,
+          date: undefined,
+          sort: undefined,
+        },
+        user,
       );
     });
 
@@ -2100,33 +2082,26 @@ describe('FhirService', () => {
         patient: 'Patient/123', // SMART on FHIR patient context
       };
 
-      mockPatientContextService.getPatientReference.mockReturnValue('Patient/123');
-      mockPatientContextService.getKeycloakUserId.mockReturnValue(undefined);
-
-      const mockQueryBuilder = {
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        getCount: jest.fn().mockResolvedValue(1),
-        skip: jest.fn().mockReturnThis(),
-        take: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue([]),
-      };
-      mockEncounterRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+      mockEncountersCoreService.findEncountersByQuery.mockResolvedValue({
+        entities: [],
+        total: 0,
+      });
 
       await service.searchEncounters({ subject: 'Patient/456' }, user);
 
-      // Should filter by patient context, not by subject parameter
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'encounter.subjectReference = :tokenPatientRef',
-        { tokenPatientRef: 'Patient/123' },
+      // Should filter by patient context (handled by EncountersCoreService)
+      // The subject parameter is still passed but patient context takes precedence in Core Service
+      expect(mockEncountersCoreService.findEncountersByQuery).toHaveBeenCalledWith(
+        {
+          page: 1,
+          limit: 10,
+          subject: 'Patient/456',
+          status: undefined,
+          date: undefined,
+          sort: undefined,
+        },
+        user,
       );
-      // Should NOT apply subject filter since patient context takes precedence
-      const subjectFilterCall = mockQueryBuilder.andWhere.mock.calls.find((call: unknown[]) => {
-        const params = call[1] as { subject?: string };
-        return params?.subject === 'Patient/456';
-      });
-      expect(subjectFilterCall).toBeUndefined();
     });
   });
 
@@ -2497,37 +2472,36 @@ describe('FhirService', () => {
 
   describe('searchEncounters - edge cases', () => {
     it('should handle subject without Patient/ prefix (covers line 808)', async () => {
-      const mockQueryBuilder = {
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        getCount: jest.fn().mockResolvedValue(1),
-        skip: jest.fn().mockReturnThis(),
-        take: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue([
-          {
-            fhirResource: {
-              resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
-              id: '1',
-              status: 'finished',
-              subject: { reference: 'Patient/test-patient-id' },
-            },
-          },
-        ]),
-      };
+      const entity = new EncounterEntity();
+      entity.fhirResource = {
+        resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
+        id: '1',
+        status: 'finished',
+        subject: { reference: 'Patient/test-patient-id' },
+      } as Encounter;
+      entity.encounterId = '1';
 
-      mockEncounterRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+      mockEncountersCoreService.findEncountersByQuery.mockResolvedValue({
+        entities: [entity],
+        total: 1,
+      });
 
       const result = await service.searchEncounters({
         subject: 'test-patient-id', // Without Patient/ prefix
       });
 
       expect(result.entries.length).toBe(1);
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'encounter.subjectReference = :subject',
+      // The Core Service handles the Patient/ prefix normalization
+      expect(mockEncountersCoreService.findEncountersByQuery).toHaveBeenCalledWith(
         {
-          subject: 'Patient/test-patient-id', // Should add Patient/ prefix
+          page: 1,
+          limit: 10,
+          subject: 'test-patient-id',
+          status: undefined,
+          date: undefined,
+          sort: undefined,
         },
+        undefined,
       );
     });
   });

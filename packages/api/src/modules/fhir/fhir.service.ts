@@ -26,6 +26,8 @@ import { ROLES } from '../../common/constants/roles';
 import { PatientContextService } from '../../common/services/patient-context.service';
 import { AuditService } from '../audit/audit.service';
 import { ScopePermissionService } from '../auth/services/scope-permission.service';
+import { EncountersCoreService } from '../encounters/encounters-core.service';
+import { EncounterToFhirMapper } from '../encounters/mappers/encounter-to-fhir.mapper';
 
 /**
  * FHIR service for managing FHIR R4 resources
@@ -45,6 +47,7 @@ export class FhirService {
     private readonly auditService: AuditService,
     private readonly scopePermissionService: ScopePermissionService,
     private readonly patientContextService: PatientContextService,
+    private readonly encountersCoreService: EncountersCoreService,
   ) {
     this.logger.setContext(FhirService.name);
   }
@@ -896,93 +899,22 @@ export class FhirService {
   }
 
   /**
-   * Checks if user has permission to access an encounter resource
-   * Validates that encounter belongs to patient context if present
-   * @param user - Current authenticated user
-   * @param encounterEntity - Encounter entity to check access for
-   * @returns true if user has access, false otherwise
-   */
-  private async canAccessEncounter(user: User, encounterEntity: EncounterEntity): Promise<boolean> {
-    // Admin can access all encounters (bypasses patient context)
-    if (this.patientContextService.shouldBypassFiltering(user)) {
-      return true;
-    }
-
-    // Use PatientContextService to determine access
-    const patientId = this.patientContextService.getPatientId(user);
-    if (patientId) {
-      // Token is scoped to a specific patient - only allow access to encounters for that patient
-      const encounterPatientId = encounterEntity.subjectReference?.replace(/^Patient\//, '');
-      return encounterPatientId === patientId;
-    }
-
-    // Check if encounter belongs to user's patient records
-    const keycloakUserId = this.patientContextService.getKeycloakUserId(user);
-    if (keycloakUserId) {
-      // Need to check if encounter's patient belongs to this user
-      const encounterPatientId = encounterEntity.subjectReference?.replace(/^Patient\//, '');
-      if (encounterPatientId) {
-        const patientEntity = await this.patientRepository.findOne({
-          where: { patientId: encounterPatientId, keycloakUserId, deletedAt: IsNull() },
-        });
-        return !!patientEntity;
-      }
-    }
-
-    // Practitioners can access all encounters (for now)
-    // TODO: In the future, filter by assigned patients or consent
-    if (user.roles.includes(ROLES.PRACTITIONER)) {
-      return true;
-    }
-
-    // Patient can only access their own encounters
-    // For now, we'll allow if the encounter references a patient
-    // In a full implementation, we'd check if the patient's keycloakUserId matches
-    if (user.roles.includes(ROLES.PATIENT)) {
-      // TODO: Implement full patient ownership check by looking up patient entity
-      return true; // Simplified for now - would need patient lookup
-    }
-
-    // Check scope-based permissions
-    const hasScopePermission = this.scopePermissionService.hasResourcePermission(
-      user,
-      FHIR_RESOURCE_TYPES.ENCOUNTER,
-      FHIR_ACTIONS.READ,
-    );
-
-    return hasScopePermission;
-  }
-
-  /**
    * Gets an Encounter by ID (FHIR resource ID, not database UUID)
    * Applies patient context filtering if present
+   * Uses EncountersCoreService for business logic and EncounterToFhirMapper for transformation
    */
   async getEncounter(id: string, user?: User): Promise<Encounter> {
-    const entity = await this.encounterRepository.findOne({
-      where: { encounterId: id, deletedAt: IsNull() },
-    });
+    // Use Core Service to get entity (with security validation)
+    const entity = await this.encountersCoreService.findEncounterByEncounterId(id, user);
 
-    if (!entity) {
-      throw new NotFoundException(
-        FhirErrorService.createNotFoundError(FHIR_RESOURCE_TYPES.ENCOUNTER, id),
-      );
-    }
-
-    // Check access permissions if user is provided
-    if (user && !(await this.canAccessEncounter(user, entity))) {
-      this.logger.warn(
-        { encounterId: id, userId: user.id, patient: user.patient },
-        'Access denied to encounter',
-      );
-      throw new ForbiddenException('You do not have permission to access this encounter');
-    }
-
-    return this.entityToEncounter(entity);
+    // Transform Entity → FHIR using mapper
+    return EncounterToFhirMapper.toFhir(entity);
   }
 
   /**
    * Searches Encounters with optional filters
    * Applies patient context filtering if present in user token
+   * Uses EncountersCoreService for business logic and EncounterToFhirMapper for transformation
    */
   async searchEncounters(
     params: {
@@ -995,98 +927,29 @@ export class FhirService {
     },
     user?: User,
   ): Promise<{ total: number; entries: Encounter[] }> {
-    const { page = 1, limit = 10, subject, status, date, sort } = params;
-    const queryBuilder = this.encounterRepository
-      .createQueryBuilder('encounter')
-      .where('encounter.deletedAt IS NULL');
+    // Normalize params to ensure all properties are defined
+    const normalizedParams = {
+      page: params.page ?? 1,
+      limit: params.limit ?? 10,
+      subject: params.subject,
+      status: params.status,
+      date: params.date,
+      sort: params.sort,
+    };
 
-    // Apply patient context filtering using unified service
-    const patientReference = this.patientContextService.getPatientReference(user);
-    if (patientReference) {
-      queryBuilder.andWhere('encounter.subjectReference = :tokenPatientRef', {
-        tokenPatientRef: patientReference,
-      });
-      this.logger.debug({ patientReference }, 'Filtering encounters by patient context');
-    } else {
-      // For keycloakUserId, we need to find the patientId first
-      const keycloakUserId = this.patientContextService.getKeycloakUserId(user);
-      if (keycloakUserId) {
-        // Find patient records for this user
-        const patientEntities = await this.patientRepository.find({
-          where: { keycloakUserId, deletedAt: IsNull() },
-        });
-        if (patientEntities.length > 0) {
-          const patientReferences = patientEntities.map((p) => `Patient/${p.patientId}`);
-          queryBuilder.andWhere('encounter.subjectReference IN (:...references)', {
-            references: patientReferences,
-          });
-          this.logger.debug(
-            { keycloakUserId, patientCount: patientEntities.length },
-            'Filtering encounters by Keycloak user ID',
-          );
-        } else {
-          // No patient records for this user, return empty
-          queryBuilder.andWhere('1 = 0');
-        }
-      }
-    }
+    // Use Core Service to get entities (with security filtering and business logic)
+    const { entities, total } = await this.encountersCoreService.findEncountersByQuery(
+      normalizedParams,
+      user,
+    );
 
-    // Filter by subject (using indexed field) - only if not already filtered by patient context
-    if (subject && !patientReference) {
-      queryBuilder.andWhere('encounter.subjectReference = :subject', {
-        subject: subject.includes('/') ? subject : `Patient/${subject}`,
-      });
-    }
+    // Transform Entity → FHIR using mapper
+    const entries = EncounterToFhirMapper.toFhirList(entities);
 
-    // Filter by status (using indexed field)
-    if (status) {
-      queryBuilder.andWhere('encounter.status = :status', { status });
-    }
-
-    // Filter by date (search in JSONB)
-    if (date) {
-      const searchDateStr = date.split('T')[0]; // Get YYYY-MM-DD part
-      queryBuilder.andWhere(`DATE(encounter."fhirResource"->'period'->>'start') = :date`, {
-        date: searchDateStr,
-      });
-    }
-
-    // Apply sorting if provided
-    if (sort) {
-      // Parse FHIR sort parameter (e.g., "-date" means descending by date)
-      const isDescending = sort.startsWith('-');
-      const sortField = isDescending ? sort.substring(1) : sort;
-
-      // Map FHIR field names to database fields
-      if (sortField === 'date') {
-        // Sort by period.start in JSONB
-        queryBuilder.orderBy(
-          `encounter."fhirResource"->'period'->>'start'`,
-          isDescending ? 'DESC' : 'ASC',
-        );
-      } else if (sortField === 'status') {
-        queryBuilder.orderBy('encounter.status', isDescending ? 'DESC' : 'ASC');
-      } else {
-        // Default sort by createdAt if field not recognized
-        queryBuilder.orderBy('encounter.createdAt', isDescending ? 'DESC' : 'ASC');
-      }
-    } else {
-      // Default sort by createdAt descending
-      queryBuilder.orderBy('encounter.createdAt', 'DESC');
-    }
-
-    // Get total count
-    const total = await queryBuilder.getCount();
-
-    // Pagination
-    const entities = await queryBuilder
-      .skip((page - 1) * limit)
-      .take(limit)
-      .getMany();
-
-    const entries = entities.map((entity) => this.entityToEncounter(entity));
-
-    this.logger.debug({ total, page, limit }, 'Encounters searched');
+    this.logger.debug(
+      { total, page: normalizedParams.page, limit: normalizedParams.limit },
+      'Encounters searched',
+    );
 
     return { total, entries };
   }
