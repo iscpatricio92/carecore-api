@@ -16,6 +16,7 @@ import {
 import { CreateEncounterDto, UpdateEncounterDto } from '../../common/dto/fhir-encounter.dto';
 import { Patient, Practitioner, Encounter, User, FHIR_RESOURCE_TYPES } from '@carecore/shared';
 import { ROLES } from '../../common/constants/roles';
+import { PatientContextService } from '../../common/services/patient-context.service';
 import { AuditService } from '../audit/audit.service';
 import { ScopePermissionService } from '../auth/services/scope-permission.service';
 
@@ -46,6 +47,14 @@ describe('FhirService', () => {
   const mockScopePermissionService = {
     hasResourcePermission: jest.fn().mockReturnValue(false),
     roleGrantsPermission: jest.fn().mockReturnValue(false),
+  };
+
+  const mockPatientContextService = {
+    getPatientFilterCriteria: jest.fn(),
+    getPatientReference: jest.fn(),
+    shouldBypassFiltering: jest.fn(),
+    getKeycloakUserId: jest.fn(),
+    getPatientId: jest.fn(),
   };
 
   // Mock repositories
@@ -99,6 +108,10 @@ describe('FhirService', () => {
           provide: ScopePermissionService,
           useValue: mockScopePermissionService,
         },
+        {
+          provide: PatientContextService,
+          useValue: mockPatientContextService,
+        },
       ],
     }).compile();
 
@@ -121,6 +134,13 @@ describe('FhirService', () => {
     mockAuditService.logUpdate.mockResolvedValue(undefined);
     mockAuditService.logDelete.mockResolvedValue(undefined);
     mockAuditService.logAction.mockResolvedValue(undefined);
+
+    // Reset PatientContextService mocks
+    mockPatientContextService.getPatientFilterCriteria.mockReturnValue(null);
+    mockPatientContextService.getPatientReference.mockReturnValue(undefined);
+    mockPatientContextService.shouldBypassFiltering.mockReturnValue(false);
+    mockPatientContextService.getKeycloakUserId.mockReturnValue(undefined);
+    mockPatientContextService.getPatientId.mockReturnValue(undefined);
   });
 
   afterEach(() => {
@@ -553,6 +573,10 @@ describe('FhirService', () => {
         patient: 'Patient/test-patient-id', // SMART on FHIR patient context
       };
 
+      mockPatientContextService.shouldBypassFiltering.mockReturnValue(false);
+      mockPatientContextService.getPatientId.mockReturnValue('test-patient-id');
+      mockPatientContextService.getKeycloakUserId.mockReturnValue(undefined);
+
       const mockEntity = new PatientEntity();
       mockEntity.fhirResource = {
         resourceType: FHIR_RESOURCE_TYPES.PATIENT,
@@ -665,6 +689,9 @@ describe('FhirService', () => {
         roles: [ROLES.ADMIN],
       };
 
+      mockPatientContextService.getPatientFilterCriteria.mockReturnValue(null);
+      mockPatientContextService.shouldBypassFiltering.mockReturnValue(true);
+
       await service.searchPatients({}, user);
 
       expect(mockQueryBuilder.andWhere).not.toHaveBeenCalled();
@@ -678,6 +705,11 @@ describe('FhirService', () => {
         email: '',
         roles: [ROLES.PATIENT],
       };
+
+      mockPatientContextService.getPatientFilterCriteria.mockReturnValue({
+        type: 'keycloakUserId',
+        value: user.id,
+      });
 
       await service.searchPatients({}, user);
 
@@ -728,15 +760,19 @@ describe('FhirService', () => {
         patient: 'Patient/123', // SMART on FHIR patient context
       };
 
+      mockPatientContextService.getPatientFilterCriteria.mockReturnValue({
+        type: 'patientId',
+        value: '123',
+      });
+
       await service.searchPatients({}, user);
 
       // Should filter by patient context, not by role
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'patient.patientId = :tokenPatientId',
-        { tokenPatientId: '123' },
-      );
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('patient.patientId = :patientId', {
+        patientId: '123',
+      });
       expect(logger.debug).toHaveBeenCalledWith(
-        { tokenPatientId: '123' },
+        { patientId: '123' },
         'Filtering patients by SMART on FHIR patient context',
       );
     });
@@ -751,13 +787,17 @@ describe('FhirService', () => {
         patient: '456', // Just patient ID, not "Patient/456"
       };
 
+      mockPatientContextService.getPatientFilterCriteria.mockReturnValue({
+        type: 'patientId',
+        value: '456',
+      });
+
       await service.searchPatients({}, user);
 
       // Should extract patient ID correctly
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'patient.patientId = :tokenPatientId',
-        { tokenPatientId: '456' },
-      );
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('patient.patientId = :patientId', {
+        patientId: '456',
+      });
     });
 
     it('should allow admin to bypass SMART on FHIR patient context filtering', async () => {
@@ -787,6 +827,10 @@ describe('FhirService', () => {
         email: '',
         roles: [ROLES.PATIENT],
       };
+
+      mockPatientContextService.shouldBypassFiltering.mockReturnValue(false);
+      mockPatientContextService.getPatientId.mockReturnValue(undefined);
+      mockPatientContextService.getKeycloakUserId.mockReturnValue(user.id);
 
       const mockEntity = new PatientEntity();
       mockEntity.fhirResource = {
@@ -1758,6 +1802,10 @@ describe('FhirService', () => {
         patient: 'Patient/test-patient-id', // SMART on FHIR patient context
       };
 
+      mockPatientContextService.shouldBypassFiltering.mockReturnValue(false);
+      mockPatientContextService.getPatientId.mockReturnValue('test-patient-id');
+      mockPatientContextService.getKeycloakUserId.mockReturnValue(undefined);
+
       const mockEntity = new EncounterEntity();
       mockEntity.fhirResource = {
         resourceType: FHIR_RESOURCE_TYPES.ENCOUNTER,
@@ -1816,6 +1864,10 @@ describe('FhirService', () => {
         roles: [ROLES.ADMIN],
         patient: 'Patient/different-patient-id', // Patient context
       };
+
+      mockPatientContextService.shouldBypassFiltering.mockReturnValue(true);
+      mockPatientContextService.getPatientId.mockReturnValue(undefined);
+      mockPatientContextService.getKeycloakUserId.mockReturnValue(undefined);
 
       const mockEntity = new EncounterEntity();
       mockEntity.fhirResource = {
@@ -2001,6 +2053,10 @@ describe('FhirService', () => {
         patient: 'Patient/123', // SMART on FHIR patient context
       };
 
+      // Configure PatientContextService mock
+      mockPatientContextService.getPatientReference.mockReturnValue('Patient/123');
+      mockPatientContextService.getKeycloakUserId.mockReturnValue(undefined);
+
       const mockQueryBuilder = {
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
@@ -2023,13 +2079,14 @@ describe('FhirService', () => {
       await service.searchEncounters({}, user);
 
       // Should filter by patient context
+      expect(mockPatientContextService.getPatientReference).toHaveBeenCalledWith(user);
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
         'encounter.subjectReference = :tokenPatientRef',
         { tokenPatientRef: 'Patient/123' },
       );
       expect(logger.debug).toHaveBeenCalledWith(
-        { tokenPatientId: '123' },
-        'Filtering encounters by SMART on FHIR patient context',
+        { patientReference: 'Patient/123' },
+        'Filtering encounters by patient context',
       );
     });
 
@@ -2042,6 +2099,9 @@ describe('FhirService', () => {
         roles: [],
         patient: 'Patient/123', // SMART on FHIR patient context
       };
+
+      mockPatientContextService.getPatientReference.mockReturnValue('Patient/123');
+      mockPatientContextService.getKeycloakUserId.mockReturnValue(undefined);
 
       const mockQueryBuilder = {
         where: jest.fn().mockReturnThis(),

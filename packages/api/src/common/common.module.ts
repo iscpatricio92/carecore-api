@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EncryptionService } from './services/encryption.service';
+import { PatientContextService } from './services/patient-context.service';
 
 /**
  * Common Module
@@ -10,7 +11,7 @@ import { EncryptionService } from './services/encryption.service';
  */
 @Module({
   imports: [TypeOrmModule],
-  providers: [EncryptionService],
-  exports: [EncryptionService],
+  providers: [EncryptionService, PatientContextService],
+  exports: [EncryptionService, PatientContextService],
 })
 export class CommonModule {}

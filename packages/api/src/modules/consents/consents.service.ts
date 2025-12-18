@@ -19,6 +19,7 @@ import {
 import { ConsentEntity } from '../../entities/consent.entity';
 import { PatientEntity } from '../../entities/patient.entity';
 import { ROLES } from '../../common/constants/roles';
+import { PatientContextService } from '../../common/services/patient-context.service';
 import { AuditService } from '../audit/audit.service';
 import { ScopePermissionService } from '../auth/services/scope-permission.service';
 
@@ -37,6 +38,7 @@ export class ConsentsService {
     private readonly logger: PinoLogger,
     private readonly auditService: AuditService,
     private readonly scopePermissionService: ScopePermissionService,
+    private readonly patientContextService: PatientContextService,
   ) {
     this.logger.setContext(ConsentsService.name);
   }
@@ -286,17 +288,25 @@ export class ConsentsService {
       .createQueryBuilder('consent')
       .where('consent.deletedAt IS NULL');
 
-    // Apply role-based filtering
+    // Apply role-based filtering using PatientContextService
     if (user) {
-      // Admin can see all consents
-      if (user.roles.includes(ROLES.ADMIN)) {
-        // No filter needed
-      }
-      // Patient can only see their own consents
-      else if (user.roles.includes(ROLES.PATIENT)) {
+      const filterCriteria = this.patientContextService.getPatientFilterCriteria(user);
+
+      // Admin can see all consents (no filter)
+      if (!filterCriteria) {
+        if (!this.patientContextService.shouldBypassFiltering(user)) {
+          // Non-admin user without criteria - deny access
+          queryBuilder.andWhere('1 = 0');
+        }
+      } else if (filterCriteria.type === 'patientId') {
+        // Filter by patient ID from SMART on FHIR context
+        queryBuilder.andWhere('consent.patientReference = :patientReference', {
+          patientReference: `Patient/${filterCriteria.value}`,
+        });
+      } else if (filterCriteria.type === 'keycloakUserId') {
         // Find patient records owned by this user
         const patientEntities = await this.patientRepository.find({
-          where: { keycloakUserId: user.id, deletedAt: IsNull() },
+          where: { keycloakUserId: filterCriteria.value, deletedAt: IsNull() },
         });
 
         if (patientEntities.length === 0) {
@@ -310,14 +320,9 @@ export class ConsentsService {
             references: patientReferences,
           });
         }
-      }
-      // Practitioners can see active consents
-      else if (user.roles.includes(ROLES.PRACTITIONER)) {
+      } else if (filterCriteria.type === 'active') {
+        // Practitioners can see active consents
         queryBuilder.andWhere('consent.status = :status', { status: 'active' });
-      }
-      // Other roles see nothing
-      else {
-        queryBuilder.andWhere('1 = 0'); // Always false
       }
     }
 

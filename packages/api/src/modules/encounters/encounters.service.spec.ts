@@ -7,10 +7,19 @@ import { EncountersService } from './encounters.service';
 import { EncounterEntity } from '../../entities/encounter.entity';
 import { User } from '@carecore/shared';
 import { ROLES } from '../../common/constants/roles';
+import { PatientContextService } from '../../common/services/patient-context.service';
 
 describe('EncountersService', () => {
   let service: EncountersService;
   let repository: jest.Mocked<Repository<EncounterEntity>>;
+
+  const mockPatientContextService = {
+    getPatientFilterCriteria: jest.fn(),
+    getPatientReference: jest.fn(),
+    shouldBypassFiltering: jest.fn(),
+    getKeycloakUserId: jest.fn(),
+    getPatientId: jest.fn(),
+  };
 
   beforeEach(async () => {
     repository = {
@@ -20,12 +29,23 @@ describe('EncountersService', () => {
       createQueryBuilder: jest.fn(),
     } as unknown as jest.Mocked<Repository<EncounterEntity>>;
 
+    // Reset mocks
+    mockPatientContextService.getPatientFilterCriteria.mockReturnValue(null);
+    mockPatientContextService.getPatientReference.mockReturnValue(undefined);
+    mockPatientContextService.shouldBypassFiltering.mockReturnValue(false);
+    mockPatientContextService.getKeycloakUserId.mockReturnValue(undefined);
+    mockPatientContextService.getPatientId.mockReturnValue(undefined);
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         EncountersService,
         {
           provide: getRepositoryToken(EncounterEntity),
           useValue: repository,
+        },
+        {
+          provide: PatientContextService,
+          useValue: mockPatientContextService,
         },
       ],
     }).compile();
@@ -108,6 +128,8 @@ describe('EncountersService', () => {
         patient: 'Patient/123',
       };
 
+      mockPatientContextService.getPatientReference.mockReturnValue('Patient/123');
+
       const entity = new EncounterEntity();
       entity.id = 'db-uuid';
       entity.encounterId = 'encounter-1';
@@ -122,6 +144,7 @@ describe('EncountersService', () => {
 
       expect(result.total).toBe(1);
       expect(result.data[0].subjectReference).toBe('Patient/123');
+      expect(mockPatientContextService.getPatientReference).toHaveBeenCalledWith(user);
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
         'encounter.subjectReference = :tokenPatientRef',
         { tokenPatientRef: 'Patient/123' },
@@ -136,6 +159,9 @@ describe('EncountersService', () => {
         email: 'admin@example.com',
         roles: [ROLES.ADMIN],
       };
+
+      mockPatientContextService.getPatientReference.mockReturnValue(undefined);
+      mockPatientContextService.shouldBypassFiltering.mockReturnValue(true);
 
       const entity1 = new EncounterEntity();
       entity1.id = 'db-uuid-1';
@@ -170,6 +196,8 @@ describe('EncountersService', () => {
         fhirUser: 'Patient/789',
       };
 
+      mockPatientContextService.getPatientReference.mockReturnValue('Patient/789');
+
       const entity = new EncounterEntity();
       entity.id = 'db-uuid';
       entity.encounterId = 'encounter-1';
@@ -181,6 +209,7 @@ describe('EncountersService', () => {
 
       await service.findAll(user);
 
+      expect(mockPatientContextService.getPatientReference).toHaveBeenCalledWith(user);
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
         'encounter.subjectReference = :tokenPatientRef',
         { tokenPatientRef: 'Patient/789' },
@@ -228,6 +257,10 @@ describe('EncountersService', () => {
         roles: [ROLES.ADMIN],
       };
 
+      mockPatientContextService.shouldBypassFiltering.mockReturnValue(true);
+      mockPatientContextService.getPatientId.mockReturnValue(undefined);
+      mockPatientContextService.getKeycloakUserId.mockReturnValue(undefined);
+
       const entity = new EncounterEntity();
       entity.id = 'db-uuid';
       entity.encounterId = 'encounter-1';
@@ -253,6 +286,10 @@ describe('EncountersService', () => {
         patient: 'Patient/123',
       };
 
+      mockPatientContextService.shouldBypassFiltering.mockReturnValue(false);
+      mockPatientContextService.getPatientId.mockReturnValue('123');
+      mockPatientContextService.getKeycloakUserId.mockReturnValue(undefined);
+
       const entity = new EncounterEntity();
       entity.id = 'db-uuid';
       entity.encounterId = 'encounter-1';
@@ -277,6 +314,10 @@ describe('EncountersService', () => {
         roles: [ROLES.PATIENT],
         patient: 'Patient/123',
       };
+
+      mockPatientContextService.shouldBypassFiltering.mockReturnValue(false);
+      mockPatientContextService.getPatientId.mockReturnValue('123');
+      mockPatientContextService.getKeycloakUserId.mockReturnValue(undefined);
 
       const entity = new EncounterEntity();
       entity.id = 'db-uuid';
@@ -333,6 +374,10 @@ describe('EncountersService', () => {
         roles: [ROLES.PATIENT],
         patient: 'Patient/123',
       };
+
+      mockPatientContextService.shouldBypassFiltering.mockReturnValue(false);
+      mockPatientContextService.getPatientId.mockReturnValue('123');
+      mockPatientContextService.getKeycloakUserId.mockReturnValue(undefined);
 
       const entity = new EncounterEntity();
       entity.id = 'db-uuid';

@@ -9,13 +9,14 @@ import {
   EncounterDetailDto,
 } from '../../common/dto/encounter.dto';
 import { EncountersListResponse, User } from '@carecore/shared';
-import { ROLES } from '../../common/constants/roles';
+import { PatientContextService } from '../../common/services/patient-context.service';
 
 @Injectable()
 export class EncountersService {
   constructor(
     @InjectRepository(EncounterEntity)
     private encounterRepository: Repository<EncounterEntity>,
+    private readonly patientContextService: PatientContextService,
   ) {}
 
   /**
@@ -47,24 +48,10 @@ export class EncountersService {
   }
 
   /**
-   * Extracts patient ID from SMART on FHIR patient context
-   * Handles formats like "Patient/123" or just "123"
-   * @param patientContext - Patient context from token (can be "Patient/123" or "123")
-   * @returns Patient ID or undefined if not a valid patient context
-   */
-  private extractPatientIdFromContext(patientContext?: string): string | undefined {
-    if (!patientContext) {
-      return undefined;
-    }
-
-    // Remove "Patient/" prefix if present
-    return patientContext.replace(/^Patient\//, '');
-  }
-
-  /**
    * Validates that user has access to an encounter
    * Patients can only access their own encounters
    * Practitioners and admins can access all encounters
+   * Uses PatientContextService to unify filtering logic
    */
   private validateAccess(entity: EncounterEntity, user?: User): void {
     if (!user) {
@@ -72,21 +59,31 @@ export class EncountersService {
     }
 
     // Admins can access everything
-    if (user.roles?.includes(ROLES.ADMIN)) {
+    if (this.patientContextService.shouldBypassFiltering(user)) {
       return;
     }
 
-    // Extract patient ID from user context
-    const userPatientId = this.extractPatientIdFromContext(user.patient || user.fhirUser);
-
-    // If user has patient context, they can only access their own encounters
+    // Use PatientContextService to get patient ID
+    const userPatientId = this.patientContextService.getPatientId(user);
     if (userPatientId) {
-      const encounterPatientId = this.extractPatientIdFromContext(entity.subjectReference);
+      // Extract patient ID from encounter subject reference
+      const encounterPatientId = entity.subjectReference?.replace(/^Patient\//, '');
       if (encounterPatientId !== userPatientId) {
         throw new ForbiddenException(
           'You do not have permission to access this encounter. Patients can only access their own encounters.',
         );
       }
+      return;
+    }
+
+    // Check if user has 'patient' role and encounter belongs to their patient records
+    const keycloakUserId = this.patientContextService.getKeycloakUserId(user);
+    if (keycloakUserId) {
+      // For keycloakUserId, we need to verify the encounter's patient belongs to this user
+      // This validation is done at the query level in findAll, so we just return here
+      // If a patient tries to access an encounter that doesn't belong to them,
+      // it won't be in the results from findAll
+      return;
     }
 
     // Practitioners can access all encounters (no restriction needed here)
@@ -103,17 +100,16 @@ export class EncountersService {
       .createQueryBuilder('encounter')
       .where('encounter.deletedAt IS NULL');
 
-    // Apply SMART on FHIR patient context filtering (admin bypasses this)
-    const tokenPatientId =
-      user && !user.roles?.includes(ROLES.ADMIN)
-        ? this.extractPatientIdFromContext(user.patient || user.fhirUser)
-        : undefined;
-
-    if (tokenPatientId) {
-      // Token is scoped to a specific patient - filter to encounters for that patient only
+    // Apply patient context filtering using unified service
+    const patientReference = this.patientContextService.getPatientReference(user);
+    if (patientReference) {
       queryBuilder.andWhere('encounter.subjectReference = :tokenPatientRef', {
-        tokenPatientRef: `Patient/${tokenPatientId}`,
+        tokenPatientRef: patientReference,
       });
+    } else if (user && !this.patientContextService.shouldBypassFiltering(user)) {
+      // If user is not admin and has no patient reference, deny access
+      // This ensures patients always have a patientId in their token
+      queryBuilder.andWhere('1 = 0'); // Always false condition
     }
 
     const entities = await queryBuilder.orderBy('encounter.createdAt', 'DESC').getMany();

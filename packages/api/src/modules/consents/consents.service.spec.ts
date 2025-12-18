@@ -10,6 +10,7 @@ import { PatientEntity } from '../../entities/patient.entity';
 import { CreateConsentDto, UpdateConsentDto } from '../../common/dto/fhir-consent.dto';
 import { Consent, User, FHIR_RESOURCE_TYPES } from '@carecore/shared';
 import { ROLES } from '../../common/constants/roles';
+import { PatientContextService } from '../../common/services/patient-context.service';
 import { AuditService } from '../audit/audit.service';
 import { ScopePermissionService } from '../auth/services/scope-permission.service';
 
@@ -37,6 +38,14 @@ describe('ConsentsService', () => {
   const mockScopePermissionService = {
     hasResourcePermission: jest.fn().mockReturnValue(false),
     roleGrantsPermission: jest.fn().mockReturnValue(false),
+  };
+
+  const mockPatientContextService = {
+    getPatientFilterCriteria: jest.fn(),
+    getPatientReference: jest.fn(),
+    shouldBypassFiltering: jest.fn(),
+    getKeycloakUserId: jest.fn(),
+    getPatientId: jest.fn(),
   };
 
   const adminUser: User = {
@@ -94,6 +103,13 @@ describe('ConsentsService', () => {
       find: jest.fn(),
     } as unknown as jest.Mocked<Repository<PatientEntity>>;
 
+    // Reset mocks
+    mockPatientContextService.getPatientFilterCriteria.mockReturnValue(null);
+    mockPatientContextService.getPatientReference.mockReturnValue(undefined);
+    mockPatientContextService.shouldBypassFiltering.mockReturnValue(false);
+    mockPatientContextService.getKeycloakUserId.mockReturnValue(undefined);
+    mockPatientContextService.getPatientId.mockReturnValue(undefined);
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ConsentsService,
@@ -102,6 +118,7 @@ describe('ConsentsService', () => {
         { provide: PinoLogger, useValue: mockLogger },
         { provide: AuditService, useValue: mockAuditService },
         { provide: ScopePermissionService, useValue: mockScopePermissionService },
+        { provide: PatientContextService, useValue: mockPatientContextService },
       ],
     }).compile();
 
@@ -191,6 +208,12 @@ describe('ConsentsService', () => {
     });
 
     it('should filter by patient for patient users', async () => {
+      // Configure PatientContextService to return keycloakUserId filter
+      mockPatientContextService.getPatientFilterCriteria.mockReturnValue({
+        type: 'keycloakUserId',
+        value: patientUser.id,
+      });
+
       patientRepository.find.mockResolvedValue([
         { patientId: 'p1', keycloakUserId: patientUser.id } as PatientEntity,
       ]);
@@ -202,6 +225,11 @@ describe('ConsentsService', () => {
     });
 
     it('should return empty when patient has no records', async () => {
+      mockPatientContextService.getPatientFilterCriteria.mockReturnValue({
+        type: 'keycloakUserId',
+        value: 'patient-1',
+      });
+
       patientRepository.find.mockResolvedValue([]);
       queryBuilder.getMany.mockResolvedValue([]);
 
@@ -210,6 +238,11 @@ describe('ConsentsService', () => {
     });
 
     it('should filter active consents for practitioner', async () => {
+      mockPatientContextService.getPatientFilterCriteria.mockReturnValue({
+        type: 'active',
+        value: true,
+      });
+
       queryBuilder.getMany.mockResolvedValue([
         consentEntityFactory({ status: 'active' }),
         consentEntityFactory({ status: 'draft' }),
