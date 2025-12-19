@@ -15,6 +15,66 @@ export class ErrorService {
   private static maxStoredErrors = 50;
 
   /**
+   * Extract a meaningful error message from various error types
+   */
+  private static extractErrorMessage(error: unknown): string {
+    if (error instanceof Error) {
+      const errorAny = error as Error & {
+        status?: number;
+        statusText?: string;
+        data?: Record<string, unknown>;
+      };
+
+      // Si el error tiene data con mensaje, usarlo primero
+      if (errorAny.data) {
+        if (typeof errorAny.data.message === 'string' && errorAny.data.message) {
+          return errorAny.data.message;
+        }
+        if (typeof errorAny.data.error === 'string' && errorAny.data.error) {
+          return errorAny.data.error;
+        }
+        if (Array.isArray(errorAny.data.message)) {
+          return errorAny.data.message.join(', ');
+        }
+      }
+
+      // Si el mensaje está vacío o es genérico, intentar extraer más información
+      if (!error.message || error.message === 'Error' || error.message.trim() === '') {
+        // Verificar si el error tiene status code
+        if (errorAny.status) {
+          const statusMsg = errorAny.statusText
+            ? `${errorAny.status}: ${errorAny.statusText}`
+            : `HTTP ${errorAny.status}`;
+          return statusMsg;
+        }
+        if (error.name && error.name !== 'Error') {
+          return `${error.name}`;
+        }
+        return 'An error occurred';
+      }
+
+      // Si el mensaje es solo "HTTP 400" o similar, intentar mejorarlo con data
+      if (error.message.startsWith('HTTP ') && errorAny.data) {
+        if (typeof errorAny.data.message === 'string' && errorAny.data.message) {
+          return errorAny.data.message;
+        }
+      }
+
+      return error.message;
+    }
+    if (typeof error === 'string') {
+      return error;
+    }
+    if (error && typeof error === 'object') {
+      const errorObj = error as { message?: string; error?: string; status?: number };
+      if (errorObj.message) return errorObj.message;
+      if (errorObj.error) return errorObj.error;
+      if (errorObj.status) return `HTTP ${errorObj.status}`;
+    }
+    return 'Unknown error occurred';
+  }
+
+  /**
    * Log an error
    */
   static logError(
@@ -23,9 +83,15 @@ export class ErrorService {
     originalError?: Error | unknown,
     context?: Record<string, unknown>,
   ): ErrorInfo {
+    // Si el mensaje está vacío o es genérico, intentar extraer uno mejor del error
+    let finalMessage = message;
+    if (!message || message === 'Error' || message.trim() === '') {
+      finalMessage = this.extractErrorMessage(originalError);
+    }
+
     const errorInfo: ErrorInfo = {
       type,
-      message,
+      message: finalMessage,
       originalError,
       context,
       timestamp: new Date().toISOString(),
@@ -37,13 +103,54 @@ export class ErrorService {
       this.errors.shift();
     }
 
-    // Log to console in development
+    // Log to console in development with better formatting
     if (__DEV__) {
-      console.error(`[${type}] ${message}`, {
-        error: originalError,
-        context,
+      const errorDetails: Record<string, unknown> = {
+        type,
+        message: finalMessage,
         timestamp: errorInfo.timestamp,
-      });
+      };
+
+      // Agregar información del error original si está disponible
+      if (originalError instanceof Error) {
+        const errorWithData = originalError as Error & {
+          status?: number;
+          statusText?: string;
+          data?: Record<string, unknown>;
+        };
+
+        errorDetails.errorName = originalError.name;
+        errorDetails.errorMessage = originalError.message;
+
+        // Agregar información HTTP si está disponible
+        if (errorWithData.status) {
+          errorDetails.status = errorWithData.status;
+          errorDetails.statusText = errorWithData.statusText;
+        }
+
+        // Agregar data del error si está disponible (puede contener mensajes del backend)
+        if (errorWithData.data) {
+          errorDetails.responseData = errorWithData.data;
+          // Si hay un mensaje en data, mostrarlo prominentemente
+          if (errorWithData.data.message) {
+            errorDetails.backendMessage = errorWithData.data.message;
+          }
+        }
+
+        if (originalError.stack) {
+          errorDetails.stack = originalError.stack.split('\n').slice(0, 5).join('\n'); // Primeras 5 líneas
+        }
+      }
+
+      // Agregar contexto si está disponible
+      if (context && Object.keys(context).length > 0) {
+        errorDetails.context = context;
+      }
+
+      // Loggear con formato más legible
+      console.group(`🔴 [${type}] ${finalMessage}`);
+      console.error('Details:', errorDetails);
+      console.groupEnd();
     }
 
     // In production, you might want to send to a logging service
@@ -104,8 +211,16 @@ export class ErrorService {
   static handleFHIRError(error: unknown, context?: Record<string, unknown>): ErrorInfo {
     let message = 'FHIR API error occurred';
 
+    // Intentar extraer un mensaje más descriptivo
     if (error instanceof Error) {
-      message = error.message;
+      message = this.extractErrorMessage(error);
+
+      // Si el mensaje sigue siendo genérico, construir uno más específico
+      if (message === 'Error' || message === 'An error occurred' || !message.trim()) {
+        const resourceType = (context?.resourceType as string) || 'resource';
+        const operation = (context?.operation as string) || 'operation';
+        message = `Failed to ${operation} ${resourceType}`;
+      }
     } else if (typeof error === 'string') {
       message = error;
     }
@@ -153,16 +268,46 @@ export class ErrorService {
    * Get user-friendly error message
    */
   static getUserFriendlyMessage(errorInfo: ErrorInfo): string {
+    // Si el mensaje ya es user-friendly, usarlo directamente
+    const message = errorInfo.message;
+
     switch (errorInfo.type) {
       case ErrorType.NETWORK:
+        // Si el mensaje ya es descriptivo, usarlo; si no, usar el genérico
+        if (message && message !== 'Network error occurred' && !message.includes('fetch')) {
+          return message;
+        }
         return 'Unable to connect to the server. Please check your internet connection and try again.';
       case ErrorType.AUTH:
+        // Si el mensaje ya es descriptivo, usarlo; si no, usar el genérico
+        if (message && message !== 'Authentication error occurred') {
+          return message;
+        }
         return 'Authentication failed. Please log in again.';
       case ErrorType.VALIDATION:
-        return errorInfo.message;
+        return message;
       case ErrorType.FHIR:
+        // Intentar hacer el mensaje más específico basado en el contexto
+        const context = errorInfo.context;
+        if (context?.resourceType && context?.operation) {
+          const resourceType = context.resourceType as string;
+          const operation = context.operation as string;
+          // Si hay un mensaje específico del error, usarlo
+          if (message && message !== 'FHIR API error occurred' && !message.includes('Failed to')) {
+            return message;
+          }
+          return `Unable to ${operation} ${resourceType}. Please try again.`;
+        }
+        // Si el mensaje ya es descriptivo, usarlo
+        if (message && message !== 'FHIR API error occurred') {
+          return message;
+        }
         return 'An error occurred while processing your medical data. Please try again.';
       default:
+        // Si el mensaje ya es descriptivo, usarlo
+        if (message && message !== 'An unexpected error occurred') {
+          return message;
+        }
         return 'An unexpected error occurred. Please try again.';
     }
   }

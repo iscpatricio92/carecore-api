@@ -169,10 +169,61 @@ export class HttpClient {
           continue;
         }
 
-        // Si no es retryable o es el último intento, lanzar error
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.message || `Error: ${response.statusText}`;
-        throw new Error(errorMessage);
+        // Si no es retryable o es el último intento, lanzar error con más información
+        // Leer el body del error ANTES de lanzar el error (solo se puede leer una vez)
+        let errorData: Record<string, unknown> = {};
+        let errorMessage = `HTTP ${response.status}`;
+
+        try {
+          // Clonar la respuesta para poder leer el body sin consumirlo
+          const clonedResponse = response.clone();
+          const contentType = clonedResponse.headers.get('content-type') || '';
+
+          if (contentType.includes('application/json')) {
+            errorData = await clonedResponse.json().catch(() => ({}));
+          } else {
+            const text = await clonedResponse.text().catch(() => '');
+            if (text) {
+              try {
+                errorData = JSON.parse(text);
+              } catch {
+                // Si no es JSON, usar el texto como mensaje
+                errorData = { message: text };
+              }
+            }
+          }
+        } catch {
+          // Si falla al leer el body, continuar con errorData vacío
+        }
+
+        // Construir mensaje de error más descriptivo
+        // Prioridad: errorData.message (string) > errorData.message (array) > errorData.error > statusText > status
+        if (errorData.message) {
+          if (typeof errorData.message === 'string' && errorData.message.trim()) {
+            errorMessage = errorData.message;
+          } else if (Array.isArray(errorData.message) && errorData.message.length > 0) {
+            // Si es un array de mensajes de validación, unirlos
+            errorMessage = errorData.message
+              .map((msg: unknown) => (typeof msg === 'string' ? msg : String(msg)))
+              .join(', ');
+          }
+        } else if (errorData.error && typeof errorData.error === 'string') {
+          errorMessage = errorData.error;
+        } else if (response.statusText) {
+          errorMessage = `${response.status}: ${response.statusText}`;
+        } else {
+          errorMessage = `HTTP ${response.status}`;
+        }
+
+        // Crear error con información adicional
+        const error = new Error(errorMessage);
+        (error as Error & { status?: number; statusText?: string; data?: unknown }).status =
+          response.status;
+        (error as Error & { status?: number; statusText?: string; data?: unknown }).statusText =
+          response.statusText;
+        (error as Error & { status?: number; statusText?: string; data?: unknown }).data =
+          errorData;
+        throw error;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error('Error desconocido');
 

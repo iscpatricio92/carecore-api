@@ -141,9 +141,29 @@ export function useFHIRData<T extends Resource>(
           return;
         }
 
-        const errorMessage = err instanceof Error ? err.message : `Error al cargar ${resourceType}`;
+        // Extraer mensaje de error más descriptivo
+        let errorMessage = `Error al cargar ${resourceType}`;
+        if (err instanceof Error) {
+          const errorWithData = err as Error & { data?: Record<string, unknown> };
+          // Si el error tiene data con mensaje, usarlo
+          if (errorWithData.data?.message) {
+            errorMessage =
+              typeof errorWithData.data.message === 'string'
+                ? errorWithData.data.message
+                : errorWithData.message;
+          } else {
+            errorMessage = err.message || errorMessage;
+          }
+        }
+
         setError(errorMessage);
-        console.error(`Error al cargar ${resourceType}:`, err);
+        // Solo loggear en desarrollo y con más detalle
+        if (__DEV__) {
+          console.error(`Error al cargar ${resourceType}:`, {
+            message: errorMessage,
+            error: err,
+          });
+        }
       } finally {
         setIsLoading(false);
       }
