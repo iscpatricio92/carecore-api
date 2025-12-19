@@ -19,60 +19,62 @@ interface FormInputProps extends TextInputProps {
   iconName?: keyof typeof Ionicons.glyphMap; // Nombre opcional del ícono
 }
 
-export const FormInput: React.FC<FormInputProps> = ({
-  label,
-  error,
-  containerStyle,
-  iconName,
-  style, // El estilo del TextInput se hereda y se usa al final
-  ...rest // El resto de las propiedades estándar de TextInput (value, onChangeText, etc.)
-}) => {
-  // Determinar si hay un error para aplicar estilos visuales
-  const hasError = !!error;
+export const FormInput: React.FC<FormInputProps> = React.memo(
+  ({
+    label,
+    error,
+    containerStyle,
+    iconName,
+    style, // El estilo del TextInput se hereda y se usa al final
+    ...rest // El resto de las propiedades estándar de TextInput (value, onChangeText, etc.)
+  }) => {
+    // Determinar si hay un error para aplicar estilos visuales
+    const hasError = !!error;
 
-  return (
-    <View style={[styles.inputContainer, containerStyle]}>
-      {/* 1. Etiqueta (Label) */}
-      <Text style={styles.label}>{label}</Text>
+    return (
+      <View style={[styles.inputContainer, containerStyle]}>
+        {/* 1. Etiqueta (Label) */}
+        <Text style={styles.label}>{label}</Text>
 
-      {/* 2. Área del Input con Ícono */}
-      <View style={[styles.inputWrapper, hasError && styles.inputWrapperError]}>
-        {/* Ícono de Prefijo Opcional */}
-        {iconName && (
-          <Ionicons
-            name={iconName}
-            size={20}
-            color={hasError ? '#D32F2F' : '#666'}
-            style={styles.icon}
+        {/* 2. Área del Input con Ícono */}
+        <View style={[styles.inputWrapper, hasError && styles.inputWrapperError]}>
+          {/* Ícono de Prefijo Opcional */}
+          {iconName && (
+            <Ionicons
+              name={iconName}
+              size={20}
+              color={hasError ? '#D32F2F' : '#666'}
+              style={styles.icon}
+            />
+          )}
+
+          {/* El Campo de Texto Principal */}
+          <TextInput
+            style={[styles.input, style]}
+            placeholderTextColor="#999"
+            // Aplicar todas las demás propiedades pasadas como props
+            {...rest}
           />
-        )}
 
-        {/* El Campo de Texto Principal */}
-        <TextInput
-          style={[styles.input, style]}
-          placeholderTextColor="#999"
-          // Aplicar todas las demás propiedades pasadas como props
-          {...rest}
-        />
+          {/* Ícono de Validación o Error (Opcional) */}
+          {hasError ? (
+            <Ionicons name="alert-circle" size={20} color="#D32F2F" style={styles.validationIcon} />
+          ) : rest.value && rest.value.length > 0 && !hasError ? (
+            <Ionicons
+              name="checkmark-circle"
+              size={20}
+              color="#00796B"
+              style={styles.validationIcon}
+            />
+          ) : null}
+        </View>
 
-        {/* Ícono de Validación o Error (Opcional) */}
-        {hasError ? (
-          <Ionicons name="alert-circle" size={20} color="#D32F2F" style={styles.validationIcon} />
-        ) : rest.value && rest.value.length > 0 && !hasError ? (
-          <Ionicons
-            name="checkmark-circle"
-            size={20}
-            color="#00796B"
-            style={styles.validationIcon}
-          />
-        ) : null}
+        {/* 3. Mensaje de Error */}
+        {hasError && <Text style={styles.errorText}>{error}</Text>}
       </View>
-
-      {/* 3. Mensaje de Error */}
-      {hasError && <Text style={styles.errorText}>{error}</Text>}
-    </View>
-  );
-};
+    );
+  },
+);
 
 const styles = StyleSheet.create({
   inputContainer: {

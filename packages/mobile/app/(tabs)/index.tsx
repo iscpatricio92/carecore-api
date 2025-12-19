@@ -53,11 +53,11 @@ export default function DashboardScreen() {
   const isLoading = isLoadingEncounters || isLoadingDocuments || isLoadingConsents;
   const error = errorEncounters || errorDocuments || errorConsents;
 
-  const handleRefresh = () => {
+  const handleRefresh = React.useCallback(() => {
     refetchEncounters();
     refetchDocuments();
     refetchConsents();
-  };
+  }, [refetchEncounters, refetchDocuments, refetchConsents]);
 
   // Combinar y ordenar registros recientes
   const recentRecords = useMemo(() => {

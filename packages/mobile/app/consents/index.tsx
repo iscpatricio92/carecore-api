@@ -52,49 +52,52 @@ export default function ConsentsScreen() {
     });
   }, [allConsents, statusFilter]);
 
-  const handleRevoke = async (consent: Consent) => {
-    if (!consent.id) {
-      Alert.alert('Error', 'No se puede revocar este consentimiento');
-      return;
-    }
+  const handleRevoke = React.useCallback(
+    async (consent: Consent) => {
+      if (!consent.id) {
+        Alert.alert('Error', 'No se puede revocar este consentimiento');
+        return;
+      }
 
-    Alert.alert(
-      'Revocar Consentimiento',
-      '¿Estás seguro de que deseas revocar este consentimiento?',
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel',
-        },
-        {
-          text: 'Revocar',
-          style: 'destructive',
-          onPress: async () => {
-            setIsRevoking(consent.id!);
-            try {
-              // Actualizar el consentimiento con status 'revoked'
-              const updatedConsent: Consent = {
-                ...consent,
-                status: 'revoked',
-              };
-              await fhirClientService.saveResource(updatedConsent);
-              // Recargar la lista
-              refetch();
-              Alert.alert('Éxito', 'Consentimiento revocado correctamente');
-            } catch (err) {
-              const errorMessage =
-                err instanceof Error ? err.message : 'Error al revocar el consentimiento';
-              Alert.alert('Error', errorMessage);
-            } finally {
-              setIsRevoking(null);
-            }
+      Alert.alert(
+        'Revocar Consentimiento',
+        '¿Estás seguro de que deseas revocar este consentimiento?',
+        [
+          {
+            text: 'Cancelar',
+            style: 'cancel',
           },
-        },
-      ],
-    );
-  };
+          {
+            text: 'Revocar',
+            style: 'destructive',
+            onPress: async () => {
+              setIsRevoking(consent.id!);
+              try {
+                // Actualizar el consentimiento con status 'revoked'
+                const updatedConsent: Consent = {
+                  ...consent,
+                  status: 'revoked',
+                };
+                await fhirClientService.saveResource(updatedConsent);
+                // Recargar la lista
+                refetch();
+                Alert.alert('Éxito', 'Consentimiento revocado correctamente');
+              } catch (err) {
+                const errorMessage =
+                  err instanceof Error ? err.message : 'Error al revocar el consentimiento';
+                Alert.alert('Error', errorMessage);
+              } finally {
+                setIsRevoking(null);
+              }
+            },
+          },
+        ],
+      );
+    },
+    [refetch],
+  );
 
-  const formatDate = (dateString?: string) => {
+  const formatDate = React.useCallback((dateString?: string) => {
     if (!dateString) return 'No especificada';
     try {
       return new Date(dateString).toLocaleDateString('es-ES', {
@@ -105,9 +108,9 @@ export default function ConsentsScreen() {
     } catch {
       return dateString;
     }
-  };
+  }, []);
 
-  const getStatusColor = (status?: string) => {
+  const getStatusColor = React.useCallback((status?: string) => {
     switch (status) {
       case 'active':
         return '#4CAF50';
@@ -118,9 +121,9 @@ export default function ConsentsScreen() {
       default:
         return '#666';
     }
-  };
+  }, []);
 
-  const getStatusLabel = (consent: Consent) => {
+  const getStatusLabel = React.useCallback((consent: Consent) => {
     if (consent.status === 'revoked') return 'Revocado';
     if (consent.status === 'active') {
       // Verificar si está expirado
@@ -132,7 +135,7 @@ export default function ConsentsScreen() {
       return 'Activo';
     }
     return consent.status || 'Desconocido';
-  };
+  }, []);
 
   return (
     <View style={styles.container}>

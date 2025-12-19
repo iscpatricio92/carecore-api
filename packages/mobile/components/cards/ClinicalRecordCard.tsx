@@ -13,7 +13,7 @@ interface ClinicalRecordCardProps {
   onPress: () => void;
 }
 
-export const ClinicalRecordCard: React.FC<ClinicalRecordCardProps> = (props) => {
+export const ClinicalRecordCard: React.FC<ClinicalRecordCardProps> = React.memo((props) => {
   const { resourceType, title, subtitle, date, onPress } = props;
 
   return (
@@ -33,7 +33,7 @@ export const ClinicalRecordCard: React.FC<ClinicalRecordCardProps> = (props) => 
       </View>
     </TouchableOpacity>
   );
-};
+});
 
 const styles = StyleSheet.create({
   card: {

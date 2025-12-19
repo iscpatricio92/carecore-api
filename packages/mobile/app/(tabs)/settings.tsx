@@ -3,22 +3,31 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { AppHeader } from '../../components/ui/AppHeader';
-import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
+import { ErrorMessage } from '../../components/ui/ErrorMessage';
+import { SkeletonList } from '../../components/ui/SkeletonLoader';
 import { useAuth } from '../../hooks/useAuth';
 import { useFHIRData } from '../../hooks/useFHIRData';
-import { Patient } from '@carecore/shared';
+import { Patient, ErrorType } from '@carecore/shared';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 
 export default function SettingsScreen() {
   const { user, logout, isLoading: isLoadingAuth } = useAuth();
-  const { data: patientData, isLoading: isLoadingPatient } = useFHIRData<Patient>('Patient');
-  const { data: consents } = useFHIRData('Consent', { status: 'active' });
+  const {
+    data: patientData,
+    isLoading: isLoadingPatient,
+    error: errorPatient,
+    refetch: refetchPatient,
+  } = useFHIRData<Patient>('Patient');
+  const { data: consents, error: errorConsents } = useFHIRData('Consent', {
+    status: 'active',
+  });
 
   const isLoading = isLoadingAuth || isLoadingPatient;
+  const error = errorPatient || errorConsents;
 
-  const handleLogout = () => {
+  const handleLogout = React.useCallback(() => {
     Alert.alert('Cerrar Sesión', '¿Estás seguro de que deseas cerrar sesión?', [
       {
         text: 'Cancelar',
@@ -33,11 +42,15 @@ export default function SettingsScreen() {
         },
       },
     ]);
-  };
+  }, [logout]);
 
-  const handleManageConsents = () => {
+  const handleManageConsents = React.useCallback(() => {
     router.push('/consents');
-  };
+  }, []);
+
+  const handleRefresh = React.useCallback(() => {
+    refetchPatient();
+  }, [refetchPatient]);
 
   // Obtener información del paciente
   const patient = patientData && patientData.length > 0 ? patientData[0] : null;
@@ -45,11 +58,11 @@ export default function SettingsScreen() {
     ? `${patient.name[0].given?.join(' ') || ''} ${patient.name[0].family || ''}`.trim()
     : user?.email || 'Usuario';
 
-  if (isLoading) {
+  if (isLoading && !patientData) {
     return (
       <View style={styles.container}>
         <AppHeader title="Perfil" />
-        <LoadingSpinner message="Cargando información..." />
+        <SkeletonList count={3} itemHeight={60} spacing={16} />
       </View>
     );
   }
@@ -59,6 +72,17 @@ export default function SettingsScreen() {
       <AppHeader title="Perfil" />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Manejo de errores */}
+        {error && (
+          <ErrorMessage
+            message={error}
+            type={ErrorType.NETWORK}
+            onRetry={handleRefresh}
+            showRetry={true}
+            style={styles.errorMessage}
+          />
+        )}
+
         {/* Información del Usuario */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Información Personal</Text>
@@ -251,5 +275,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  errorMessage: {
+    marginBottom: 16,
   },
 });

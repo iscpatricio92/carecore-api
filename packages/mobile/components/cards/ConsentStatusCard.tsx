@@ -9,32 +9,31 @@ interface ConsentStatusCardProps {
   onManagePress: () => void;
 }
 
-export const ConsentStatusCard: React.FC<ConsentStatusCardProps> = ({
-  activeConsentsCount,
-  onManagePress,
-}) => {
-  return (
-    <View style={styles.card}>
-      <Text style={styles.header}>Tu Información está Protegida</Text>
+export const ConsentStatusCard: React.FC<ConsentStatusCardProps> = React.memo(
+  ({ activeConsentsCount, onManagePress }) => {
+    return (
+      <View style={styles.card}>
+        <Text style={styles.header}>Tu Información está Protegida</Text>
 
-      {/* Mensaje de estado */}
-      <Text style={styles.statusText}>
-        Actualmente compartiendo con {activeConsentsCount} profesional(es) médico(s) o
-        institución(es).
-      </Text>
+        {/* Mensaje de estado */}
+        <Text style={styles.statusText}>
+          Actualmente compartiendo con {activeConsentsCount} profesional(es) médico(s) o
+          institución(es).
+        </Text>
 
-      {/* Botón de Acción Principal */}
-      <PrimaryButton
-        title="Administrar Accesos (Consentimientos)"
-        onPress={onManagePress}
-        style={styles.button}
-      />
+        {/* Botón de Acción Principal */}
+        <PrimaryButton
+          title="Administrar Accesos (Consentimientos)"
+          onPress={onManagePress}
+          style={styles.button}
+        />
 
-      {/* Texto de refuerzo de propiedad */}
-      <Text style={styles.footerText}>Recuerda: Eres el dueño absoluto de tu historial.</Text>
-    </View>
-  );
-};
+        {/* Texto de refuerzo de propiedad */}
+        <Text style={styles.footerText}>Recuerda: Eres el dueño absoluto de tu historial.</Text>
+      </View>
+    );
+  },
+);
 
 const styles = StyleSheet.create({
   card: {

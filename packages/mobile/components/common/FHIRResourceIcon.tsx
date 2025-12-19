@@ -25,7 +25,7 @@ const IconMap: Record<
   Procedure: { iconName: 'pulse', color: '#FF3243' },
 };
 
-export const FHIRResourceIcon: React.FC<FHIRResourceIconProps> = ({ type }) => {
+export const FHIRResourceIcon: React.FC<FHIRResourceIconProps> = React.memo(({ type }) => {
   const { iconName, color } = IconMap[type] || IconMap[FHIR_RESOURCE_TYPES.PATIENT];
 
   return (
@@ -33,7 +33,7 @@ export const FHIRResourceIcon: React.FC<FHIRResourceIconProps> = ({ type }) => {
       <Ionicons name={iconName} size={20} color={color} />
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   iconContainer: {

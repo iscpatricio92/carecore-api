@@ -20,12 +20,13 @@ import { SkeletonList } from '../../components/ui/SkeletonLoader';
 import { ErrorType } from '@carecore/shared';
 import {
   DocumentReference,
-  Encounter,
   FhirResourceType,
   ResourceFilter,
   DateFilter,
+  EncounterListItemDto,
 } from '@carecore/shared';
 import { useFHIRData } from '../../hooks/useFHIRData';
+import { useEncounters } from '../../hooks/useEncounters';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -34,7 +35,33 @@ export default function HistoryScreen() {
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Construir parámetros de fecha
+  // Obtener Encounters con paginación (usando endpoint optimizado)
+  const {
+    data: encounters,
+    isLoading: isLoadingEncounters,
+    error: errorEncounters,
+    refetch: refetchEncounters,
+    hasMore: hasMoreEncounters,
+    loadMore: loadMoreEncounters,
+  } = useEncounters({
+    enablePagination: true,
+    pageSize: 20,
+  });
+
+  // Obtener DocumentReferences con paginación
+  const {
+    data: documents,
+    isLoading: isLoadingDocuments,
+    error: errorDocuments,
+    refetch: refetchDocuments,
+    hasMore: hasMoreDocuments,
+    loadMore: loadMoreDocuments,
+  } = useFHIRData<DocumentReference>('DocumentReference', dateParams as Record<string, string>, {
+    enablePagination: true,
+    pageSize: 20,
+  });
+
+  // Construir parámetros de fecha para DocumentReferences
   const dateParams = useMemo(() => {
     if (dateFilter === 'all') return {};
     const now = new Date();
@@ -55,48 +82,52 @@ export default function HistoryScreen() {
     return { date: `ge${dateFrom.toISOString().split('T')[0]}` };
   }, [dateFilter]);
 
-  // Obtener Encounters con paginación
-  const {
-    data: encounters,
-    isLoading: isLoadingEncounters,
-    error: errorEncounters,
-    refetch: refetchEncounters,
-    hasMore: hasMoreEncounters,
-    loadMore: loadMoreEncounters,
-  } = useFHIRData<Encounter>('Encounter', dateParams as Record<string, string>, {
-    enablePagination: true,
-    pageSize: 20,
-  });
-
-  // Obtener DocumentReferences con paginación
-  const {
-    data: documents,
-    isLoading: isLoadingDocuments,
-    error: errorDocuments,
-    refetch: refetchDocuments,
-    hasMore: hasMoreDocuments,
-    loadMore: loadMoreDocuments,
-  } = useFHIRData<DocumentReference>('DocumentReference', dateParams as Record<string, string>, {
-    enablePagination: true,
-    pageSize: 20,
-  });
-
   // Combinar y filtrar registros
   const allRecords = useMemo(() => {
-    const records: Array<Encounter | DocumentReference> = [];
+    type RecordItem =
+      | { type: 'encounter'; data: EncounterListItemDto }
+      | { type: 'document'; data: DocumentReference };
+
+    const records: RecordItem[] = [];
 
     // Agregar según filtro de tipo
     if (resourceFilter === 'all' || resourceFilter === 'Encounter') {
-      if (encounters) records.push(...encounters);
+      if (encounters) {
+        encounters.forEach((encounter) => {
+          records.push({ type: 'encounter', data: encounter });
+        });
+      }
     }
     if (resourceFilter === 'all' || resourceFilter === 'DocumentReference') {
-      if (documents) records.push(...documents);
+      if (documents) {
+        documents.forEach((doc) => {
+          records.push({ type: 'document', data: doc });
+        });
+      }
+    }
+
+    // Filtrar por fecha si es necesario
+    let filteredRecords = records;
+    if (dateFilter !== 'all') {
+      const dateFrom = dateParams.date?.replace('ge', '');
+      if (dateFrom) {
+        filteredRecords = records.filter((record) => {
+          const recordDate =
+            record.type === 'encounter'
+              ? record.data.createdAt
+              : (record.data as DocumentReference).date;
+          if (!recordDate) return false;
+          return new Date(recordDate) >= new Date(dateFrom);
+        });
+      }
     }
 
     // Ordenar por fecha (más reciente primero)
-    records.sort((a, b) => {
-      const dateA = a.resourceType === 'Encounter' ? a.period?.start : a.date;
-      const dateB = b.resourceType === 'Encounter' ? b.period?.start : b.date;
+    filteredRecords.sort((a, b) => {
+      const dateA =
+        a.type === 'encounter' ? a.data.createdAt : (a.data as DocumentReference).date || '';
+      const dateB =
+        b.type === 'encounter' ? b.data.createdAt : (b.data as DocumentReference).date || '';
       if (!dateA || !dateB) return 0;
       return new Date(dateB).getTime() - new Date(dateA).getTime();
     });
@@ -104,41 +135,39 @@ export default function HistoryScreen() {
     // Filtrar por búsqueda
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      return records.filter((record) => {
-        const title =
-          record.resourceType === 'Encounter'
-            ? record.type?.[0]?.coding?.[0]?.display || record.subject?.display || ''
-            : record.type?.coding?.[0]?.display || record.description || '';
-        const subtitle = record.subject?.display || '';
-        return title.toLowerCase().includes(query) || subtitle.toLowerCase().includes(query);
+      return filteredRecords.filter((record) => {
+        if (record.type === 'encounter') {
+          const title = record.data.type || record.data.subjectReference || '';
+          const subtitle = record.data.subjectReference || '';
+          return title.toLowerCase().includes(query) || subtitle.toLowerCase().includes(query);
+        } else {
+          const doc = record.data as DocumentReference;
+          const title = doc.type?.coding?.[0]?.display || doc.description || '';
+          const subtitle = doc.subject?.display || '';
+          return title.toLowerCase().includes(query) || subtitle.toLowerCase().includes(query);
+        }
       });
     }
 
-    return records;
-  }, [encounters, documents, resourceFilter, searchQuery]);
+    return filteredRecords;
+  }, [encounters, documents, resourceFilter, searchQuery, dateFilter, dateParams]);
 
   const isLoading = isLoadingEncounters || isLoadingDocuments;
   const error = errorEncounters || errorDocuments;
 
-  const handleRefresh = () => {
+  const handleRefresh = React.useCallback(() => {
     refetchEncounters();
     refetchDocuments();
-  };
+  }, [refetchEncounters, refetchDocuments]);
 
-  const handleLoadMore = () => {
+  const handleLoadMore = React.useCallback(() => {
     if (resourceFilter === 'all' || resourceFilter === 'Encounter') {
       if (hasMoreEncounters) loadMoreEncounters();
     }
     if (resourceFilter === 'all' || resourceFilter === 'DocumentReference') {
       if (hasMoreDocuments) loadMoreDocuments();
     }
-  };
-
-  const handleRecordPress = (record: Encounter | DocumentReference) => {
-    if (record.id) {
-      router.push(`/record/${record.id}`);
-    }
-  };
+  }, [resourceFilter, hasMoreEncounters, hasMoreDocuments, loadMoreEncounters, loadMoreDocuments]);
 
   return (
     <View style={styles.container}>
@@ -280,27 +309,48 @@ export default function HistoryScreen() {
       ) : (
         <FlatList
           data={allRecords}
-          keyExtractor={(item, index) => item.id || `record-${index}`}
+          keyExtractor={(item, index) => {
+            if (item.type === 'encounter') {
+              return item.data.encounterId || item.data.id || `encounter-${index}`;
+            }
+            return item.data.id || `document-${index}`;
+          }}
           renderItem={({ item }) => {
-            const title =
-              item.resourceType === 'Encounter'
-                ? item.type?.[0]?.coding?.[0]?.display || item.subject?.display || 'Encounter'
-                : item.type?.coding?.[0]?.display || item.description || 'Document';
-            const subtitle = item.subject?.display || 'Subject not available';
-            const date =
-              item.resourceType === 'Encounter'
-                ? item.period?.start || 'Date not available'
-                : item.date || 'Date not available';
+            if (item.type === 'encounter') {
+              const encounter = item.data;
+              return (
+                <ClinicalRecordCard
+                  resourceType={'Encounter' as FhirResourceType}
+                  title={`Encounter - ${encounter.status}`}
+                  subtitle={encounter.subjectReference || 'Subject not available'}
+                  date={new Date(encounter.createdAt).toISOString()}
+                  onPress={() => {
+                    if (encounter.encounterId) {
+                      router.push(`/record/${encounter.encounterId}`);
+                    }
+                  }}
+                />
+              );
+            } else {
+              const doc = item.data as DocumentReference;
+              const title = doc.type?.coding?.[0]?.display || doc.description || 'Document';
+              const subtitle = doc.subject?.display || 'Subject not available';
+              const date = doc.date || 'Date not available';
 
-            return (
-              <ClinicalRecordCard
-                resourceType={item.resourceType as FhirResourceType}
-                title={title}
-                subtitle={subtitle}
-                date={date}
-                onPress={() => handleRecordPress(item)}
-              />
-            );
+              return (
+                <ClinicalRecordCard
+                  resourceType={doc.resourceType as FhirResourceType}
+                  title={title}
+                  subtitle={subtitle}
+                  date={date}
+                  onPress={() => {
+                    if (doc.id) {
+                      router.push(`/record/${doc.id}`);
+                    }
+                  }}
+                />
+              );
+            }
           }}
           contentContainerStyle={styles.listContent}
           refreshControl={<RefreshControl refreshing={isLoading} onRefresh={handleRefresh} />}
