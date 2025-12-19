@@ -25,7 +25,7 @@ services:
     # Construir shared primero, luego limpiar dist si existe para evitar errores EBUSY
     # Luego ejecutar nest start --watch usando npx con configuración mejorada para hot reload
     # Nota: El build genera dist/packages/api/src/main.js, creamos symlink para que nest start lo encuentre
-    # IMPORTANTE: Capturamos el exit code del build antes de filtrar output para no enmascarar errores
+
     command: sh -c "npm ci && cd /app/packages/shared && npm run build && cd /app/packages/api && rm -rf dist && npm run build > /tmp/build_output.log 2>&1; BUILD_EXIT=$$?; grep -v 'scripts/' /tmp/build_output.log || true; if [ $${BUILD_EXIT} -ne 0 ]; then echo '❌ Build failed with exit code' $${BUILD_EXIT} && exit $${BUILD_EXIT}; fi && sh /app/packages/api/scripts/create-main-symlink.sh && cd /app/packages/api && npx nest start --watch --preserveWatchOutput"
     volumes:
       # Montar código fuente para hot-reload (monorepo structure)
@@ -66,10 +66,18 @@ services:
       FHIR_VERSION: ${FHIR_VERSION}
       FHIR_BASE_URL: ${FHIR_BASE_URL}
       # Variables de Keycloak (deben estar en .env.local)
-      KEYCLOAK_URL: ${KEYCLOAK_URL}
+      # KEYCLOAK_URL: Cuando API corre en Docker, debe usar el nombre del servicio 'keycloak'
+      # en lugar de 'localhost' porque los contenedores se comunican por nombre de servicio
+      KEYCLOAK_URL: http://keycloak:8080
+      # KEYCLOAK_PUBLIC_URL: URL pública de Keycloak para clientes externos (mobile)
+      # Debe coincidir con el issuer de los tokens emitidos a clientes móviles
+      # Si no se configura, se usa KEYCLOAK_URL (para clientes confidenciales)
+      KEYCLOAK_PUBLIC_URL: ${KEYCLOAK_PUBLIC_URL}
       KEYCLOAK_REALM: ${KEYCLOAK_REALM}
       KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
+      KEYCLOAK_ADMIN_CLIENT_ID: ${KEYCLOAK_ADMIN_CLIENT_ID}
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET}
     # En desarrollo, no necesitamos healthcheck estricto
     # Usa PORT o API_INTERNAL_PORT desde process.env (ambas están disponibles en el contenedor)
     # PORT se establece desde API_INTERNAL_PORT en línea 50, y es lo que usa NestJS
@@ -84,11 +92,14 @@ services:
       retries: 3
       start_period: 120s
     # Configurar logging para ver logs en tiempo real
+    # En desarrollo, usar el driver 'local' que es más eficiente y muestra logs mejor
     logging:
       driver: 'json-file'
       options:
         max-size: '10m'
         max-file: '3'
+        compress: 'false' # No comprimir en desarrollo para ver logs más rápido
     # Mantener stdout/stderr para ver logs en tiempo real
+    # tty: true permite que pino-pretty muestre colores correctamente
     stdin_open: true
     tty: true

@@ -426,9 +426,9 @@ describe('AuthController', () => {
         tokenType: 'Bearer',
       });
 
-      await controller.refresh('refresh-token', mockRequest, mockResponse);
+      await controller.refresh('refresh-token', undefined, mockRequest, mockResponse);
 
-      expect(mockAuthService.refreshToken).toHaveBeenCalledWith('refresh-token');
+      expect(mockAuthService.refreshToken).toHaveBeenCalledWith('refresh-token', undefined);
       expect(mockResponse.cookie).toHaveBeenCalledWith(
         'access_token',
         'new-token',
@@ -478,9 +478,12 @@ describe('AuthController', () => {
         tokenType: 'Bearer',
       });
 
-      await controller.refresh(undefined, mockRequest, mockResponse);
+      await controller.refresh(undefined, undefined, mockRequest, mockResponse);
 
-      expect(mockAuthService.refreshToken).toHaveBeenCalledWith('refresh-token-from-cookie');
+      expect(mockAuthService.refreshToken).toHaveBeenCalledWith(
+        'refresh-token-from-cookie',
+        undefined,
+      );
       expect(mockResponse.json).toHaveBeenCalled();
     });
 
@@ -494,7 +497,7 @@ describe('AuthController', () => {
         json: jest.fn(),
       } as unknown as Response;
 
-      await controller.refresh(undefined, mockRequest, mockResponse);
+      await controller.refresh(undefined, undefined, mockRequest, mockResponse);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
       expect(mockResponse.json).toHaveBeenCalledWith({
@@ -517,7 +520,7 @@ describe('AuthController', () => {
         new UnauthorizedException('Refresh token is invalid or expired'),
       );
 
-      await controller.refresh('invalid-token', mockRequest, mockResponse);
+      await controller.refresh('invalid-token', undefined, mockRequest, mockResponse);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.UNAUTHORIZED);
       expect(mockResponse.json).toHaveBeenCalledWith({
@@ -541,7 +544,7 @@ describe('AuthController', () => {
         new BadRequestException('Keycloak URL is not configured'),
       );
 
-      await controller.refresh('refresh-token', mockRequest, mockResponse);
+      await controller.refresh('refresh-token', undefined, mockRequest, mockResponse);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
       expect(mockResponse.json).toHaveBeenCalledWith({
@@ -569,7 +572,7 @@ describe('AuthController', () => {
         tokenType: 'Bearer',
       });
 
-      await controller.refresh(refreshToken, mockRequest, mockResponse);
+      await controller.refresh(refreshToken, undefined, mockRequest, mockResponse);
 
       // Should set access_token cookie
       expect(mockResponse.cookie).toHaveBeenCalledWith(

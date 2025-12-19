@@ -59,6 +59,7 @@ Configurar el cliente OAuth2/OIDC "carecore-api" de tipo confidential para que l
    - **Valid redirect URIs:**
      - `http://localhost:3000/api/auth/callback`
      - `http://localhost:3000/api/auth/callback/*`
+     - `carecore://auth` (para app móvil - deep linking)
    - **Valid post logout redirect URIs:**
      - `http://localhost:3000`
    - **Web origins:**
@@ -149,6 +150,7 @@ curl -X POST http://localhost:8080/realms/carecore/protocol/openid-connect/token
 - **Valid Redirect URIs:**
   - http://localhost:3000/api/auth/callback
   - http://localhost:3000/api/auth/callback/\*
+  - carecore://auth (para app móvil - deep linking)
 - **Web Origins:** http://localhost:3000
 
 ### Tokens
@@ -213,6 +215,8 @@ Después de configurar el cliente, continúa con:
 1. Verificar que la URL en la petición coincida exactamente con las configuradas
 2. Verificar que no haya espacios o caracteres especiales
 3. Verificar que el protocolo (http/https) coincida
+4. **Para app móvil:** Verificar que `carecore://auth` esté en la lista de Valid Redirect URIs
+5. Si usas un cliente separado para móvil (`carecore-mobile`), verificar que ese cliente tenga el redirect_uri configurado
 
 ## 📖 Referencias
 

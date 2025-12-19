@@ -262,6 +262,7 @@ Este es el cliente principal para la API backend.
 3. **Valid redirect URIs:**
    - `http://localhost:3000/api/auth/callback`
    - `http://localhost:3000/api/auth/callback/*`
+   - `carecore://auth` (para app móvil - deep linking)
 4. **Valid post logout redirect URIs:**
    - `http://localhost:3000`
 5. **Web origins:**

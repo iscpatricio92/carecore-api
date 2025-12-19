@@ -230,6 +230,11 @@ KEYCLOAK_HTTP_ENABLED=true
   - Development: `http://localhost:8080`
   - Production: `https://keycloak.yourdomain.com`
   - Docker internal: `http://keycloak:8080` (when API runs in Docker)
+- `KEYCLOAK_PUBLIC_URL`: Public URL of Keycloak for external clients (mobile) (**optional**)
+  - Used when refreshing tokens for public clients (mobile) to ensure issuer matches
+  - Should match the issuer in tokens issued to mobile clients
+  - Default: Uses `KEYCLOAK_URL` if not set
+  - Example: `http://localhost:8080` (when mobile uses localhost but API uses keycloak:8080 in Docker)
 - `KEYCLOAK_REALM`: Name of the Keycloak realm (**required**)
 - `KEYCLOAK_CLIENT_ID`: Client ID for OAuth2 authentication (**required**)
 - `KEYCLOAK_CLIENT_SECRET`: Client secret for OAuth2 authentication (**required**)

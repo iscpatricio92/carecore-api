@@ -269,6 +269,49 @@ describe('JwtStrategy', () => {
       expect(mockLogger.warn).toHaveBeenCalled();
     });
 
+    it('should accept token with public issuer when KEYCLOAK_PUBLIC_URL is configured', async () => {
+      // Recreate strategy with KEYCLOAK_PUBLIC_URL configured
+      mockConfigService.get.mockImplementation((key: string) => {
+        const values: Record<string, string> = {
+          KEYCLOAK_URL: 'http://keycloak:8080',
+          KEYCLOAK_PUBLIC_URL: 'http://localhost:8080',
+          KEYCLOAK_REALM: 'carecore',
+        };
+        return values[key];
+      });
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          JwtStrategy,
+          {
+            provide: ConfigService,
+            useValue: mockConfigService,
+          },
+          {
+            provide: PinoLogger,
+            useValue: mockLogger,
+          },
+        ],
+      }).compile();
+
+      const strategyWithPublicUrl = module.get<JwtStrategy>(JwtStrategy);
+
+      const publicIssuer = 'http://localhost:8080/realms/carecore';
+      const payload: jwt.JwtPayload = {
+        sub: 'user-123',
+        preferred_username: 'testuser',
+        iss: publicIssuer,
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        iat: Math.floor(Date.now() / 1000),
+      };
+
+      const user = await strategyWithPublicUrl.validate(payload);
+
+      expect(user).toBeDefined();
+      expect(user.id).toBe('user-123');
+      expect(user.username).toBe('testuser');
+    });
+
     it('should throw UnauthorizedException when sub is missing', async () => {
       const payload: jwt.JwtPayload = {
         preferred_username: 'testuser',

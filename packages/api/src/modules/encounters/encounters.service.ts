@@ -1,43 +1,74 @@
-import { Encounter } from '@carecore/shared';
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
+import { Injectable } from '@nestjs/common';
 
+import { EncounterDetailDto } from '../../common/dto/encounter.dto';
+import { EncountersListResponse, User } from '@carecore/shared';
+import { EncountersCoreService } from './encounters-core.service';
+import { EncounterToClientMapper } from './mappers/encounter-to-client.mapper';
+
+/**
+ * Encounters Service (Application Service - Thin Layer)
+ *
+ * This service is a thin orchestration layer that:
+ * - Calls EncountersCoreService for business logic and data access
+ * - Uses EncounterToClientMapper for transformation
+ * - Returns optimized DTOs for mobile/web clients
+ *
+ * All security, validation, and business logic is in EncountersCoreService.
+ */
 @Injectable()
 export class EncountersService {
-  private encounters: Encounter[] = [];
+  constructor(private readonly coreService: EncountersCoreService) {}
 
-  create(encounter: Encounter): Encounter {
-    const newEncounter: Encounter = {
-      ...encounter,
-      resourceType: 'Encounter',
-      id: encounter.id || randomUUID(),
-      meta: {
-        ...encounter.meta,
-        lastUpdated: new Date().toISOString(),
-        versionId: '1',
-      },
-    };
-    this.encounters.push(newEncounter);
-    return newEncounter;
-  }
+  /**
+   * Gets all encounters for the current user
+   * Filters by patient context if user is a patient (not admin)
+   * Returns optimized DTOs for client consumption
+   *
+   * @param user - Current authenticated user
+   * @returns List of encounters optimized for mobile/web
+   */
+  async findAll(user?: User): Promise<EncountersListResponse> {
+    // Use Core Service to get entities (with security filtering)
+    const { entities, total } = await this.coreService.findAll(user);
 
-  findAll() {
+    // Transform Entity → DTO using mapper
     return {
-      resourceType: 'Bundle',
-      type: 'searchset',
-      total: this.encounters.length,
-      entry: this.encounters.map((encounter) => ({
-        fullUrl: `urn:uuid:${encounter.id}`,
-        resource: encounter,
-      })),
+      data: EncounterToClientMapper.toListItemList(entities),
+      total,
     };
   }
 
-  findOne(id: string): Encounter {
-    const encounter = this.encounters.find((e) => e.id === id);
-    if (!encounter) {
-      throw new NotFoundException(`Encounter with ID ${id} not found`);
-    }
-    return encounter;
+  /**
+   * Gets an encounter by database UUID
+   * Validates that user has access to the encounter
+   * Returns optimized DTO for client consumption
+   *
+   * @param id - Database UUID
+   * @param user - Current authenticated user
+   * @returns EncounterDetailDto
+   */
+  async findOne(id: string, user?: User): Promise<EncounterDetailDto> {
+    // Use Core Service to get entity (with security validation)
+    const entity = await this.coreService.findEncounterById(id, user);
+
+    // Transform Entity → DTO using mapper
+    return EncounterToClientMapper.toDetailDto(entity);
+  }
+
+  /**
+   * Gets an encounter by encounterId (FHIR resource ID)
+   * Validates that user has access to the encounter
+   * Returns optimized DTO for client consumption
+   *
+   * @param encounterId - FHIR resource ID
+   * @param user - Current authenticated user
+   * @returns EncounterDetailDto
+   */
+  async findByEncounterId(encounterId: string, user?: User): Promise<EncounterDetailDto> {
+    // Use Core Service to get entity (with security validation)
+    const entity = await this.coreService.findEncounterByEncounterId(encounterId, user);
+
+    // Transform Entity → DTO using mapper
+    return EncounterToClientMapper.toDetailDto(entity);
   }
 }

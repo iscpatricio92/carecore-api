@@ -19,6 +19,7 @@
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "resolveJsonModule": true,
+    "moduleResolution": "node",
     "paths": {
       "@/*": ["src/*"],
       "@/common/*": ["src/common/*"],

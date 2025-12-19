@@ -10,6 +10,8 @@
   "scripts": {
     "build": "npm run build:shared && npm run build --workspace=@carecore/api",
     "build:shared": "npm run build --workspace=@carecore/shared",
+    "start": "npm run start --workspace=@carecore/api",
+    "start:dev": "npm run start:dev --workspace=@carecore/api",
     "test": "echo 'select specific package to test: api, web, mobile. use npm run test:<package>'",
     "test:api": "npm run test --workspace=@carecore/api",
     "test:api:cov": "npm run test:cov --workspace=@carecore/api",
@@ -27,7 +29,9 @@
     "format:check": "prettier --check \"**/*.{ts,js,json,md,yml,yaml}\" --ignore-path .prettierignore",
     "commit": "cz",
     "prepare": "husky install",
-    "test:changed": "bash scripts/run-tests-for-packages.sh"
+    "test:changed": "bash scripts/run-tests-for-packages.sh",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "lint-staged": {
     "packages/api/**/*.{ts,js}": [
@@ -49,9 +53,13 @@
       "prettier --write"
     ]
   },
+  "dependencies": {
+    "dotenv": "^17.2.3"
+  },
   "devDependencies": {
     "@commitlint/cli": "^20.1.0",
     "@commitlint/config-conventional": "^20.0.0",
+    "@eslint/eslintrc": "^3.3.3",
     "commitizen": "^4.3.0",
     "cz-conventional-changelog": "^3.3.0",
     "cz-customizable": "^7.5.1",

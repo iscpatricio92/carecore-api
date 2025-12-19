@@ -108,7 +108,7 @@ export class AuthService {
     // Add OAuth2 parameters
     authUrl.searchParams.set('client_id', clientId);
     authUrl.searchParams.set('response_type', 'code');
-    authUrl.searchParams.set('scope', 'openid profile email');
+    authUrl.searchParams.set('scope', 'openid profile email fhirUser');
     authUrl.searchParams.set('redirect_uri', redirectUri);
     authUrl.searchParams.set('state', stateToken);
 
@@ -367,17 +367,22 @@ export class AuthService {
   /**
    * Refresh an access token using a refresh token
    * @param refreshToken Refresh token to exchange for new tokens
+   * @param clientId Optional client ID for public clients (mobile). If not provided, uses confidential client
    * @returns New access token and refresh token
    */
-  async refreshToken(refreshToken: string): Promise<{
+  async refreshToken(
+    refreshToken: string,
+    clientId?: string,
+  ): Promise<{
     accessToken: string;
     refreshToken: string;
     expiresIn: number;
     tokenType: string;
   }> {
     const keycloakUrl = this.configService.get<string>('KEYCLOAK_URL');
+    const keycloakPublicUrl = this.configService.get<string>('KEYCLOAK_PUBLIC_URL'); // URL pública para clientes externos (mobile)
     const keycloakRealm = this.configService.get<string>('KEYCLOAK_REALM') || 'carecore';
-    const clientId = this.configService.get<string>('KEYCLOAK_CLIENT_ID');
+    const defaultClientId = this.configService.get<string>('KEYCLOAK_CLIENT_ID');
     const clientSecret = this.configService.get<string>('KEYCLOAK_CLIENT_SECRET');
 
     // Validate required configuration
@@ -386,14 +391,12 @@ export class AuthService {
       throw new BadRequestException('Keycloak URL is not configured');
     }
 
-    if (!clientId) {
+    // Use provided clientId (for public clients like mobile) or default (confidential client)
+    const finalClientId = clientId || defaultClientId;
+
+    if (!finalClientId) {
       this.logger.error('KEYCLOAK_CLIENT_ID is not configured');
       throw new BadRequestException('Keycloak client ID is not configured');
-    }
-
-    if (!clientSecret) {
-      this.logger.error('KEYCLOAK_CLIENT_SECRET is not configured');
-      throw new BadRequestException('Keycloak client secret is not configured');
     }
 
     if (!refreshToken) {
@@ -401,18 +404,44 @@ export class AuthService {
       throw new BadRequestException('Refresh token is required');
     }
 
+    // Always use KEYCLOAK_URL for HTTP requests to Keycloak (for Docker networking)
+    // KEYCLOAK_PUBLIC_URL is only used for issuer validation in JwtStrategy, not for HTTP requests
+    // Keycloak can accept refresh tokens with public issuer even when request comes from internal URL
+    const finalKeycloakUrl = keycloakUrl;
+
     // Build token endpoint URL
-    const tokenUrl = `${keycloakUrl}/realms/${keycloakRealm}/protocol/openid-connect/token`;
+    const tokenUrl = `${finalKeycloakUrl}/realms/${keycloakRealm}/protocol/openid-connect/token`;
 
     // Prepare request body
     const body = new URLSearchParams();
     body.append('grant_type', 'refresh_token');
     body.append('refresh_token', refreshToken);
-    body.append('client_id', clientId);
-    body.append('client_secret', clientSecret);
+    body.append('client_id', finalClientId);
+
+    // Only add client_secret for confidential clients (not for public clients like mobile)
+    // If clientId is provided (public client), don't use client_secret
+    // If using default client (confidential), require client_secret
+    if (!clientId) {
+      // Using confidential client, requires client_secret
+      if (!clientSecret) {
+        this.logger.error('KEYCLOAK_CLIENT_SECRET is not configured');
+        throw new BadRequestException('Keycloak client secret is not configured');
+      }
+      body.append('client_secret', clientSecret);
+    }
+    // For public clients (mobile), no client_secret is needed
 
     try {
-      this.logger.debug({ tokenUrl, clientId }, 'Refreshing access token');
+      this.logger.debug(
+        {
+          tokenUrl,
+          clientId: finalClientId,
+          isPublicClient: !!clientId,
+          keycloakUrl: finalKeycloakUrl,
+          publicUrlConfigured: !!keycloakPublicUrl,
+        },
+        'Refreshing access token',
+      );
 
       const response = await fetch(tokenUrl, {
         method: 'POST',
@@ -424,11 +453,36 @@ export class AuthService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        this.logger.error({ status: response.status, error: errorText }, 'Failed to refresh token');
+        this.logger.error(
+          {
+            status: response.status,
+            error: errorText,
+            tokenUrl,
+            clientId: finalClientId,
+            isPublicClient: !!clientId,
+          },
+          'Failed to refresh token',
+        );
+
+        // Try to parse error response for more details
+        let errorMessage = 'Refresh token is invalid or expired';
+        try {
+          const errorData = JSON.parse(errorText) as { error?: string; error_description?: string };
+          if (errorData.error_description) {
+            errorMessage = errorData.error_description;
+          } else if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch {
+          // If parsing fails, use the raw error text if available
+          if (errorText) {
+            errorMessage = errorText;
+          }
+        }
 
         // Check if token is expired or invalid
         if (response.status === 400 || response.status === 401) {
-          throw new UnauthorizedException('Refresh token is invalid or expired');
+          throw new UnauthorizedException(errorMessage);
         }
 
         throw new UnauthorizedException('Failed to refresh access token');
@@ -1042,7 +1096,7 @@ export class AuthService {
       });
 
       if (!keycloakUserId) {
-        throw new BadRequestException('Failed to create user in Keycloak');
+        throw new BadRequestException('Failed to create user in Keycloak 1047');
       }
 
       // Step 5: Assign 'patient' role to the user

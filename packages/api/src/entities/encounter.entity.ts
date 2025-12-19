@@ -55,7 +55,7 @@ export class EncounterEntity {
    * Contains all Encounter data according to FHIR R4 specification
    * @see https://www.hl7.org/fhir/encounter.html
    */
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: 'jsonb', nullable: true, name: 'fhirResource' })
   fhirResource!: Encounter;
 
   /**

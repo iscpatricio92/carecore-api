@@ -138,35 +138,21 @@ Repetir el proceso para los siguientes scopes:
 
 **Recomendación:** Agregar todos los scopes creados como Default Client Scopes para que se incluyan automáticamente en los tokens.
 
-### Paso 5: Crear Scope Groups (Opcional)
+### Paso 5: Scopes Genéricos (NO RECOMENDADOS)
 
-Los scope groups permiten agrupar múltiples scopes para facilitar la asignación.
-
-#### 5.1 Crear Scope Group `fhir:read`
-
-1. En **Client scopes**, hacer clic en **Create client scope**
-2. En "General settings":
-   - **Name:** `fhir:read`
-   - **Description:** `Read access to all FHIR resources`
-   - **Type:** Default
-   - Hacer clic en **Next**
-
-3. En "Settings":
-   - **Include in Token Scope:** ON ✅
-   - Hacer clic en **Save**
-
-4. Ir a la pestaña **Mappers** del scope `fhir:read`
-5. Hacer clic en **Add mapper** > **By configuration** > **Audience**
-6. Configurar:
-   - **Name:** `fhir-read-audience`
-   - **Included Client Audience:** `carecore-api`
-   - Hacer clic en **Save**
-
-**Nota:** Los scope groups en Keycloak funcionan agregando múltiples scopes. Para simplificar, podemos asignar todos los scopes de lectura directamente al cliente.
-
-#### 5.2 Crear Scope Group `fhir:write`
-
-Repetir el proceso para `fhir:write` con descripción "Write access to all FHIR resources".
+> **⚠️ IMPORTANTE:** Los scopes genéricos `fhir:read` y `fhir:write` **NO están implementados** en el sistema y **NO se recomiendan** por las siguientes razones:
+>
+> - **Violan el principio de menor privilegio**: Dan acceso a TODOS los recursos FHIR, no solo a los necesarios
+> - **Dificultan la auditoría**: Es más difícil rastrear qué recursos específicos puede acceder un usuario
+> - **Riesgo de seguridad**: Si se asignan incorrectamente, pueden dar acceso no deseado
+> - **Mantenibilidad**: Es más difícil mantener permisos granulares
+>
+> **Solución recomendada:** Usar scopes específicos por recurso:
+>
+> - `patient:read` para que los pacientes accedan a sus propios datos (incluyendo encounters relacionados)
+> - `encounter:read` para practitioners y admins
+> - `document:read` para documentos
+> - etc.
 
 ### Paso 6: Asignar Scopes a Roles (Opcional)
 

@@ -53,7 +53,7 @@ export class PractitionerEntity {
    * Contains all Practitioner data according to FHIR R4 specification
    * @see https://www.hl7.org/fhir/practitioner.html
    */
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: 'jsonb', nullable: true, name: 'fhirResource' })
   fhirResource!: Practitioner;
 
   /**

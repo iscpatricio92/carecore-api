@@ -517,3 +517,32 @@ export interface OperationOutcomeIssue {
   location?: string[];
   expression?: string[];
 }
+
+/**
+ * Resource Type Alias
+ *
+ * A type alias for FhirResource that represents any FHIR resource.
+ * This is a convenience type for generic operations that work with any resource type.
+ *
+ * @example
+ * function processResource<T extends Resource>(resource: T): T {
+ *   // Process any FHIR resource
+ *   return resource;
+ * }
+ */
+export type Resource = FhirResource;
+
+/**
+ * Union type of all specific FHIR resource types
+ *
+ * This union type represents all the specific FHIR resource types
+ * that are defined in this package. Useful for type narrowing and
+ * type-safe operations across different resource types.
+ */
+export type SpecificResource =
+  | Patient
+  | Practitioner
+  | Encounter
+  | Consent
+  | DocumentReference
+  | OperationOutcome;

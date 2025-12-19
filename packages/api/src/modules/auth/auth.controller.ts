@@ -479,6 +479,11 @@ export class AuthController {
           type: 'string',
           description: 'Refresh token to obtain a new access token (optional if sent in cookie)',
         },
+        clientId: {
+          type: 'string',
+          description:
+            'Optional client ID for public clients (mobile). If not provided, uses confidential client.',
+        },
       },
     },
     required: false,
@@ -512,6 +517,7 @@ export class AuthController {
   })
   async refresh(
     @Body('refreshToken') refreshTokenFromBody: string | undefined,
+    @Body('clientId') clientId: string | undefined,
     @Req() req: Request,
     @Res() res: Response,
   ): Promise<void> {
@@ -526,7 +532,8 @@ export class AuthController {
     }
 
     try {
-      const tokens = await this.authService.refreshToken(refreshToken);
+      // Pass clientId if provided (for public clients like mobile)
+      const tokens = await this.authService.refreshToken(refreshToken, clientId);
 
       // Set secure HTTP-only cookies for new tokens
       const isProduction = process.env.NODE_ENV === 'production';
@@ -677,6 +684,7 @@ export class AuthController {
    * Get current user endpoint - Returns information about the authenticated user
    */
   @Get('user')
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Get current user information',
